@@ -1,6 +1,6 @@
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useEffect } from "react"
-import { useForm } from "react-hook-form"
+import { Controller, useForm } from "react-hook-form"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -17,7 +17,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { useCreateUser, useUpdateUser } from "@/features/usuarios/hooks/useUsers"
+import {
+  useCreateUser,
+  useUpdateUser,
+} from "@/features/usuarios/hooks/useUsers"
 import {
   type UserFormValues,
   userFormSchema,
@@ -106,24 +109,31 @@ export function UserForm({ roles, user, onSuccess }: UserFormProps) {
         ) : null}
         <Field data-invalid={Boolean(form.formState.errors.rol_id)}>
           <FieldLabel>Rol</FieldLabel>
-          <Select
-            value={form.watch("rol_id")}
-            onValueChange={(value) =>
-              form.setValue("rol_id", value ?? "", { shouldValidate: true })
-            }
-            disabled={!roles.length}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Selecciona un rol" />
-            </SelectTrigger>
-            <SelectContent>
-              {roles.map((role) => (
-                <SelectItem key={role.id} value={role.id}>
-                  {role.nombre}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <Controller
+            control={form.control}
+            name="rol_id"
+            render={({ field }) => (
+              <Select
+                value={field.value || undefined}
+                onValueChange={(value) => {
+                  field.onChange(value ?? "")
+                  field.onBlur()
+                }}
+                disabled={!roles.length}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecciona un rol" />
+                </SelectTrigger>
+                <SelectContent>
+                  {roles.map((role) => (
+                    <SelectItem key={role.id} value={role.id}>
+                      {role.nombre}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          />
           <FieldError errors={[form.formState.errors.rol_id]} />
         </Field>
       </FieldGroup>

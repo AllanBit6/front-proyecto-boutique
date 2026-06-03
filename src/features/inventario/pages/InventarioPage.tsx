@@ -1,4 +1,10 @@
-import { ChevronLeft, ChevronRight, Plus, Search, Settings2 } from "lucide-react"
+import {
+  ChevronLeft,
+  ChevronRight,
+  Plus,
+  Search,
+  Settings2,
+} from "lucide-react"
 import { useMemo, useState } from "react"
 
 import { Button } from "@/components/ui/button"
@@ -25,70 +31,51 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { BarcodeDialog } from "@/features/inventario/components/BarcodeDialog"
 import { CatalogManager } from "@/features/inventario/components/CatalogManager"
-import { ProductForm } from "@/features/inventario/components/ProductForm"
-import { ProductsTable } from "@/features/inventario/components/ProductsTable"
 import { ProductWizardForm } from "@/features/inventario/components/ProductWizardForm"
 import { VariantForm } from "@/features/inventario/components/VariantForm"
 import { VariantsTable } from "@/features/inventario/components/VariantsTable"
 import {
   useBrands,
   useColors,
-  useDeleteProduct,
   useDeleteVariant,
-  useProduct,
   useProducts,
   useSizes,
   useVariant,
   useVariants,
 } from "@/features/inventario/hooks/useProducts"
-import type { Product, Variant } from "@/features/inventario/types/product"
+import type { Variant } from "@/features/inventario/types/product"
+import { useAuthStore } from "@/store"
 
 const PAGE_SIZE = 10
 const CATALOG_LIMIT = 100
 
 export function InventarioPage() {
-  const [productsPage, setProductsPage] = useState(1)
+  const role = useAuthStore((state) => state.role)
+  const canManageInventory = role === "admin" || role === "warehouse"
   const [variantsPage, setVariantsPage] = useState(1)
-  const [productSearch, setProductSearch] = useState("")
-  const [productBrandFilter, setProductBrandFilter] = useState("all")
   const [variantSearch, setVariantSearch] = useState("")
   const [variantProductFilter, setVariantProductFilter] = useState("all")
   const [variantStockFilter, setVariantStockFilter] = useState("all")
   const [isRegisterProductOpen, setIsRegisterProductOpen] = useState(false)
   const [isCreateVariantOpen, setIsCreateVariantOpen] = useState(false)
   const [isCatalogManagerOpen, setIsCatalogManagerOpen] = useState(false)
-  const [editingProductId, setEditingProductId] = useState<string | null>(null)
   const [editingVariantId, setEditingVariantId] = useState<string | null>(null)
-  const [deleteProduct, setDeleteProduct] = useState<Product | null>(null)
   const [deleteVariant, setDeleteVariant] = useState<Variant | null>(null)
   const [barcodeVariant, setBarcodeVariant] = useState<Variant | null>(null)
-  const productsQuery = useProducts({ page: productsPage, limit: PAGE_SIZE })
   const productOptionsQuery = useProducts({ page: 1, limit: CATALOG_LIMIT })
   const variantsQuery = useVariants({ page: variantsPage, limit: PAGE_SIZE })
-  const brandsQuery = useBrands()
-  const sizesQuery = useSizes()
-  const colorsQuery = useColors()
-  const editProductQuery = useProduct(editingProductId)
+  const brandsQuery = useBrands(canManageInventory)
+  const sizesQuery = useSizes(canManageInventory)
+  const colorsQuery = useColors(canManageInventory)
   const editVariantQuery = useVariant(editingVariantId)
-  const deleteProductMutation = useDeleteProduct()
   const deleteVariantMutation = useDeleteVariant()
-  const productsData = productsQuery.data
-  const productOptions = productOptionsQuery.data?.data ?? productsData?.data ?? []
+  const productOptions = productOptionsQuery.data?.data ?? []
   const variantsData = variantsQuery.data
   const brands = brandsQuery.data ?? []
   const sizes = sizesQuery.data ?? []
   const colors = colorsQuery.data ?? []
-  const filteredProducts = useMemo(
-    () =>
-      filterProducts(productsData?.data ?? [], {
-        search: productSearch,
-        brandId: productBrandFilter,
-      }),
-    [productBrandFilter, productSearch, productsData?.data]
-  )
   const variantProductOptions = useMemo(
     () => getVariantProductOptions(variantsData?.data ?? []),
     [variantsData?.data]
@@ -100,17 +87,13 @@ export function InventarioPage() {
         productId: variantProductFilter,
         stock: variantStockFilter,
       }),
-    [variantProductFilter, variantSearch, variantStockFilter, variantsData?.data]
+    [
+      variantProductFilter,
+      variantSearch,
+      variantStockFilter,
+      variantsData?.data,
+    ]
   )
-
-  async function handleDeleteProduct() {
-    if (!deleteProduct) {
-      return
-    }
-
-    await deleteProductMutation.mutateAsync(deleteProduct.id)
-    setDeleteProduct(null)
-  }
 
   async function handleDeleteVariant() {
     if (!deleteVariant) {
@@ -126,198 +109,124 @@ export function InventarioPage() {
       <section className="space-y-4">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h1 className="text-xl font-semibold">Inventario</h1>
-            <p className="text-sm text-muted-foreground">
-              Registra prendas listas para vender y administra tallas, colores,
-              precios y codigos.
+            <h1 className="page-heading">Inventario</h1>
+            <p className="page-subtitle">
+              Consulta prendas, existencias, precios y codigos listos para la
+              venta.
             </p>
           </div>
-          <Button variant="outline" onClick={() => setIsCatalogManagerOpen(true)}>
-            <Settings2 />
-            Tallas y colores
-          </Button>
+          {canManageInventory ? (
+            <Button
+              variant="outline"
+              onClick={() => setIsCatalogManagerOpen(true)}
+            >
+              <Settings2 />
+              Tallas y colores
+            </Button>
+          ) : null}
         </div>
 
-        <Tabs defaultValue="variantes">
-          <TabsList>
-            <TabsTrigger value="variantes">Prendas</TabsTrigger>
-            <TabsTrigger value="productos">Modelos base</TabsTrigger>
-          </TabsList>
-          <TabsContent value="variantes" className="mt-4">
-            <Card>
-              <CardHeader className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-                <div>
-                  <CardTitle>Prendas</CardTitle>
-                  <CardDescription>
-                    Inventario vendible por talla, color, precio y codigo.
-                  </CardDescription>
-                </div>
-                <div className="flex flex-col gap-2 sm:flex-row">
-                  <Button onClick={() => setIsRegisterProductOpen(true)}>
-                    <Plus />
-                    Registrar prenda
-                  </Button>
-                  <Button
-                    variant="outline"
-                    onClick={() => setIsCreateVariantOpen(true)}
-                  >
-                    <Plus />
-                    Agregar talla/color
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid gap-2 md:grid-cols-[minmax(220px,1fr)_180px_160px]">
-                  <SearchInput
-                    value={variantSearch}
-                    onChange={setVariantSearch}
-                    placeholder="Buscar prenda, talla, color, SKU o codigo"
-                  />
-                  <Select
-                    value={variantProductFilter}
-                    onValueChange={(value) =>
-                      setVariantProductFilter(value ?? "all")
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Todas las prendas</SelectItem>
-                      {variantProductOptions.map((product) => (
-                        <SelectItem key={product.id} value={product.id}>
-                          {product.nombre}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <Select
-                    value={variantStockFilter}
-                    onValueChange={(value) =>
-                      setVariantStockFilter(value ?? "all")
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Todo inventario</SelectItem>
-                      <SelectItem value="low">Necesita reposicion</SelectItem>
-                      <SelectItem value="ok">Disponible</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                {variantsQuery.isLoading ? (
-                  <div className="text-sm text-muted-foreground">
-                    Cargando prendas...
-                  </div>
-                ) : variantsQuery.isError ? (
-                  <div className="text-sm text-destructive">
-                    No se pudieron cargar las prendas.
-                  </div>
-                ) : (
-                  <VariantsTable
-                    variants={filteredVariants}
-                    onEdit={(variant) => setEditingVariantId(variant.id)}
-                    onDelete={setDeleteVariant}
-                    onBarcode={setBarcodeVariant}
-                  />
-                )}
-                {variantsData ? (
-                  <PaginationControls
-                    page={variantsData.page}
-                    totalPages={variantsData.totalPages}
-                    total={variantsData.total}
-                    visible={filteredVariants.length}
-                    isFetching={variantsQuery.isFetching}
-                    onPrevious={() =>
-                      setVariantsPage((currentPage) => currentPage - 1)
-                    }
-                    onNext={() =>
-                      setVariantsPage((currentPage) => currentPage + 1)
-                    }
-                  />
-                ) : null}
-              </CardContent>
-            </Card>
-          </TabsContent>
-          <TabsContent value="productos" className="mt-4">
-            <Card>
-              <CardHeader className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-                <div>
-                  <CardTitle>Modelos base</CardTitle>
-                  <CardDescription>
-                    Agrupacion de prendas por nombre, marca y detalle.
-                  </CardDescription>
-                </div>
+        <Card>
+          <CardHeader className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+              <CardTitle>Prendas disponibles</CardTitle>
+              <CardDescription>
+                Existencias por talla, color, precio y codigo de barras.
+              </CardDescription>
+            </div>
+            {canManageInventory ? (
+              <div className="flex flex-col gap-2 sm:flex-row">
                 <Button onClick={() => setIsRegisterProductOpen(true)}>
                   <Plus />
                   Registrar prenda
                 </Button>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid gap-2 md:grid-cols-[minmax(220px,1fr)_220px]">
-                  <SearchInput
-                    value={productSearch}
-                    onChange={setProductSearch}
-                    placeholder="Buscar modelo, detalle o marca"
-                  />
-                  <Select
-                    value={productBrandFilter}
-                    onValueChange={(value) =>
-                      setProductBrandFilter(value ?? "all")
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Todas las marcas</SelectItem>
-                      {brands.map((brand) => (
-                        <SelectItem key={brand.id} value={brand.id}>
-                          {brand.nombre}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                {productsQuery.isLoading ? (
-                  <div className="text-sm text-muted-foreground">
-                    Cargando modelos...
-                  </div>
-                ) : productsQuery.isError ? (
-                  <div className="text-sm text-destructive">
-                    No se pudieron cargar los modelos.
-                  </div>
-                ) : (
-                  <ProductsTable
-                    products={filteredProducts}
-                    onEdit={(product) => setEditingProductId(product.id)}
-                    onDelete={setDeleteProduct}
-                  />
-                )}
-                {productsData ? (
-                  <PaginationControls
-                    page={productsData.page}
-                    totalPages={productsData.totalPages}
-                    total={productsData.total}
-                    visible={filteredProducts.length}
-                    isFetching={productsQuery.isFetching}
-                    onPrevious={() =>
-                      setProductsPage((currentPage) => currentPage - 1)
-                    }
-                    onNext={() =>
-                      setProductsPage((currentPage) => currentPage + 1)
-                    }
-                  />
-                ) : null}
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
+                <Button
+                  variant="outline"
+                  onClick={() => setIsCreateVariantOpen(true)}
+                >
+                  <Plus />
+                  Agregar talla/color
+                </Button>
+              </div>
+            ) : null}
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid gap-2 md:grid-cols-[minmax(220px,1fr)_180px_160px]">
+              <SearchInput
+                value={variantSearch}
+                onChange={setVariantSearch}
+                placeholder="Buscar prenda, talla, color, SKU o codigo"
+              />
+              <Select
+                value={variantProductFilter}
+                onValueChange={(value) =>
+                  setVariantProductFilter(value ?? "all")
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todas las prendas</SelectItem>
+                  {variantProductOptions.map((product) => (
+                    <SelectItem key={product.id} value={product.id}>
+                      {product.nombre}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select
+                value={variantStockFilter}
+                onValueChange={(value) => setVariantStockFilter(value ?? "all")}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todo inventario</SelectItem>
+                  <SelectItem value="low">Necesita reposicion</SelectItem>
+                  <SelectItem value="ok">Disponible</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            {variantsQuery.isLoading ? (
+              <div className="text-sm text-muted-foreground">
+                Cargando prendas...
+              </div>
+            ) : variantsQuery.isError ? (
+              <div className="text-sm text-destructive">
+                No se pudieron cargar las prendas.
+              </div>
+            ) : (
+              <VariantsTable
+                variants={filteredVariants}
+                onEdit={(variant) => setEditingVariantId(variant.id)}
+                onDelete={setDeleteVariant}
+                onBarcode={setBarcodeVariant}
+                showActions={canManageInventory}
+              />
+            )}
+            {variantsData ? (
+              <PaginationControls
+                page={variantsData.page}
+                totalPages={variantsData.totalPages}
+                total={variantsData.total}
+                visible={filteredVariants.length}
+                isFetching={variantsQuery.isFetching}
+                onPrevious={() =>
+                  setVariantsPage((currentPage) => currentPage - 1)
+                }
+                onNext={() => setVariantsPage((currentPage) => currentPage + 1)}
+              />
+            ) : null}
+          </CardContent>
+        </Card>
       </section>
 
-      <Dialog open={isRegisterProductOpen} onOpenChange={setIsRegisterProductOpen}>
+      <Dialog
+        open={isRegisterProductOpen}
+        onOpenChange={setIsRegisterProductOpen}
+      >
         <DialogContent className="max-h-[92svh] overflow-y-auto sm:max-w-2xl">
           <DialogHeader>
             <DialogTitle>Registrar prenda</DialogTitle>
@@ -368,39 +277,6 @@ export function InventarioPage() {
       </Dialog>
 
       <Dialog
-        open={Boolean(editingProductId)}
-        onOpenChange={(open) => {
-          if (!open) {
-            setEditingProductId(null)
-          }
-        }}
-      >
-        <DialogContent className="max-h-[88svh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Editar modelo base</DialogTitle>
-            <DialogDescription>
-              Actualiza nombre, detalle y marca.
-            </DialogDescription>
-          </DialogHeader>
-          {editProductQuery.isLoading ? (
-            <div className="text-sm text-muted-foreground">
-              Cargando modelo...
-            </div>
-          ) : editProductQuery.data ? (
-            <ProductForm
-              brands={brands}
-              product={editProductQuery.data}
-              onSuccess={() => setEditingProductId(null)}
-            />
-          ) : (
-            <div className="text-sm text-destructive">
-              No se pudo cargar el modelo.
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
-
-      <Dialog
         open={Boolean(editingVariantId)}
         onOpenChange={(open) => {
           if (!open) {
@@ -443,19 +319,6 @@ export function InventarioPage() {
             setBarcodeVariant(null)
           }
         }}
-      />
-
-      <ConfirmDeactivateDialog
-        open={Boolean(deleteProduct)}
-        title="Desactivar modelo"
-        description={`Esta accion desactivara ${deleteProduct?.nombre ?? ""}.`}
-        isPending={deleteProductMutation.isPending}
-        onOpenChange={(open) => {
-          if (!open) {
-            setDeleteProduct(null)
-          }
-        }}
-        onConfirm={() => void handleDeleteProduct()}
       />
 
       <ConfirmDeactivateDialog
@@ -571,7 +434,11 @@ function ConfirmDeactivateDialog({
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancelar
           </Button>
-          <Button variant="destructive" disabled={isPending} onClick={onConfirm}>
+          <Button
+            variant="destructive"
+            disabled={isPending}
+            onClick={onConfirm}
+          >
             {isPending ? "Desactivando..." : "Desactivar"}
           </Button>
         </DialogFooter>
@@ -592,22 +459,6 @@ function includesSearch(values: string[], search: string) {
   }
 
   return values.some((value) => normalizeText(value).includes(normalizedSearch))
-}
-
-function filterProducts(
-  products: Product[],
-  filters: { search: string; brandId: string }
-) {
-  return products.filter((product) => {
-    const matchesSearch = includesSearch(
-      [product.nombre, product.caracteristica_distintiva, product.marca_nombre],
-      filters.search
-    )
-    const matchesBrand =
-      filters.brandId === "all" || product.marca_id === filters.brandId
-
-    return matchesSearch && matchesBrand
-  })
 }
 
 function filterVariants(

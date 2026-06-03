@@ -15,7 +15,7 @@ export function AppLayout() {
     <SidebarProvider>
       <AppSidebar />
       <SidebarInset>
-        <header className="sticky top-0 z-10 flex h-14 items-center justify-between border-b bg-background px-4">
+        <header className="sticky top-0 z-10 flex h-14 items-center justify-between border-b bg-card/95 px-4 shadow-sm shadow-slate-950/5 backdrop-blur supports-[backdrop-filter]:bg-card/80">
           <div className="flex min-w-0 items-center gap-3">
             <SidebarTrigger
               render={<Button variant="ghost" size="icon" aria-label="Menu" />}
@@ -24,9 +24,7 @@ export function AppLayout() {
             </SidebarTrigger>
             <div className="flex min-w-0 items-center gap-2">
               <Store className="size-5 text-primary" />
-              <span className="truncate text-sm font-medium">
-                POS Boutique
-              </span>
+              <span className="truncate text-sm font-medium">Boutique POS</span>
             </div>
           </div>
           <RoleSwitcher />

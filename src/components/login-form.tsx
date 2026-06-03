@@ -1,5 +1,6 @@
 import { useState } from "react"
 import { useNavigate } from "react-router-dom"
+import { Store } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
@@ -19,6 +20,19 @@ import {
 } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 import { useAuthStore } from "@/store"
+import type { Role } from "@/shared/types/domain"
+
+function getHomePath(role: Role) {
+  if (role === "cashier") {
+    return "/cajero"
+  }
+
+  if (role === "warehouse") {
+    return "/inventario"
+  }
+
+  return "/dashboard"
+}
 
 export function LoginForm({
   className,
@@ -41,7 +55,7 @@ export function LoginForm({
 
     try {
       const user = await login({ userName, password })
-      navigate(user.firstLogin ? "/reset-password" : "/dashboard", {
+      navigate(user.firstLogin ? "/reset-password" : getHomePath(user.role), {
         replace: true,
       })
     } catch {
@@ -53,12 +67,17 @@ export function LoginForm({
 
   return (
     <div className={cn("flex flex-col gap-6", className)} {...props}>
-      <Card>
-        <CardHeader>
-          <CardTitle>Ingresar</CardTitle>
-          <CardDescription>
-            Usa tus credenciales para acceder al POS.
-          </CardDescription>
+      <Card className="border bg-card/95 shadow-lg shadow-slate-950/10">
+        <CardHeader className="gap-3">
+          <div className="flex size-11 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+            <Store className="size-5" />
+          </div>
+          <div>
+            <CardTitle>Entrar al punto de venta</CardTitle>
+            <CardDescription>
+              Accede para vender, consultar inventario o administrar la tienda.
+            </CardDescription>
+          </div>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit}>
@@ -69,7 +88,7 @@ export function LoginForm({
                   id="user_name"
                   name="user_name"
                   autoComplete="username"
-                  placeholder="admin"
+                  placeholder="tu.usuario"
                   required
                 />
               </Field>
@@ -85,11 +104,15 @@ export function LoginForm({
               </Field>
               <Field>
                 {error ? <FieldError>{error}</FieldError> : null}
-                <Button type="submit" disabled={isSubmitting}>
-                  {isSubmitting ? "Ingresando..." : "Ingresar"}
+                <Button
+                  className="w-full"
+                  type="submit"
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting ? "Validando..." : "Entrar"}
                 </Button>
                 <FieldDescription className="text-center">
-                  La sesion se valida con el servidor.
+                  Tu sesion queda protegida por el servidor.
                 </FieldDescription>
               </Field>
             </FieldGroup>

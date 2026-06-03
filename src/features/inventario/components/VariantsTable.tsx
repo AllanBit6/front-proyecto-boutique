@@ -23,6 +23,7 @@ interface VariantsTableProps {
   onEdit: (variant: Variant) => void
   onDelete: (variant: Variant) => void
   onBarcode: (variant: Variant) => void
+  showActions?: boolean
 }
 
 export function VariantsTable({
@@ -30,6 +31,7 @@ export function VariantsTable({
   onEdit,
   onDelete,
   onBarcode,
+  showActions = true,
 }: VariantsTableProps) {
   if (!variants.length) {
     return (
@@ -48,7 +50,7 @@ export function VariantsTable({
           <TableHead>Talla / color</TableHead>
           <TableHead className="text-right">Precio</TableHead>
           <TableHead>Disponibles</TableHead>
-          <TableHead className="w-10" />
+          {showActions ? <TableHead className="w-10" /> : null}
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -63,7 +65,9 @@ export function VariantsTable({
                   {variant.codigo_barras}
                 </div>
               </TableCell>
-              <TableCell>{variant.producto_nombre || variant.producto_id}</TableCell>
+              <TableCell>
+                {variant.producto_nombre || variant.producto_id}
+              </TableCell>
               <TableCell>
                 {variant.talla_nombre || variant.talla_id} /{" "}
                 {variant.color_nombre || variant.color_id}
@@ -76,38 +80,40 @@ export function VariantsTable({
                   {variant.stock_actual} disp.
                 </Badge>
               </TableCell>
-              <TableCell>
-                <DropdownMenu>
-                  <DropdownMenuTrigger
-                    render={
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        aria-label="Acciones de variante"
-                      />
-                    }
-                  >
-                    <MoreHorizontal />
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-36">
-                    <DropdownMenuItem onClick={() => onBarcode(variant)}>
-                      <Barcode />
-                      Codigo
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => onEdit(variant)}>
-                      <Edit />
-                      Editar
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      variant="destructive"
-                      onClick={() => onDelete(variant)}
+              {showActions ? (
+                <TableCell>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger
+                      render={
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          aria-label="Acciones de variante"
+                        />
+                      }
                     >
-                      <Trash2 />
-                      Desactivar
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </TableCell>
+                      <MoreHorizontal />
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-36">
+                      <DropdownMenuItem onClick={() => onBarcode(variant)}>
+                        <Barcode />
+                        Codigo
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => onEdit(variant)}>
+                        <Edit />
+                        Editar
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        variant="destructive"
+                        onClick={() => onDelete(variant)}
+                      >
+                        <Trash2 />
+                        Desactivar
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </TableCell>
+              ) : null}
             </TableRow>
           )
         })}

@@ -2,6 +2,13 @@ import { LogOut } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { useAuthStore } from "@/store"
+import type { Role } from "@/shared/types/domain"
+
+const ROLE_LABELS: Record<Role, string> = {
+  admin: "Administrador",
+  cashier: "Vendedor",
+  warehouse: "Bodega",
+}
 
 export function RoleSwitcher() {
   const user = useAuthStore((state) => state.user)
@@ -11,7 +18,9 @@ export function RoleSwitcher() {
     <div className="flex items-center gap-2">
       <div className="hidden min-w-0 text-right text-xs md:block">
         <div className="truncate font-medium">{user?.name}</div>
-        <div className="text-muted-foreground">{user?.userName}</div>
+        <div className="text-muted-foreground">
+          {user?.role ? ROLE_LABELS[user.role] : user?.userName}
+        </div>
       </div>
       <Button
         variant="ghost"

@@ -14,6 +14,18 @@ import { NotFoundPage } from "@/pages/NotFoundPage"
 import type { FeatureRoute } from "@/shared/types/navigation"
 import { useAuthStore } from "@/store"
 
+function getHomePath(role: string | null) {
+  if (role === "cashier") {
+    return "/cajero"
+  }
+
+  if (role === "warehouse") {
+    return "/inventario"
+  }
+
+  return "/dashboard"
+}
+
 function ProtectedRoute() {
   const location = useLocation()
   const user = useAuthStore((state) => state.user)
@@ -47,10 +59,16 @@ function RoleProtectedRoute({ route }: { route: FeatureRoute }) {
   const role = useAuthStore((state) => state.role)
 
   if (!role || !route.allowedRoles.includes(role)) {
-    return <Navigate to="/dashboard" replace />
+    return <Navigate to={getHomePath(role)} replace />
   }
 
   return route.element
+}
+
+function HomeRedirect() {
+  const role = useAuthStore((state) => state.role)
+
+  return <Navigate to={getHomePath(role)} replace />
 }
 
 export const router = createBrowserRouter([
@@ -71,7 +89,7 @@ export const router = createBrowserRouter([
         children: [
           {
             index: true,
-            element: <Navigate to="/dashboard" replace />,
+            element: <HomeRedirect />,
           },
           ...featureRoutes.map((route) => ({
             path: route.path,

@@ -58,7 +58,9 @@ export function UsuariosPage() {
           <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <CardTitle>Usuarios</CardTitle>
-              <CardDescription>Administracion de usuarios del POS</CardDescription>
+              <CardDescription>
+                Equipo con acceso al punto de venta y administracion.
+              </CardDescription>
             </div>
             {usersData ? (
               <div className="text-sm text-muted-foreground">
@@ -117,7 +119,9 @@ export function UsuariosPage() {
         <Card>
           <CardHeader>
             <CardTitle>Nuevo usuario</CardTitle>
-            <CardDescription>Los roles se cargan desde /roles</CardDescription>
+            <CardDescription>
+              Asigna el rol segun su responsabilidad en tienda.
+            </CardDescription>
           </CardHeader>
           <CardContent>
             {rolesQuery.isLoading ? (
@@ -142,7 +146,9 @@ export function UsuariosPage() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Editar usuario</DialogTitle>
-            <DialogDescription>Actualiza los datos y rol del usuario.</DialogDescription>
+            <DialogDescription>
+              Actualiza los datos y rol del usuario.
+            </DialogDescription>
           </DialogHeader>
           {editUserQuery.isLoading ? (
             <div className="text-sm text-muted-foreground">

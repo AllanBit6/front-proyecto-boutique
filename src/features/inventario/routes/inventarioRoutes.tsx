@@ -8,7 +8,7 @@ export const inventarioRoutes: FeatureRoute[] = [
     path: "inventario",
     title: "Inventario",
     element: <InventarioPage />,
-    allowedRoles: ["admin"],
+    allowedRoles: ["admin", "cashier", "warehouse"],
     icon: Boxes,
     showInSidebar: true,
   },

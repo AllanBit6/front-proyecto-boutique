@@ -146,22 +146,25 @@ export function useDeleteVariant() {
   })
 }
 
-export function useBrands() {
+export function useBrands(enabled = true) {
   return useQuery({
+    enabled,
     queryKey: brandsQueryKey,
     queryFn: fetchBrands,
   })
 }
 
-export function useSizes() {
+export function useSizes(enabled = true) {
   return useQuery({
+    enabled,
     queryKey: sizesQueryKey,
     queryFn: fetchSizes,
   })
 }
 
-export function useColors() {
+export function useColors(enabled = true) {
   return useQuery({
+    enabled,
     queryKey: colorsQueryKey,
     queryFn: fetchColors,
   })

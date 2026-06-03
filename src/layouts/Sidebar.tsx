@@ -1,3 +1,4 @@
+import { Store } from "lucide-react"
 import { NavLink } from "react-router-dom"
 
 import { featureRoutes } from "@/features/featureRoutes"
@@ -23,11 +24,21 @@ export function AppSidebar() {
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader className="border-b">
-        <div className="px-2 py-1 text-sm font-semibold">Front POS</div>
+        <div className="flex items-center gap-2 px-2 py-2">
+          <div className="flex size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+            <Store className="size-4" />
+          </div>
+          <div className="min-w-0">
+            <div className="truncate text-sm font-semibold">Boutique POS</div>
+            <div className="truncate text-xs text-muted-foreground">
+              Venta e inventario
+            </div>
+          </div>
+        </div>
       </SidebarHeader>
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel>Modulos</SidebarGroupLabel>
+          <SidebarGroupLabel>Operacion</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {visibleRoutes.map((route) => {

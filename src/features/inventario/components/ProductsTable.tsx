@@ -22,12 +22,14 @@ interface ProductsTableProps {
   products: Product[]
   onEdit: (product: Product) => void
   onDelete: (product: Product) => void
+  showActions?: boolean
 }
 
 export function ProductsTable({
   products,
   onEdit,
   onDelete,
+  showActions = true,
 }: ProductsTableProps) {
   if (!products.length) {
     return (
@@ -44,7 +46,7 @@ export function ProductsTable({
           <TableHead>Modelo</TableHead>
           <TableHead>Marca</TableHead>
           <TableHead>Estado</TableHead>
-          <TableHead className="w-10" />
+          {showActions ? <TableHead className="w-10" /> : null}
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -62,34 +64,36 @@ export function ProductsTable({
                 {product.activo ? "Activo" : "Inactivo"}
               </Badge>
             </TableCell>
-            <TableCell>
-              <DropdownMenu>
-                <DropdownMenuTrigger
-                  render={
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      aria-label="Acciones de producto"
-                    />
-                  }
-                >
-                  <MoreHorizontal />
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-36">
-                  <DropdownMenuItem onClick={() => onEdit(product)}>
-                    <Edit />
-                    Editar
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    variant="destructive"
-                    onClick={() => onDelete(product)}
+            {showActions ? (
+              <TableCell>
+                <DropdownMenu>
+                  <DropdownMenuTrigger
+                    render={
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        aria-label="Acciones de producto"
+                      />
+                    }
                   >
-                    <Trash2 />
-                    Desactivar
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </TableCell>
+                    <MoreHorizontal />
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-36">
+                    <DropdownMenuItem onClick={() => onEdit(product)}>
+                      <Edit />
+                      Editar
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      variant="destructive"
+                      onClick={() => onDelete(product)}
+                    >
+                      <Trash2 />
+                      Desactivar
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </TableCell>
+            ) : null}
           </TableRow>
         ))}
       </TableBody>

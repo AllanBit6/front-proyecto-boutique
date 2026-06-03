@@ -8,7 +8,8 @@ import type {
 } from "@/features/usuarios/types/user"
 
 interface ApiRole {
-  id: string
+  id?: string
+  id_rol?: string
   nombre?: string
   name?: string
 }
@@ -59,9 +60,11 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 function normalizeRole(role: ApiRole): RoleOption {
+  const id = role.id_rol ?? role.id ?? ""
+
   return {
-    id: role.id,
-    nombre: role.nombre ?? role.name ?? role.id,
+    id,
+    nombre: role.nombre ?? role.name ?? id,
   }
 }
 
@@ -137,9 +140,11 @@ export async function fetchUsers(params: {
   })
   const response = await request<unknown>(`/usuarios?${searchParams}`)
   const meta = readMeta(response)
-  const users = readArray<ApiUser>(response, ["usuarios", "users", "items"]).map(
-    normalizeUser
-  )
+  const users = readArray<ApiUser>(response, [
+    "usuarios",
+    "users",
+    "items",
+  ]).map(normalizeUser)
   const page = meta.page ?? meta.pagina ?? meta.current_page ?? params.page
   const limit = meta.limit ?? meta.per_page ?? params.limit
   const total = meta.total ?? users.length
@@ -207,5 +212,7 @@ export async function resetPassword({
 export async function fetchRoles(): Promise<RoleOption[]> {
   const response = await request<unknown>("/roles")
 
-  return readArray<ApiRole>(response, ["roles", "items"]).map(normalizeRole)
+  return readArray<ApiRole>(response, ["roles", "items"])
+    .map(normalizeRole)
+    .filter((role) => role.id)
 }

@@ -6,7 +6,7 @@ import type { FeatureRoute } from "@/shared/types/navigation"
 export const cajeroRoutes: FeatureRoute[] = [
   {
     path: "cajero",
-    title: "Cajero",
+    title: "POS",
     element: <CajeroPage />,
     allowedRoles: ["cashier"],
     icon: ScanBarcode,
