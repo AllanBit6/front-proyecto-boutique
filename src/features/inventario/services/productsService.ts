@@ -10,6 +10,7 @@ import type {
   UpdateVariantInput,
   Variant,
 } from "@/features/inventario/types/product"
+import { buildBarcode } from "@/features/inventario/utils/codes"
 
 const API_URL = import.meta.env.VITE_API_URL ?? ""
 
@@ -36,7 +37,9 @@ interface ApiProduct {
   caracteristica_distintiva?: string
   marca_id?: string
   marca?: ApiCatalog
-  activo?: boolean
+  activo?: boolean | string | number
+  estado?: string
+  deleted_at?: string | null
 }
 
 interface ApiVariant {
@@ -50,11 +53,14 @@ interface ApiVariant {
   color?: ApiCatalog & { id_color?: string }
   sku?: string
   codigo_barras?: string
+  codigoBarras?: string
   precio_compra?: number | string
   precio_venta?: number | string
   stock_minimo?: number
   stock_actual?: number
-  activo?: boolean
+  activo?: boolean | string | number
+  estado?: string
+  deleted_at?: string | null
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
@@ -116,11 +122,61 @@ function readMeta(response: unknown): ApiMeta {
   return meta && typeof meta === "object" ? (meta as ApiMeta) : (record as ApiMeta)
 }
 
+function readRecord<T>(response: unknown, keys: string[] = []): T {
+  if (!response || typeof response !== "object") {
+    return {} as T
+  }
+
+  const record = response as Record<string, unknown>
+
+  for (const key of keys) {
+    const value = record[key]
+
+    if (value && typeof value === "object" && !Array.isArray(value)) {
+      return value as T
+    }
+  }
+
+  if (record.data && typeof record.data === "object") {
+    return readRecord<T>(record.data, keys)
+  }
+
+  return record as T
+}
+
 function normalizeCatalog(item: ApiCatalog, idKey: keyof ApiCatalog): CatalogOption {
   return {
     id: String(item[idKey] ?? item.id ?? ""),
     nombre: item.nombre ?? "",
   }
+}
+
+function readActive(item: {
+  activo?: boolean | string | number
+  estado?: string
+  deleted_at?: string | null
+}) {
+  if (item.deleted_at) {
+    return false
+  }
+
+  if (typeof item.activo === "boolean") {
+    return item.activo
+  }
+
+  if (typeof item.activo === "number") {
+    return item.activo === 1
+  }
+
+  const value = String(item.activo ?? item.estado ?? "")
+    .trim()
+    .toLocaleLowerCase()
+
+  if (["false", "0", "inactivo", "desactivado", "inactive"].includes(value)) {
+    return false
+  }
+
+  return true
 }
 
 function normalizeProduct(product: ApiProduct): Product {
@@ -130,7 +186,7 @@ function normalizeProduct(product: ApiProduct): Product {
     caracteristica_distintiva: product.caracteristica_distintiva ?? "",
     marca_id: product.marca_id ?? product.marca?.id_marca ?? product.marca?.id ?? "",
     marca_nombre: product.marca?.nombre ?? "",
-    activo: product.activo ?? true,
+    activo: readActive(product),
   }
 }
 
@@ -145,12 +201,23 @@ function normalizeVariant(variant: ApiVariant): Variant {
     color_id: variant.color_id ?? variant.color?.id_color ?? variant.color?.id ?? "",
     color_nombre: variant.color?.nombre ?? "",
     sku: variant.sku ?? "",
-    codigo_barras: variant.codigo_barras ?? "",
+    codigo_barras: variant.codigo_barras ?? variant.codigoBarras ?? "",
     precio_compra: Number(variant.precio_compra ?? 0),
     precio_venta: Number(variant.precio_venta ?? 0),
     stock_minimo: variant.stock_minimo ?? 0,
     stock_actual: variant.stock_actual ?? 0,
-    activo: variant.activo ?? true,
+    activo: readActive(variant),
+  }
+}
+
+function withLocalBarcode(variant: Variant, codigoBarras: string): Variant {
+  if (variant.codigo_barras) {
+    return variant
+  }
+
+  return {
+    ...variant,
+    codigo_barras: codigoBarras,
   }
 }
 
@@ -189,30 +256,30 @@ export async function fetchProducts(params: {
 }
 
 export async function fetchProduct(id: string): Promise<Product> {
-  const response = await request<ApiProduct>(`/productos/${id}`)
+  const response = await request<unknown>(`/productos/${id}`)
 
-  return normalizeProduct(response)
+  return normalizeProduct(readRecord<ApiProduct>(response, ["producto"]))
 }
 
 export async function createProduct(input: CreateProductInput): Promise<Product> {
-  const response = await request<ApiProduct>("/productos", {
+  const response = await request<unknown>("/productos", {
     method: "POST",
     body: JSON.stringify(input),
   })
 
-  return normalizeProduct(response)
+  return normalizeProduct(readRecord<ApiProduct>(response, ["producto"]))
 }
 
 export async function updateProduct(params: {
   id: string
   input: UpdateProductInput
 }): Promise<Product> {
-  const response = await request<ApiProduct>(`/productos/${params.id}`, {
+  const response = await request<unknown>(`/productos/${params.id}`, {
     method: "PATCH",
     body: JSON.stringify(params.input),
   })
 
-  return normalizeProduct(response)
+  return normalizeProduct(readRecord<ApiProduct>(response, ["producto"]))
 }
 
 export async function deleteProduct(id: string): Promise<void> {
@@ -236,30 +303,56 @@ export async function fetchVariants(params: {
 }
 
 export async function fetchVariant(id: string): Promise<Variant> {
-  const response = await request<ApiVariant>(`/variantes/${id}`)
+  const response = await request<unknown>(`/variantes/${id}`)
 
-  return normalizeVariant(response)
+  return normalizeVariant(readRecord<ApiVariant>(response, ["variante"]))
 }
 
 export async function createVariant(input: CreateVariantInput): Promise<Variant> {
-  const response = await request<ApiVariant>("/variantes", {
+  const codigoBarras = input.codigo_barras || buildBarcode()
+  const payload = {
+    ...input,
+    codigo_barras: codigoBarras,
+  }
+  const response = await request<unknown>("/variantes", {
     method: "POST",
-    body: JSON.stringify(input),
+    body: JSON.stringify(payload),
   })
+  const variant = normalizeVariant(readRecord<ApiVariant>(response, ["variante"]))
 
-  return normalizeVariant(response)
+  if (variant.id && !variant.codigo_barras) {
+    const updateResponse = await request<unknown>(`/variantes/${variant.id}`, {
+      method: "PATCH",
+      body: JSON.stringify(payload),
+    })
+
+    return withLocalBarcode(
+      normalizeVariant(readRecord<ApiVariant>(updateResponse, ["variante"])),
+      codigoBarras
+    )
+  }
+
+  return withLocalBarcode(variant, codigoBarras)
 }
 
 export async function updateVariant(params: {
   id: string
   input: UpdateVariantInput
 }): Promise<Variant> {
-  const response = await request<ApiVariant>(`/variantes/${params.id}`, {
+  const codigoBarras = params.input.codigo_barras || buildBarcode()
+  const payload = {
+    ...params.input,
+    codigo_barras: codigoBarras,
+  }
+  const response = await request<unknown>(`/variantes/${params.id}`, {
     method: "PATCH",
-    body: JSON.stringify(params.input),
+    body: JSON.stringify(payload),
   })
 
-  return normalizeVariant(response)
+  return withLocalBarcode(
+    normalizeVariant(readRecord<ApiVariant>(response, ["variante"])),
+    codigoBarras
+  )
 }
 
 export async function deleteVariant(id: string): Promise<void> {

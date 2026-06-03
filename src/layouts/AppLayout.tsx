@@ -23,7 +23,9 @@ export function AppLayout() {
               <Menu />
             </SidebarTrigger>
             <div className="flex min-w-0 items-center gap-2">
-              <Store className="size-5 text-primary" />
+              <span className="icon-surface size-7 bg-primary/10 text-primary">
+                <Store className="size-4" />
+              </span>
               <span className="truncate text-sm font-medium">Boutique POS</span>
             </div>
           </div>

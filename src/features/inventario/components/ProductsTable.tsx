@@ -61,7 +61,7 @@ export function ProductsTable({
             <TableCell>{product.marca_nombre || product.marca_id}</TableCell>
             <TableCell>
               <Badge variant={product.activo ? "secondary" : "outline"}>
-                {product.activo ? "Activo" : "Inactivo"}
+                {product.activo ? "Activo" : "Desactivado"}
               </Badge>
             </TableCell>
             {showActions ? (

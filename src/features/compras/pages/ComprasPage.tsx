@@ -1,4 +1,5 @@
 import { useState } from "react"
+import { toast } from "sonner"
 
 import {
   AdminPager,
@@ -26,7 +27,6 @@ import {
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue,
 } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
 import {
@@ -47,15 +47,44 @@ export function ComprasPage() {
   const variantsQuery = useVariants({ page: 1, limit: 100 })
   const createPurchase = useCreatePurchase()
   const cancelPurchase = useCancelPurchase()
+  const selectedVariant = (variantsQuery.data?.data ?? []).find(
+    (variant) => variant.id === variantId
+  )
 
   async function handleCreate(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
     const form = new FormData(event.currentTarget)
-    await createPurchase.mutateAsync({
+    const cantidad = Number(form.get("cantidad") ?? 0)
+    const precioUnitario = Number(form.get("precio_unitario") ?? 0)
+
+    if (!variantId || !selectedVariant) {
+      toast.error("Selecciona una prenda para sumar stock.")
+      return
+    }
+
+    if (!cantidad || cantidad <= 0) {
+      toast.error("Ingresa una cantidad mayor a cero.")
+      return
+    }
+
+    if (precioUnitario < 0) {
+      toast.error("Ingresa un costo valido.")
+      return
+    }
+
+    const promise = createPurchase.mutateAsync({
       variante_id: variantId,
-      cantidad: Number(form.get("cantidad") ?? 0),
-      precio_unitario: Number(form.get("precio_unitario") ?? 0),
+      cantidad,
+      precio_unitario: precioUnitario,
     })
+
+    toast.promise(promise, {
+      loading: "Registrando entrada de stock...",
+      success: `Stock sumado para ${selectedVariant.producto_nombre}.`,
+      error: (error) => getErrorMessage(error),
+    })
+
+    await promise
     setVariantId("")
     event.currentTarget.reset()
   }
@@ -63,7 +92,15 @@ export function ComprasPage() {
   async function handleCancel(id: string) {
     const motivo = window.prompt("Motivo de anulacion")
     if (!motivo) return
-    await cancelPurchase.mutateAsync({ id, motivo })
+    const promise = cancelPurchase.mutateAsync({ id, motivo })
+
+    toast.promise(promise, {
+      loading: "Anulando compra...",
+      success: "Compra anulada correctamente.",
+      error: (error) => getErrorMessage(error),
+    })
+
+    await promise
   }
 
   return (
@@ -92,7 +129,15 @@ export function ComprasPage() {
                     onValueChange={(value) => setVariantId(value ?? "")}
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="Selecciona prenda" />
+                      <span
+                        className={
+                          !selectedVariant ? "text-muted-foreground" : ""
+                        }
+                      >
+                        {selectedVariant
+                          ? `${selectedVariant.producto_nombre} / ${selectedVariant.talla_nombre} / ${selectedVariant.color_nombre}`
+                          : "Selecciona prenda"}
+                      </span>
                     </SelectTrigger>
                     <SelectContent>
                       {(variantsQuery.data?.data ?? []).map((variant) => (
@@ -200,4 +245,12 @@ export function ComprasPage() {
       </div>
     </section>
   )
+}
+
+function getErrorMessage(error: unknown) {
+  if (error instanceof Error) {
+    return error.message
+  }
+
+  return "No se pudo completar la operacion."
 }

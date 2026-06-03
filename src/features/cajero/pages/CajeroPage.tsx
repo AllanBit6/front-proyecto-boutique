@@ -1,5 +1,6 @@
 import { Minus, Plus, ScanBarcode, ShoppingCart, Trash2 } from "lucide-react"
 import { useMemo, useState } from "react"
+import { toast } from "sonner"
 
 import { formatCurrency } from "@/features/admin/components/AdminTable"
 import { useVariants } from "@/features/inventario/hooks/useProducts"
@@ -24,7 +25,6 @@ import {
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue,
 } from "@/components/ui/select"
 import {
   Table,
@@ -91,6 +91,19 @@ export function CajeroPage() {
   const variantsQuery = useVariants({ page: 1, limit: 100 })
   const findByBarcode = useFindVariantByBarcode()
   const createSale = useCreateSale()
+  const sellableVariants = useMemo(
+    () =>
+      (variantsQuery.data?.data ?? []).filter(
+        (variant) => variant.activo && variant.stock_actual > 0
+      ),
+    [variantsQuery.data?.data]
+  )
+  const selectedVariant = sellableVariants.find(
+    (variant) => variant.id === selectedVariantId
+  )
+  const selectedPaymentMethod = PAYMENT_METHODS.find(
+    (method) => method.value === paymentMethod
+  )
   const total = useMemo(
     () =>
       cart.reduce(
@@ -108,8 +121,11 @@ export function CajeroPage() {
 
     if (!variant.activo || variant.stock_actual <= 0) {
       setError("La variante no tiene stock disponible.")
-      return
+      toast.error("La prenda no tiene stock disponible.")
+      return false
     }
+
+    let added = true
 
     setCart((current) => {
       const existing = current.find((item) => item.variant.id === variant.id)
@@ -117,6 +133,8 @@ export function CajeroPage() {
       if (existing) {
         if (existing.quantity >= variant.stock_actual) {
           setError("No puedes vender mas que el stock actual.")
+          toast.warning("No puedes vender mas que el stock actual.")
+          added = false
           return current
         }
 
@@ -129,6 +147,8 @@ export function CajeroPage() {
 
       return [...current, { variant, quantity: 1 }]
     })
+
+    return added
   }
 
   function updateQuantity(variantId: string, quantity: number) {
@@ -162,37 +182,54 @@ export function CajeroPage() {
 
     try {
       const variant = await findByBarcode.mutateAsync(code)
-      addVariant(variant)
-      playScanBeep()
+      if (addVariant(variant)) {
+        playScanBeep()
+        toast.success(`${variantLabel(variant)} agregado al carrito.`)
+      }
       setBarcode("")
     } catch (exception) {
-      setError(
+      const message =
         exception instanceof Error
           ? exception.message
           : "No se encontro el codigo."
-      )
+      setError(message)
+      toast.error(message)
     }
   }
 
-  async function handleCheckout(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault()
+  async function submitCheckout(form?: HTMLFormElement | null) {
     setError("")
 
     if (cart.length === 0) {
       setError("Agrega al menos una prenda al carrito.")
+      toast.error("Agrega al menos una prenda al carrito.")
+      return
+    }
+
+    const inactiveItem = cart.find(
+      (item) => !item.variant.activo || item.variant.stock_actual <= 0
+    )
+
+    if (inactiveItem) {
+      const message = `${variantLabel(inactiveItem.variant)} ya no esta disponible para vender.`
+      setError(message)
+      toast.error(message)
       return
     }
 
     if (paymentMethod === "EFECTIVO" && received < total) {
       setError("El monto recibido no cubre el total.")
+      toast.error("El monto recibido no cubre el total.")
       return
     }
 
     try {
-      const form = new FormData(event.currentTarget)
-      await createSale.mutateAsync({
-        nombre_cliente: String(form.get("nombre_cliente") || "Cliente final"),
-        nit: String(form.get("nit") || "CF"),
+      const formData = form ? new FormData(form) : new FormData()
+      const payload = {
+        nombre_cliente: String(
+          formData.get("nombre_cliente") || "Cliente final"
+        ),
+        nit: String(formData.get("nit") || "CF"),
         detalles: cart.map((item) => ({
           variante_id: item.variant.id,
           cantidad: item.quantity,
@@ -209,18 +246,39 @@ export function CajeroPage() {
                 : referenceNumber || undefined,
           },
         ],
+      }
+
+      console.info("[sale] submit", {
+        payload,
+        cart,
+        total,
+        received,
       })
+
+      const promise = createSale.mutateAsync(payload)
+
+      toast.promise(promise, {
+        loading: "Registrando venta...",
+        success: "Venta registrada correctamente.",
+        error: (error) => getErrorMessage(error, "No se pudo registrar la venta."),
+      })
+
+      await promise
       setCart([])
       setAmountReceived("")
       setReferenceNumber("")
-      event.currentTarget.reset()
+      form?.reset()
     } catch (exception) {
-      setError(
-        exception instanceof Error
-          ? exception.message
-          : "No se pudo registrar la venta."
-      )
+      const message = getErrorMessage(exception, "No se pudo registrar la venta.")
+      console.error("[sale] failed", exception)
+      setError(message)
     }
+  }
+
+  async function handleCheckout(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    console.info("[sale] form submit triggered")
+    await submitCheckout(event.currentTarget)
   }
 
   return (
@@ -272,7 +330,7 @@ export function CajeroPage() {
               <Select
                 value={selectedVariantId}
                 onValueChange={(value) => {
-                  const variant = (variantsQuery.data?.data ?? []).find(
+                  const variant = sellableVariants.find(
                     (item) => item.id === value
                   )
                   setSelectedVariantId("")
@@ -282,10 +340,16 @@ export function CajeroPage() {
                 }}
               >
                 <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Buscar prenda" />
+                  <span
+                    className={!selectedVariant ? "text-muted-foreground" : ""}
+                  >
+                    {selectedVariant
+                      ? variantLabel(selectedVariant)
+                      : "Buscar prenda"}
+                  </span>
                 </SelectTrigger>
                 <SelectContent>
-                  {(variantsQuery.data?.data ?? []).map((variant) => (
+                  {sellableVariants.map((variant) => (
                     <SelectItem key={variant.id} value={variant.id}>
                       {variantLabel(variant)} -{" "}
                       {formatCurrency(variant.precio_venta)}
@@ -399,7 +463,7 @@ export function CajeroPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <form className="space-y-4" onSubmit={handleCheckout}>
+            <form className="space-y-4" noValidate onSubmit={handleCheckout}>
               <div className="rounded-lg border bg-primary px-4 py-3 text-primary-foreground shadow-sm">
                 <div className="text-sm opacity-85">Total a cobrar</div>
                 <div className="text-3xl font-semibold tracking-normal">
@@ -428,7 +492,7 @@ export function CajeroPage() {
                     }
                   >
                     <SelectTrigger className="w-full">
-                      <SelectValue />
+                      <span>{selectedPaymentMethod?.label ?? "Efectivo"}</span>
                     </SelectTrigger>
                     <SelectContent>
                       {PAYMENT_METHODS.map((method) => (
@@ -477,8 +541,13 @@ export function CajeroPage() {
                 )}
               </FieldGroup>
               <Button
+                type="button"
                 className="h-10 w-full"
                 disabled={cart.length === 0 || createSale.isPending}
+                onClick={(event) => {
+                  console.info("[sale] checkout button clicked")
+                  void submitCheckout(event.currentTarget.form)
+                }}
               >
                 {createSale.isPending ? "Registrando..." : "Finalizar venta"}
               </Button>
@@ -488,4 +557,8 @@ export function CajeroPage() {
       </div>
     </section>
   )
+}
+
+function getErrorMessage(error: unknown, fallback: string) {
+  return error instanceof Error ? error.message : fallback
 }

@@ -15,7 +15,6 @@ import {
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue,
 } from "@/components/ui/select"
 import {
   useCreateUser,
@@ -72,6 +71,7 @@ export function UserForm({ roles, user, onSuccess }: UserFormProps) {
   })
 
   const isPending = createUser.isPending || updateUser.isPending
+  const selectedRole = roles.find((role) => role.id === form.watch("rol_id"))
 
   return (
     <form className="space-y-4" onSubmit={onSubmit}>
@@ -122,7 +122,11 @@ export function UserForm({ roles, user, onSuccess }: UserFormProps) {
                 disabled={!roles.length}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Selecciona permiso" />
+                  <span
+                    className={!selectedRole ? "text-muted-foreground" : ""}
+                  >
+                    {selectedRole?.nombre ?? "Selecciona permiso"}
+                  </span>
                 </SelectTrigger>
                 <SelectContent>
                   {roles.map((role) => (

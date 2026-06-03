@@ -191,6 +191,14 @@
     @apply border bg-card/95 shadow-sm shadow-slate-950/5;
   }
 
+  .icon-surface {
+    @apply inline-flex aspect-square shrink-0 items-center justify-center rounded-lg;
+  }
+
+  .icon-surface > svg {
+    @apply shrink-0;
+  }
+
   .page-accent {
     @apply rounded-lg border bg-linear-to-r from-primary/10 via-accent/40 to-card p-4 shadow-sm;
   }

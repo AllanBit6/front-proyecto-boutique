@@ -92,7 +92,14 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   })
 
   if (!response.ok) {
-    const message = await response.text()
+    const message = await readErrorMessage(response)
+
+    console.error("[API error]", {
+      path,
+      status: response.status,
+      message,
+    })
+
     throw new Error(message || "No se pudo completar la solicitud.")
   }
 
@@ -103,7 +110,35 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return response.json() as Promise<T>
 }
 
-function readArray<T>(response: unknown, keys: string[] = ["data", "items"]) {
+async function readErrorMessage(response: Response) {
+  const text = await response.text()
+
+  if (!text) {
+    return ""
+  }
+
+  try {
+    const data = JSON.parse(text) as Record<string, unknown>
+    const message = data.message ?? data.error ?? data.detail
+
+    if (Array.isArray(message)) {
+      return message.join(", ")
+    }
+
+    if (message) {
+      return String(message)
+    }
+  } catch {
+    return text
+  }
+
+  return text
+}
+
+function readArray<T>(
+  response: unknown,
+  keys: string[] = ["data", "items", "movimientos", "movimientosInventario"]
+) {
   if (Array.isArray(response)) {
     return response as T[]
   }
@@ -118,6 +153,10 @@ function readArray<T>(response: unknown, keys: string[] = ["data", "items"]) {
     if (Array.isArray(record[key])) {
       return record[key] as T[]
     }
+  }
+
+  if (record.data && typeof record.data === "object") {
+    return readArray<T>(record.data, keys)
   }
 
   return []
@@ -358,9 +397,15 @@ export async function createInventoryAdjustment(input: {
   cantidad: number
   motivo: string
 }) {
+  console.info("[stock adjustment] request", input)
+
   return request("/movimientos-inventarios/ajuste", {
     method: "POST",
     body: JSON.stringify(input),
+  }).then((response) => {
+    console.info("[stock adjustment] response", response)
+
+    return response
   })
 }
 

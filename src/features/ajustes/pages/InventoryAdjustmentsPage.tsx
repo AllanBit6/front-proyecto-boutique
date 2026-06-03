@@ -1,5 +1,6 @@
 import { SlidersHorizontal } from "lucide-react"
-import { useState } from "react"
+import { useMemo, useState } from "react"
+import { toast } from "sonner"
 
 import { AdminPager, formatDate } from "@/features/admin/components/AdminTable"
 import {
@@ -23,7 +24,6 @@ import {
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue,
 } from "@/components/ui/select"
 import {
   Table,
@@ -47,6 +47,8 @@ export function InventoryAdjustmentsPage() {
   const [movementType, setMovementType] = useState("all")
   const [adjustmentType, setAdjustmentType] = useState("INGRESO")
   const [variantId, setVariantId] = useState("")
+  const [quantity, setQuantity] = useState("")
+  const [reason, setReason] = useState("")
   const movementsQuery = useInventoryMovements({
     page,
     limit: PAGE_SIZE,
@@ -54,20 +56,113 @@ export function InventoryAdjustmentsPage() {
   })
   const variantsQuery = useVariants({ page: 1, limit: 100 })
   const createAdjustment = useCreateInventoryAdjustment()
+  const activeVariants = useMemo(
+    () => (variantsQuery.data?.data ?? []).filter((variant) => variant.activo),
+    [variantsQuery.data?.data]
+  )
+  const selectedVariant = activeVariants.find(
+    (variant) => variant.id === variantId
+  )
+  const [lastResult, setLastResult] = useState<{
+    type: "success" | "error" | "info"
+    message: string
+  } | null>(null)
+  const selectedAdjustmentType = ADJUSTMENT_TYPES.find(
+    (type) => type.value === adjustmentType
+  )
+
+  async function submitAdjustment(form?: HTMLFormElement | null) {
+    console.info("[stock adjustment] submit action triggered")
+
+    const cantidad = Number(quantity)
+    const motivo = reason.trim()
+
+    if (!variantId || !selectedVariant) {
+      setLastResult({
+        type: "error",
+        message: "Selecciona una prenda activa antes de aplicar el ajuste.",
+      })
+      toast.error("Selecciona una prenda para ajustar el stock.")
+      return
+    }
+
+    if (!cantidad || cantidad <= 0) {
+      setLastResult({
+        type: "error",
+        message: "La cantidad debe ser mayor a cero.",
+      })
+      toast.error("Ingresa una cantidad mayor a cero.")
+      return
+    }
+
+    if (!motivo) {
+      setLastResult({
+        type: "error",
+        message: "El motivo es obligatorio para registrar el movimiento.",
+      })
+      toast.error("Ingresa el motivo del ajuste.")
+      return
+    }
+
+    const payload = {
+      variante_id: variantId,
+      tipo: adjustmentType,
+      cantidad,
+      motivo,
+    }
+    const previousStock = selectedVariant.stock_actual
+    const expectedStock =
+      adjustmentType === "SALIDA"
+        ? previousStock - cantidad
+        : adjustmentType === "AJUSTE"
+          ? cantidad
+          : previousStock + cantidad
+
+    console.info("[stock adjustment] submit", {
+      payload,
+      selectedVariant,
+      previousStock,
+      expectedStock,
+    })
+    setLastResult({
+      type: "info",
+      message: `Aplicando ajuste. Stock actual: ${previousStock}. Resultado esperado: ${expectedStock}.`,
+    })
+
+    const promise = createAdjustment.mutateAsync({
+      ...payload,
+    })
+
+    toast.promise(promise, {
+      loading: "Aplicando ajuste de stock...",
+      success: `Stock actualizado para ${selectedVariant.producto_nombre}.`,
+      error: (error) => getErrorMessage(error),
+    })
+
+    try {
+      await promise
+      setLastResult({
+        type: "success",
+        message:
+          "Ajuste enviado correctamente. Si el stock visible no cambia, revisa la respuesta del backend en la consola.",
+      })
+      setVariantId("")
+      setQuantity("")
+      setReason("")
+      form?.reset()
+    } catch (error) {
+      console.error("[stock adjustment] failed", error)
+      setLastResult({
+        type: "error",
+        message: getErrorMessage(error),
+      })
+    }
+  }
 
   async function handleAdjustment(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
-
-    const form = new FormData(event.currentTarget)
-    await createAdjustment.mutateAsync({
-      variante_id: variantId,
-      tipo: adjustmentType,
-      cantidad: Number(form.get("cantidad") ?? 0),
-      motivo: String(form.get("motivo") ?? ""),
-    })
-
-    setVariantId("")
-    event.currentTarget.reset()
+    console.info("[stock adjustment] form submit triggered")
+    await submitAdjustment(event.currentTarget)
   }
 
   return (
@@ -91,7 +186,16 @@ export function InventoryAdjustmentsPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <form className="space-y-3" onSubmit={handleAdjustment}>
+            <form
+              className="space-y-3"
+              noValidate
+              onSubmit={handleAdjustment}
+              onInvalid={(event) => {
+                event.preventDefault()
+                console.warn("[stock adjustment] invalid form", event.target)
+                toast.error("Revisa los campos del ajuste de stock.")
+              }}
+            >
               <FieldGroup className="gap-3">
                 <Field>
                   <FieldLabel>Prenda</FieldLabel>
@@ -100,10 +204,18 @@ export function InventoryAdjustmentsPage() {
                     onValueChange={(value) => setVariantId(value ?? "")}
                   >
                     <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Selecciona prenda" />
+                      <span
+                        className={
+                          !selectedVariant ? "text-muted-foreground" : ""
+                        }
+                      >
+                        {selectedVariant
+                          ? `${selectedVariant.producto_nombre} / ${selectedVariant.talla_nombre} / ${selectedVariant.color_nombre}`
+                          : "Selecciona prenda"}
+                      </span>
                     </SelectTrigger>
                     <SelectContent>
-                      {(variantsQuery.data?.data ?? []).map((variant) => (
+                      {activeVariants.map((variant) => (
                         <SelectItem key={variant.id} value={variant.id}>
                           {variant.producto_nombre} / {variant.talla_nombre} /{" "}
                           {variant.color_nombre}
@@ -111,6 +223,16 @@ export function InventoryAdjustmentsPage() {
                       ))}
                     </SelectContent>
                   </Select>
+                  {selectedVariant ? (
+                    <div className="text-xs text-muted-foreground">
+                      Stock actual: {selectedVariant.stock_actual} unidades
+                    </div>
+                  ) : null}
+                  {!variantsQuery.isLoading && !activeVariants.length ? (
+                    <div className="text-xs text-destructive">
+                      No hay prendas activas disponibles para ajustar.
+                    </div>
+                  ) : null}
                 </Field>
                 <Field>
                   <FieldLabel>Que cambio haras</FieldLabel>
@@ -121,7 +243,7 @@ export function InventoryAdjustmentsPage() {
                     }
                   >
                     <SelectTrigger className="w-full">
-                      <SelectValue />
+                      <span>{selectedAdjustmentType?.label ?? "Entrada"}</span>
                     </SelectTrigger>
                     <SelectContent>
                       {ADJUSTMENT_TYPES.map((type) => (
@@ -139,7 +261,8 @@ export function InventoryAdjustmentsPage() {
                     name="cantidad"
                     type="number"
                     min="1"
-                    required
+                    value={quantity}
+                    onChange={(event) => setQuantity(event.target.value)}
                   />
                 </Field>
                 <Field>
@@ -148,16 +271,39 @@ export function InventoryAdjustmentsPage() {
                     id="motivo"
                     name="motivo"
                     placeholder="Conteo fisico, merma, correccion..."
-                    required
+                    value={reason}
+                    onChange={(event) => setReason(event.target.value)}
                   />
                 </Field>
               </FieldGroup>
               <Button
+                type="button"
                 className="w-full"
-                disabled={createAdjustment.isPending || !variantId}
+                onClick={() => {
+                  console.info("[stock adjustment] button clicked")
+                  void submitAdjustment()
+                }}
+                disabled={
+                  createAdjustment.isPending ||
+                  !variantId ||
+                  variantsQuery.isLoading
+                }
               >
                 {createAdjustment.isPending ? "Aplicando..." : "Aplicar ajuste"}
               </Button>
+              {lastResult ? (
+                <div
+                  className={
+                    lastResult.type === "error"
+                      ? "rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive"
+                      : lastResult.type === "success"
+                        ? "rounded-md border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-700 dark:text-emerald-300"
+                        : "rounded-md border bg-muted px-3 py-2 text-sm text-muted-foreground"
+                  }
+                >
+                  {lastResult.message}
+                </div>
+              ) : null}
             </form>
           </CardContent>
         </Card>
@@ -178,7 +324,13 @@ export function InventoryAdjustmentsPage() {
               }}
             >
               <SelectTrigger className="w-44">
-                <SelectValue />
+                <span>
+                  {movementType === "all"
+                    ? "Todos"
+                    : ADJUSTMENT_TYPES.find(
+                        (type) => type.value === movementType
+                      )?.label}
+                </span>
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todos</SelectItem>
@@ -192,6 +344,10 @@ export function InventoryAdjustmentsPage() {
             {movementsQuery.isLoading ? (
               <div className="text-sm text-muted-foreground">
                 Cargando movimientos...
+              </div>
+            ) : movementsQuery.isError ? (
+              <div className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                {getErrorMessage(movementsQuery.error)}
               </div>
             ) : (
               <Table>
@@ -218,6 +374,16 @@ export function InventoryAdjustmentsPage() {
                       <TableCell>{item.motivo || item.origen}</TableCell>
                     </TableRow>
                   ))}
+                  {movementsQuery.data?.data.length === 0 ? (
+                    <TableRow>
+                      <TableCell
+                        colSpan={6}
+                        className="py-8 text-center text-sm text-muted-foreground"
+                      >
+                        Todavia no hay cambios de stock registrados.
+                      </TableCell>
+                    </TableRow>
+                  ) : null}
                 </TableBody>
               </Table>
             )}
@@ -236,4 +402,12 @@ export function InventoryAdjustmentsPage() {
       </div>
     </section>
   )
+}
+
+function getErrorMessage(error: unknown) {
+  if (error instanceof Error) {
+    return error.message
+  }
+
+  return "No se pudo aplicar el ajuste de stock."
 }

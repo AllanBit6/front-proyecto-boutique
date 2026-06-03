@@ -45,11 +45,12 @@ export function VariantsTable({
     <Table>
       <TableHeader>
         <TableRow>
-          <TableHead>Codigo</TableHead>
+          <TableHead>SKU</TableHead>
           <TableHead>Prenda</TableHead>
           <TableHead>Talla / color</TableHead>
           <TableHead className="text-right">Precio</TableHead>
           <TableHead>Stock</TableHead>
+          <TableHead>Estado</TableHead>
           {showActions ? <TableHead className="w-10" /> : null}
         </TableRow>
       </TableHeader>
@@ -58,13 +59,11 @@ export function VariantsTable({
           const lowStock = variant.stock_actual <= variant.stock_minimo
 
           return (
-            <TableRow key={variant.id}>
-              <TableCell>
-                <div className="font-medium">{variant.sku}</div>
-                <div className="text-xs text-muted-foreground">
-                  {variant.codigo_barras}
-                </div>
-              </TableCell>
+            <TableRow
+              key={variant.id}
+              className={!variant.activo ? "opacity-70" : undefined}
+            >
+              <TableCell className="font-medium">{variant.sku || "-"}</TableCell>
               <TableCell>
                 {variant.producto_nombre || variant.producto_id}
               </TableCell>
@@ -78,6 +77,11 @@ export function VariantsTable({
               <TableCell>
                 <Badge variant={lowStock ? "destructive" : "secondary"}>
                   {variant.stock_actual} disp.
+                </Badge>
+              </TableCell>
+              <TableCell>
+                <Badge variant={variant.activo ? "secondary" : "outline"}>
+                  {variant.activo ? "Activo" : "Desactivado"}
                 </Badge>
               </TableCell>
               {showActions ? (

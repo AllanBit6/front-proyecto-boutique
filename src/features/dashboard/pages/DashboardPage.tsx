@@ -82,7 +82,7 @@ export function DashboardPage() {
                 <CardTitle className="text-sm text-muted-foreground">
                   {item.title}
                 </CardTitle>
-                <div className="flex size-8 items-center justify-center rounded-md bg-accent text-accent-foreground">
+                <div className="icon-surface size-8 bg-accent text-accent-foreground">
                   <Icon className="size-4" />
                 </div>
               </CardHeader>

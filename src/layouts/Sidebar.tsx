@@ -26,7 +26,7 @@ export function AppSidebar() {
     <Sidebar collapsible="icon">
       <SidebarHeader className="border-b">
         <div className="flex items-center gap-2 px-2 py-2">
-          <div className="flex size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+          <div className="icon-surface size-8 bg-primary text-primary-foreground">
             <Store className="size-4" />
           </div>
           <div className="min-w-0">

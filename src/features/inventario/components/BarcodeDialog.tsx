@@ -1,6 +1,6 @@
-import JsBarcode from "jsbarcode"
 import { Download } from "lucide-react"
-import { useEffect, useRef } from "react"
+import { useEffect, useMemo, useState } from "react"
+import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -11,7 +11,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import { useUpdateVariant } from "@/features/inventario/hooks/useProducts"
 import type { Variant } from "@/features/inventario/types/product"
+import { buildBarcode, buildSku } from "@/features/inventario/utils/codes"
 
 interface BarcodeDialogProps {
   variant: Variant | null
@@ -24,40 +26,71 @@ export function BarcodeDialog({
   open,
   onOpenChange,
 }: BarcodeDialogProps) {
-  const barcodeRef = useRef<SVGSVGElement | null>(null)
-  const barcode = variant?.codigo_barras
+  const [generatedBarcode, setGeneratedBarcode] = useState("")
+  const updateVariant = useUpdateVariant()
+  const barcode = generatedBarcode || variant?.codigo_barras
+  const barcodeSvg = useMemo(
+    () => (barcode ? createEan13Svg(barcode) : ""),
+    [barcode]
+  )
 
   useEffect(() => {
-    if (!barcodeRef.current || !barcode) {
-      return
-    }
-
-    JsBarcode(barcodeRef.current, barcode, {
-      format: "CODE128",
-      displayValue: true,
-      font: "Inter, Arial, sans-serif",
-      fontSize: 14,
-      height: 72,
-      margin: 12,
-      width: 2,
-    })
-  }, [barcode, open])
+    setGeneratedBarcode("")
+  }, [variant?.id, open])
 
   function handleDownload() {
-    if (!barcodeRef.current || !variant) {
+    if (!barcodeSvg || !barcode) {
       return
     }
 
-    const serializer = new XMLSerializer()
-    const svg = serializer.serializeToString(barcodeRef.current)
-    const blob = new Blob([svg], { type: "image/svg+xml;charset=utf-8" })
+    const blob = new Blob([barcodeSvg], { type: "image/svg+xml;charset=utf-8" })
     const url = URL.createObjectURL(blob)
     const link = document.createElement("a")
 
     link.href = url
-    link.download = `barcode-${variant.sku}.svg`
+    link.download = `barcode-${barcode}.svg`
     link.click()
     URL.revokeObjectURL(url)
+  }
+
+  async function handleCreateBarcode() {
+    if (!variant) {
+      return
+    }
+
+    const nextBarcode = buildBarcode()
+    const promise = updateVariant.mutateAsync({
+      id: variant.id,
+      input: {
+        producto_id: variant.producto_id,
+        talla_id: variant.talla_id,
+        color_id: variant.color_id,
+        sku:
+          variant.sku ||
+          buildSku(
+            variant.producto_nombre,
+            variant.talla_nombre,
+            variant.color_nombre
+          ),
+        codigo_barras: nextBarcode,
+        precio_compra: variant.precio_compra,
+        precio_venta: variant.precio_venta,
+        stock_minimo: variant.stock_minimo,
+        activo: variant.activo,
+      },
+    })
+
+    toast.promise(promise, {
+      loading: "Generando codigo de barras...",
+      success: "Codigo de barras listo.",
+      error: (error) =>
+        error instanceof Error
+          ? error.message
+          : "No se pudo generar el codigo.",
+    })
+
+    const updatedVariant = await promise
+    setGeneratedBarcode(updatedVariant.codigo_barras || nextBarcode)
   }
 
   return (
@@ -66,28 +99,150 @@ export function BarcodeDialog({
         <DialogHeader>
           <DialogTitle>Codigo de barras</DialogTitle>
           <DialogDescription>
-            {variant?.sku} - {variant?.producto_nombre}
+            {variant?.producto_nombre} / {variant?.talla_nombre} /{" "}
+            {variant?.color_nombre}
           </DialogDescription>
         </DialogHeader>
-        {barcode ? (
+        {barcodeSvg ? (
           <div className="overflow-x-auto rounded-lg border bg-white p-4">
-            <svg ref={barcodeRef} className="mx-auto block" />
+            <div
+              className="mx-auto w-fit"
+              dangerouslySetInnerHTML={{ __html: barcodeSvg }}
+            />
+          </div>
+        ) : barcode ? (
+          <div className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">
+            Este codigo no se puede imprimir como EAN-13. Genera uno nuevo para
+            esta prenda.
           </div>
         ) : (
           <div className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">
-            Esta presentacion aun no tiene codigo de barras.
+            Esta prenda aun no tiene codigo de barras.
           </div>
         )}
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cerrar
           </Button>
-          <Button disabled={!barcode} onClick={handleDownload}>
-            <Download />
-            Descargar SVG
-          </Button>
+          {barcodeSvg ? (
+            <Button onClick={handleDownload}>
+              <Download />
+              Descargar SVG
+            </Button>
+          ) : (
+            <Button
+              disabled={updateVariant.isPending}
+              onClick={handleCreateBarcode}
+            >
+              {updateVariant.isPending
+                ? "Creando..."
+                : barcode
+                  ? "Generar nuevo codigo"
+                  : "Crear codigo"}
+            </Button>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>
   )
+}
+
+const LEFT_ODD = [
+  "0001101",
+  "0011001",
+  "0010011",
+  "0111101",
+  "0100011",
+  "0110001",
+  "0101111",
+  "0111011",
+  "0110111",
+  "0001011",
+]
+const LEFT_EVEN = [
+  "0100111",
+  "0110011",
+  "0011011",
+  "0100001",
+  "0011101",
+  "0111001",
+  "0000101",
+  "0010001",
+  "0001001",
+  "0010111",
+]
+const RIGHT = [
+  "1110010",
+  "1100110",
+  "1101100",
+  "1000010",
+  "1011100",
+  "1001110",
+  "1010000",
+  "1000100",
+  "1001000",
+  "1110100",
+]
+const PARITY = [
+  "LLLLLL",
+  "LLGLGG",
+  "LLGGLG",
+  "LLGGGL",
+  "LGLLGG",
+  "LGGLLG",
+  "LGGGLL",
+  "LGLGLG",
+  "LGLGGL",
+  "LGGLGL",
+]
+
+function createEan13Svg(value: string) {
+  if (!/^\d{13}$/.test(value)) {
+    return ""
+  }
+
+  const digits = value.split("").map(Number)
+  const leftPattern = PARITY[digits[0]]
+  const leftBits = digits
+    .slice(1, 7)
+    .map((digit, index) =>
+      leftPattern[index] === "L" ? LEFT_ODD[digit] : LEFT_EVEN[digit]
+    )
+    .join("")
+  const rightBits = digits
+    .slice(7)
+    .map((digit) => RIGHT[digit])
+    .join("")
+  const bits = `101${leftBits}01010${rightBits}101`
+  const moduleWidth = 2
+  const quiet = 18
+  const barHeight = 72
+  const guardHeight = 82
+  const textY = 108
+  const width = quiet * 2 + bits.length * moduleWidth
+  const bars = bits
+    .split("")
+    .map((bit, index) => {
+      if (bit !== "1") {
+        return ""
+      }
+
+      const isGuard =
+        index < 3 ||
+        (index >= 45 && index < 50) ||
+        index >= bits.length - 3
+      const height = isGuard ? guardHeight : barHeight
+      const x = quiet + index * moduleWidth
+
+      return `<rect x="${x}" y="10" width="${moduleWidth}" height="${height}" fill="#111827" />`
+    })
+    .join("")
+
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="118" viewBox="0 0 ${width} 118" role="img" aria-label="Codigo de barras ${value}">
+  <rect width="100%" height="100%" fill="#ffffff" />
+  ${bars}
+  <text x="${quiet - 8}" y="${textY}" font-family="Inter, Arial, sans-serif" font-size="13" fill="#111827" text-anchor="middle">${value[0]}</text>
+  <text x="${quiet + 24 * moduleWidth}" y="${textY}" font-family="Inter, Arial, sans-serif" font-size="13" fill="#111827" text-anchor="middle">${value.slice(1, 7)}</text>
+  <text x="${quiet + 72 * moduleWidth}" y="${textY}" font-family="Inter, Arial, sans-serif" font-size="13" fill="#111827" text-anchor="middle">${value.slice(7)}</text>
+</svg>`
 }

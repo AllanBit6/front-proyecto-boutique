@@ -15,7 +15,6 @@ import {
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue,
 } from "@/components/ui/select"
 import {
   useCreateVariant,
@@ -30,6 +29,7 @@ import type {
   Product,
   Variant,
 } from "@/features/inventario/types/product"
+import { buildBarcode, buildSku } from "@/features/inventario/utils/codes"
 
 interface VariantFormProps {
   products: Product[]
@@ -64,12 +64,13 @@ export function VariantForm({
     const input = {
       ...values,
       sku:
-        values.sku?.trim() ||
+        variant?.sku ||
         buildSku(
           product?.nombre ?? "",
           size?.nombre ?? "",
           color?.nombre ?? ""
         ),
+      codigo_barras: variant?.codigo_barras || buildBarcode(),
     }
 
     if (variant) {
@@ -85,6 +86,13 @@ export function VariantForm({
   const isPending = createVariant.isPending || updateVariant.isPending
   const hasCatalogs =
     products.length > 0 && sizes.length > 0 && colors.length > 0
+  const selectedProduct = products.find(
+    (item) => item.id === form.watch("producto_id")
+  )
+  const selectedSize = sizes.find((item) => item.id === form.watch("talla_id"))
+  const selectedColor = colors.find(
+    (item) => item.id === form.watch("color_id")
+  )
 
   return (
     <form className="space-y-4" onSubmit={onSubmit}>
@@ -101,7 +109,9 @@ export function VariantForm({
             disabled={!products.length}
           >
             <SelectTrigger>
-              <SelectValue placeholder="Selecciona una prenda" />
+              <span className={!selectedProduct ? "text-muted-foreground" : ""}>
+                {selectedProduct?.nombre ?? "Selecciona una prenda"}
+              </span>
             </SelectTrigger>
             <SelectContent>
               {products.map((product) => (
@@ -126,7 +136,9 @@ export function VariantForm({
               disabled={!sizes.length}
             >
               <SelectTrigger>
-                <SelectValue placeholder="Talla" />
+                <span className={!selectedSize ? "text-muted-foreground" : ""}>
+                  {selectedSize?.nombre ?? "Talla"}
+                </span>
               </SelectTrigger>
               <SelectContent>
                 {sizes.map((size) => (
@@ -150,7 +162,9 @@ export function VariantForm({
               disabled={!colors.length}
             >
               <SelectTrigger>
-                <SelectValue placeholder="Color" />
+                <span className={!selectedColor ? "text-muted-foreground" : ""}>
+                  {selectedColor?.nombre ?? "Color"}
+                </span>
               </SelectTrigger>
               <SelectContent>
                 {colors.map((color) => (
@@ -163,11 +177,6 @@ export function VariantForm({
             <FieldError errors={[form.formState.errors.color_id]} />
           </Field>
         </div>
-        <Field data-invalid={Boolean(form.formState.errors.sku)}>
-          <FieldLabel htmlFor="sku">Codigo interno</FieldLabel>
-          <Input id="sku" placeholder="Automatico" {...form.register("sku")} />
-          <FieldError errors={[form.formState.errors.sku]} />
-        </Field>
         <div className="grid gap-3 sm:grid-cols-2">
           <Field data-invalid={Boolean(form.formState.errors.precio_compra)}>
             <FieldLabel htmlFor="precio_compra">Costo</FieldLabel>
@@ -215,27 +224,11 @@ export function VariantForm({
   )
 }
 
-function buildSku(productName: string, sizeName: string, colorName: string) {
-  const parts = [productName, sizeName, colorName]
-    .map((part) =>
-      part
-        .normalize("NFD")
-        .replace(/[\u0300-\u036f]/g, "")
-        .replace(/[^a-zA-Z0-9]/g, "")
-        .slice(0, 3)
-        .toUpperCase()
-    )
-    .filter(Boolean)
-
-  return [...parts, Date.now().toString().slice(-4)].join("-")
-}
-
 function getDefaultValues(variant?: Variant): VariantFormValues {
   return {
     producto_id: variant?.producto_id ?? "",
     talla_id: variant?.talla_id ?? "",
     color_id: variant?.color_id ?? "",
-    sku: variant?.sku ?? "",
     precio_compra: variant?.precio_compra ?? 0,
     precio_venta: variant?.precio_venta ?? 0,
     stock_minimo: variant?.stock_minimo ?? 0,

@@ -6,6 +6,7 @@ import {
   Settings2,
 } from "lucide-react"
 import { useMemo, useState } from "react"
+import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -29,7 +30,6 @@ import {
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue,
 } from "@/components/ui/select"
 import { BarcodeDialog } from "@/features/inventario/components/BarcodeDialog"
 import { CatalogManager } from "@/features/inventario/components/CatalogManager"
@@ -80,6 +80,15 @@ export function InventarioPage() {
     () => getVariantProductOptions(variantsData?.data ?? []),
     [variantsData?.data]
   )
+  const selectedProductFilter = variantProductOptions.find(
+    (product) => product.id === variantProductFilter
+  )
+  const selectedStockFilter =
+    variantStockFilter === "low"
+      ? "Necesita reposicion"
+      : variantStockFilter === "ok"
+        ? "Disponible"
+        : "Todo inventario"
   const filteredVariants = useMemo(
     () =>
       filterVariants(variantsData?.data ?? [], {
@@ -100,7 +109,18 @@ export function InventarioPage() {
       return
     }
 
-    await deleteVariantMutation.mutateAsync(deleteVariant.id)
+    const promise = deleteVariantMutation.mutateAsync(deleteVariant.id)
+
+    toast.promise(promise, {
+      loading: "Desactivando prenda...",
+      success: "Prenda desactivada correctamente.",
+      error: (error) =>
+        error instanceof Error
+          ? error.message
+          : "No se pudo desactivar la prenda.",
+    })
+
+    await promise
     setDeleteVariant(null)
   }
 
@@ -155,7 +175,7 @@ export function InventarioPage() {
               <SearchInput
                 value={variantSearch}
                 onChange={setVariantSearch}
-                placeholder="Buscar prenda, talla, color o codigo"
+                placeholder="Buscar SKU, prenda, talla o color"
               />
               <Select
                 value={variantProductFilter}
@@ -164,7 +184,11 @@ export function InventarioPage() {
                 }
               >
                 <SelectTrigger>
-                  <SelectValue />
+                  <span>
+                    {variantProductFilter === "all"
+                      ? "Todas las prendas"
+                      : selectedProductFilter?.nombre}
+                  </span>
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todas las prendas</SelectItem>
@@ -180,7 +204,7 @@ export function InventarioPage() {
                 onValueChange={(value) => setVariantStockFilter(value ?? "all")}
               >
                 <SelectTrigger>
-                  <SelectValue />
+                  <span>{selectedStockFilter}</span>
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todo inventario</SelectItem>
@@ -468,7 +492,6 @@ function filterVariants(
     const matchesSearch = includesSearch(
       [
         variant.sku,
-        variant.codigo_barras,
         variant.producto_nombre,
         variant.talla_nombre,
         variant.color_nombre,

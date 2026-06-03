@@ -81,10 +81,13 @@ export function useCreatePurchase() {
 
   return useMutation({
     mutationFn: createPurchase,
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: adminKeys.purchases })
-      void queryClient.invalidateQueries({ queryKey: variantsQueryKey })
-      void queryClient.invalidateQueries({ queryKey: adminKeys.movements })
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: adminKeys.purchases }),
+        queryClient.invalidateQueries({ queryKey: variantsQueryKey }),
+        queryClient.invalidateQueries({ queryKey: adminKeys.movements }),
+        queryClient.invalidateQueries({ queryKey: adminKeys.dashboard }),
+      ])
     },
   })
 }
@@ -94,10 +97,13 @@ export function useCancelPurchase() {
 
   return useMutation({
     mutationFn: cancelPurchase,
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: adminKeys.purchases })
-      void queryClient.invalidateQueries({ queryKey: variantsQueryKey })
-      void queryClient.invalidateQueries({ queryKey: adminKeys.movements })
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: adminKeys.purchases }),
+        queryClient.invalidateQueries({ queryKey: variantsQueryKey }),
+        queryClient.invalidateQueries({ queryKey: adminKeys.movements }),
+        queryClient.invalidateQueries({ queryKey: adminKeys.dashboard }),
+      ])
     },
   })
 }
@@ -138,9 +144,12 @@ export function useCreateInventoryAdjustment() {
 
   return useMutation({
     mutationFn: createInventoryAdjustment,
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: adminKeys.movements })
-      void queryClient.invalidateQueries({ queryKey: variantsQueryKey })
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: adminKeys.movements }),
+        queryClient.invalidateQueries({ queryKey: variantsQueryKey }),
+        queryClient.invalidateQueries({ queryKey: adminKeys.dashboard }),
+      ])
     },
   })
 }

@@ -1,6 +1,6 @@
 import { useState } from "react"
 import { useNavigate } from "react-router-dom"
-import { Store } from "lucide-react"
+import { LockKeyhole, Store, UserRound } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
@@ -67,45 +67,53 @@ export function LoginForm({
 
   return (
     <div className={cn("flex flex-col gap-6", className)} {...props}>
-      <Card className="border bg-card/95 shadow-lg shadow-slate-950/10">
-        <CardHeader className="gap-3">
-          <div className="flex size-11 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+      <Card className="overflow-hidden border bg-card/92 shadow-xl shadow-slate-950/10 backdrop-blur dark:shadow-black/30">
+        <CardHeader className="gap-4 border-b bg-linear-to-br from-primary/12 via-accent/18 to-transparent p-6">
+          <div className="icon-surface size-12 bg-primary text-primary-foreground shadow-sm">
             <Store className="size-5" />
           </div>
           <div>
-            <CardTitle>Entrar al punto de venta</CardTitle>
-            <CardDescription>
+            <CardTitle className="text-xl">Entrar al punto de venta</CardTitle>
+            <CardDescription className="mt-1 leading-6">
               Accede para vender, consultar inventario o administrar la tienda.
             </CardDescription>
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-6">
           <form onSubmit={handleSubmit}>
-            <FieldGroup>
+            <FieldGroup className="gap-4">
               <Field>
                 <FieldLabel htmlFor="user_name">Usuario</FieldLabel>
-                <Input
-                  id="user_name"
-                  name="user_name"
-                  autoComplete="username"
-                  placeholder="tu.usuario"
-                  required
-                />
+                <div className="relative">
+                  <UserRound className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    id="user_name"
+                    name="user_name"
+                    className="h-10 pl-9"
+                    autoComplete="username"
+                    placeholder="tu.usuario"
+                    required
+                  />
+                </div>
               </Field>
               <Field>
                 <FieldLabel htmlFor="password">Contrasena</FieldLabel>
-                <Input
-                  id="password"
-                  name="password"
-                  type="password"
-                  autoComplete="current-password"
-                  required
-                />
+                <div className="relative">
+                  <LockKeyhole className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    id="password"
+                    name="password"
+                    className="h-10 pl-9"
+                    type="password"
+                    autoComplete="current-password"
+                    required
+                  />
+                </div>
               </Field>
               <Field>
                 {error ? <FieldError>{error}</FieldError> : null}
                 <Button
-                  className="w-full"
+                  className="h-10 w-full"
                   type="submit"
                   disabled={isSubmitting}
                 >
