@@ -1,5 +1,5 @@
 import { Store } from "lucide-react"
-import { NavLink } from "react-router-dom"
+import { NavLink, useLocation } from "react-router-dom"
 
 import { featureRoutes } from "@/features/featureRoutes"
 import {
@@ -16,6 +16,7 @@ import {
 import { useAuthStore } from "@/store"
 
 export function AppSidebar() {
+  const location = useLocation()
   const role = useAuthStore((state) => state.role)
   const visibleRoutes = featureRoutes.filter(
     (route) => role && route.showInSidebar && route.allowedRoles.includes(role)
@@ -47,7 +48,9 @@ export function AppSidebar() {
                 return (
                   <SidebarMenuItem key={route.path}>
                     <SidebarMenuButton
+                      isActive={location.pathname === `/${route.path}`}
                       render={<NavLink to={`/${route.path}`} />}
+                      tooltip={route.title}
                     >
                       {Icon ? <Icon /> : null}
                       <span>{route.title}</span>

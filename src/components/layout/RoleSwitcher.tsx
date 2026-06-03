@@ -1,5 +1,6 @@
 import { LogOut } from "lucide-react"
 
+import { ThemeMenu } from "@/components/layout/ThemeMenu"
 import { Button } from "@/components/ui/button"
 import { useAuthStore } from "@/store"
 import type { Role } from "@/shared/types/domain"
@@ -16,6 +17,7 @@ export function RoleSwitcher() {
 
   return (
     <div className="flex items-center gap-2">
+      <ThemeMenu />
       <div className="hidden min-w-0 text-right text-xs md:block">
         <div className="truncate font-medium">{user?.name}</div>
         <div className="text-muted-foreground">
