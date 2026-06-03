@@ -65,7 +65,11 @@ export function VariantForm({
       ...values,
       sku:
         values.sku?.trim() ||
-        buildSku(product?.nombre ?? "", size?.nombre ?? "", color?.nombre ?? ""),
+        buildSku(
+          product?.nombre ?? "",
+          size?.nombre ?? "",
+          color?.nombre ?? ""
+        ),
     }
 
     if (variant) {
@@ -79,7 +83,8 @@ export function VariantForm({
   })
 
   const isPending = createVariant.isPending || updateVariant.isPending
-  const hasCatalogs = products.length > 0 && sizes.length > 0 && colors.length > 0
+  const hasCatalogs =
+    products.length > 0 && sizes.length > 0 && colors.length > 0
 
   return (
     <form className="space-y-4" onSubmit={onSubmit}>
@@ -159,13 +164,13 @@ export function VariantForm({
           </Field>
         </div>
         <Field data-invalid={Boolean(form.formState.errors.sku)}>
-          <FieldLabel htmlFor="sku">SKU</FieldLabel>
+          <FieldLabel htmlFor="sku">Codigo interno</FieldLabel>
           <Input id="sku" placeholder="Automatico" {...form.register("sku")} />
           <FieldError errors={[form.formState.errors.sku]} />
         </Field>
         <div className="grid gap-3 sm:grid-cols-2">
           <Field data-invalid={Boolean(form.formState.errors.precio_compra)}>
-            <FieldLabel htmlFor="precio_compra">Precio compra</FieldLabel>
+            <FieldLabel htmlFor="precio_compra">Costo</FieldLabel>
             <Input
               id="precio_compra"
               type="number"
@@ -176,7 +181,7 @@ export function VariantForm({
             <FieldError errors={[form.formState.errors.precio_compra]} />
           </Field>
           <Field data-invalid={Boolean(form.formState.errors.precio_venta)}>
-            <FieldLabel htmlFor="precio_venta">Precio venta</FieldLabel>
+            <FieldLabel htmlFor="precio_venta">Precio de venta</FieldLabel>
             <Input
               id="precio_venta"
               type="number"
@@ -188,7 +193,7 @@ export function VariantForm({
           </Field>
         </div>
         <Field data-invalid={Boolean(form.formState.errors.stock_minimo)}>
-          <FieldLabel htmlFor="stock_minimo">Alerta stock</FieldLabel>
+          <FieldLabel htmlFor="stock_minimo">Avisar cuando queden</FieldLabel>
           <Input
             id="stock_minimo"
             type="number"
@@ -204,7 +209,7 @@ export function VariantForm({
           ? "Guardando..."
           : variant
             ? "Guardar cambios"
-            : "Agregar talla/color"}
+            : "Guardar talla/color"}
       </Button>
     </form>
   )

@@ -6,7 +6,7 @@ import type { FeatureRoute } from "@/shared/types/navigation"
 export const reporteriaRoutes: FeatureRoute[] = [
   {
     path: "reportes",
-    title: "Pagos",
+    title: "Cobros",
     element: <ReporteriaPage />,
     allowedRoles: ["admin"],
     icon: CreditCard,

@@ -6,7 +6,7 @@ import type { FeatureRoute } from "@/shared/types/navigation"
 export const ajustesRoutes: FeatureRoute[] = [
   {
     path: "ajustes-inventario",
-    title: "Ajustes",
+    title: "Stock",
     element: <InventoryAdjustmentsPage />,
     allowedRoles: ["admin", "warehouse"],
     icon: SlidersHorizontal,

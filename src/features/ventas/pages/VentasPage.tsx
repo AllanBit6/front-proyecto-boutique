@@ -42,12 +42,12 @@ export function VentasPage() {
       <div>
         <h1 className="page-heading">Ventas</h1>
         <p className="page-subtitle">
-          Revisa tickets emitidos, montos cobrados y anulaciones registradas.
+          Revisa ventas realizadas, montos cobrados y anulaciones.
         </p>
       </div>
       <Card>
         <CardHeader>
-          <CardTitle>Historial de ventas</CardTitle>
+          <CardTitle>Ventas registradas</CardTitle>
           <CardDescription>
             Las ventas nuevas se registran desde el punto de venta.
           </CardDescription>
@@ -63,8 +63,8 @@ export function VentasPage() {
                 <TableRow>
                   <TableHead>Fecha</TableHead>
                   <TableHead>Cliente</TableHead>
-                  <TableHead>Usuario</TableHead>
-                  <TableHead>Items</TableHead>
+                  <TableHead>Vendedor</TableHead>
+                  <TableHead>Prendas</TableHead>
                   <TableHead>Total</TableHead>
                   <TableHead>Estado</TableHead>
                   <TableHead />
@@ -80,7 +80,7 @@ export function VentasPage() {
                     <TableCell>{formatCurrency(item.total)}</TableCell>
                     <TableCell>
                       <Badge variant={item.activo ? "secondary" : "outline"}>
-                        {item.activo ? "Activa" : "Anulada"}
+                        {item.activo ? "Vigente" : "Anulada"}
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right">

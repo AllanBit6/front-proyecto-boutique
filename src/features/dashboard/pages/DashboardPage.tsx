@@ -41,12 +41,12 @@ export function DashboardPage() {
   const topProducts = metrics?.topProducts ?? metrics?.topVariantes ?? []
   const cards = [
     {
-      title: "Ingresos de hoy",
+      title: "Caja de hoy",
       value: formatCurrency(Number(metrics?.ingresosHoy ?? 0)),
       icon: TrendingUp,
     },
     {
-      title: "Ventas realizadas",
+      title: "Ventas de hoy",
       value: Number(metrics?.ventasHoy ?? 0),
       icon: Receipt,
     },
@@ -69,8 +69,7 @@ export function DashboardPage() {
       <div>
         <h1 className="page-heading">Resumen de tienda</h1>
         <p className="page-subtitle">
-          Indicadores rápidos para revisar ventas, ingresos y comportamiento del
-          mostrador.
+          Una vista rapida de ventas, ingresos y productos con mas movimiento.
         </p>
       </div>
       <div className="grid gap-4 md:grid-cols-4">
@@ -102,7 +101,7 @@ export function DashboardPage() {
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_420px]">
         <Card>
           <CardHeader>
-            <CardTitle>Ventas semanales</CardTitle>
+            <CardTitle>Ventas esta semana</CardTitle>
           </CardHeader>
           <CardContent>
             {weeklySales.length ? (
@@ -145,7 +144,7 @@ export function DashboardPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Productos mas vendidos</CardTitle>
+            <CardTitle>Mas vendidos</CardTitle>
           </CardHeader>
           <CardContent>
             {topProducts.length ? (

@@ -134,7 +134,7 @@ export function ProductWizardForm({
             form.formState.errors.caracteristica_distintiva
           )}
         >
-            <FieldLabel htmlFor="wizard_caracteristica">Detalle</FieldLabel>
+          <FieldLabel htmlFor="wizard_caracteristica">Detalle</FieldLabel>
           <Input
             id="wizard_caracteristica"
             placeholder="General"
@@ -197,7 +197,9 @@ export function ProductWizardForm({
         </div>
         <div className="grid gap-3 sm:grid-cols-2">
           <Field data-invalid={Boolean(form.formState.errors.precio_venta)}>
-          <FieldLabel htmlFor="wizard_precio_venta">Precio al publico</FieldLabel>
+            <FieldLabel htmlFor="wizard_precio_venta">
+              Precio de venta
+            </FieldLabel>
             <Input
               id="wizard_precio_venta"
               type="number"
@@ -208,9 +210,7 @@ export function ProductWizardForm({
             <FieldError errors={[form.formState.errors.precio_venta]} />
           </Field>
           <Field data-invalid={Boolean(form.formState.errors.precio_compra)}>
-            <FieldLabel htmlFor="wizard_precio_compra">
-              Precio compra
-            </FieldLabel>
+            <FieldLabel htmlFor="wizard_precio_compra">Costo</FieldLabel>
             <Input
               id="wizard_precio_compra"
               type="number"
@@ -223,7 +223,9 @@ export function ProductWizardForm({
         </div>
         <div className="grid gap-3 sm:grid-cols-2">
           <Field data-invalid={Boolean(form.formState.errors.stock_minimo)}>
-            <FieldLabel htmlFor="wizard_stock_minimo">Alerta stock</FieldLabel>
+            <FieldLabel htmlFor="wizard_stock_minimo">
+              Avisar cuando queden
+            </FieldLabel>
             <Input
               id="wizard_stock_minimo"
               type="number"
@@ -235,7 +237,7 @@ export function ProductWizardForm({
             <FieldError errors={[form.formState.errors.stock_minimo]} />
           </Field>
           <Field data-invalid={Boolean(form.formState.errors.sku)}>
-            <FieldLabel htmlFor="wizard_sku">SKU</FieldLabel>
+            <FieldLabel htmlFor="wizard_sku">Codigo interno</FieldLabel>
             <Input
               id="wizard_sku"
               placeholder="Automatico"

@@ -71,13 +71,13 @@ export function ComprasPage() {
       <div>
         <h1 className="page-heading">Compras</h1>
         <p className="page-subtitle">
-          Registra entradas de mercaderia y manten actualizado el inventario.
+          Registra producto recibido para sumar stock al inventario.
         </p>
       </div>
       <div className="grid gap-4 lg:grid-cols-[360px_minmax(0,1fr)]">
         <Card>
           <CardHeader>
-            <CardTitle>Nueva compra</CardTitle>
+            <CardTitle>Producto recibido</CardTitle>
             <CardDescription>
               Selecciona la prenda y registra la cantidad recibida.
             </CardDescription>
@@ -116,7 +116,7 @@ export function ComprasPage() {
                 </Field>
                 <Field>
                   <FieldLabel htmlFor="precio_unitario">
-                    Costo unitario
+                    Costo por unidad
                   </FieldLabel>
                   <Input
                     id="precio_unitario"
@@ -129,16 +129,16 @@ export function ComprasPage() {
                 </Field>
               </FieldGroup>
               <Button disabled={createPurchase.isPending || !variantId}>
-                {createPurchase.isPending ? "Guardando..." : "Registrar compra"}
+                {createPurchase.isPending ? "Guardando..." : "Sumar al stock"}
               </Button>
             </form>
           </CardContent>
         </Card>
         <Card>
           <CardHeader>
-            <CardTitle>Historial</CardTitle>
+            <CardTitle>Entradas registradas</CardTitle>
             <CardDescription>
-              Compras registradas y anulaciones.
+              Producto recibido y cambios aplicados al inventario.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
@@ -151,8 +151,8 @@ export function ComprasPage() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Fecha</TableHead>
-                    <TableHead>Usuario</TableHead>
-                    <TableHead>Items</TableHead>
+                    <TableHead>Registrado por</TableHead>
+                    <TableHead>Prendas</TableHead>
                     <TableHead>Total</TableHead>
                     <TableHead>Estado</TableHead>
                     <TableHead />
@@ -167,7 +167,7 @@ export function ComprasPage() {
                       <TableCell>{formatCurrency(item.total)}</TableCell>
                       <TableCell>
                         <Badge variant={item.activo ? "secondary" : "outline"}>
-                          {item.activo ? "Activa" : "Anulada"}
+                          {item.activo ? "Vigente" : "Anulada"}
                         </Badge>
                       </TableCell>
                       <TableCell className="text-right">

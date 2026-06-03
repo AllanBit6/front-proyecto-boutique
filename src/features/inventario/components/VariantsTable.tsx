@@ -49,7 +49,7 @@ export function VariantsTable({
           <TableHead>Prenda</TableHead>
           <TableHead>Talla / color</TableHead>
           <TableHead className="text-right">Precio</TableHead>
-          <TableHead>Disponibles</TableHead>
+          <TableHead>Stock</TableHead>
           {showActions ? <TableHead className="w-10" /> : null}
         </TableRow>
       </TableHeader>
@@ -97,7 +97,7 @@ export function VariantsTable({
                     <DropdownMenuContent align="end" className="w-36">
                       <DropdownMenuItem onClick={() => onBarcode(variant)}>
                         <Barcode />
-                        Codigo
+                        Ver codigo
                       </DropdownMenuItem>
                       <DropdownMenuItem onClick={() => onEdit(variant)}>
                         <Edit />

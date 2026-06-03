@@ -57,9 +57,9 @@ export function UsuariosPage() {
         <Card>
           <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <CardTitle>Usuarios</CardTitle>
+              <CardTitle>Equipo</CardTitle>
               <CardDescription>
-                Equipo con acceso al punto de venta y administracion.
+                Personas que pueden entrar al sistema.
               </CardDescription>
             </div>
             {usersData ? (
@@ -118,9 +118,9 @@ export function UsuariosPage() {
         </Card>
         <Card>
           <CardHeader>
-            <CardTitle>Nuevo usuario</CardTitle>
+            <CardTitle>Nueva persona</CardTitle>
             <CardDescription>
-              Asigna el rol segun su responsabilidad en tienda.
+              Define sus datos y que puede hacer.
             </CardDescription>
           </CardHeader>
           <CardContent>

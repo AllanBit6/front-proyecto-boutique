@@ -61,11 +61,30 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 
 function normalizeRole(role: ApiRole): RoleOption {
   const id = role.id_rol ?? role.id ?? ""
+  const name = role.nombre ?? role.name ?? id
 
   return {
     id,
-    nombre: role.nombre ?? role.name ?? id,
+    nombre: friendlyRoleName(name),
   }
+}
+
+function friendlyRoleName(role: string) {
+  const normalizedRole = role.trim().toLocaleLowerCase()
+
+  if (normalizedRole === "administrador" || normalizedRole === "admin") {
+    return "Administrador"
+  }
+
+  if (normalizedRole === "vendedor" || normalizedRole === "cashier") {
+    return "Vendedor"
+  }
+
+  if (normalizedRole === "bodeguero" || normalizedRole === "warehouse") {
+    return "Bodega"
+  }
+
+  return role
 }
 
 function normalizeUser(user: ApiUser): User {
@@ -85,7 +104,7 @@ function normalizeUser(user: ApiUser): User {
     apellido: user.apellido ?? "",
     user_name: user.user_name ?? "",
     rol_id: user.rol_id ?? roleEntity?.id ?? "",
-    rol_nombre: roleName,
+    rol_nombre: friendlyRoleName(roleName),
   }
 }
 

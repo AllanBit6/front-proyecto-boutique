@@ -73,10 +73,9 @@ export function InventoryAdjustmentsPage() {
   return (
     <section className="space-y-4">
       <div>
-        <h1 className="page-heading">Ajustes de inventario</h1>
+        <h1 className="page-heading">Ajustar stock</h1>
         <p className="page-subtitle">
-          Registra entradas, salidas o correcciones manuales cuando el ajuste no
-          venga de una venta, compra, anulacion o devolucion.
+          Corrige cantidades cuando encuentres diferencias en tienda o bodega.
         </p>
       </div>
 
@@ -85,10 +84,10 @@ export function InventoryAdjustmentsPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <SlidersHorizontal className="size-4 text-primary" />
-              Nuevo ajuste
+              Corregir cantidad
             </CardTitle>
             <CardDescription>
-              Usa esta accion solo para movimientos manuales autorizados.
+              Indica que prenda cambia, cuanto cambia y por que.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -114,7 +113,7 @@ export function InventoryAdjustmentsPage() {
                   </Select>
                 </Field>
                 <Field>
-                  <FieldLabel>Tipo de ajuste</FieldLabel>
+                  <FieldLabel>Que cambio haras</FieldLabel>
                   <Select
                     value={adjustmentType}
                     onValueChange={(value) =>
@@ -166,9 +165,9 @@ export function InventoryAdjustmentsPage() {
         <Card>
           <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <CardTitle>Historial de movimientos</CardTitle>
+              <CardTitle>Cambios de stock</CardTitle>
               <CardDescription>
-                Kardex operativo generado por ventas, compras y ajustes.
+                Entradas, salidas y correcciones registradas.
               </CardDescription>
             </div>
             <Select
@@ -200,8 +199,8 @@ export function InventoryAdjustmentsPage() {
                   <TableRow>
                     <TableHead>Fecha</TableHead>
                     <TableHead>Prenda</TableHead>
-                    <TableHead>Tipo</TableHead>
-                    <TableHead>Cant.</TableHead>
+                    <TableHead>Cambio</TableHead>
+                    <TableHead>Cantidad</TableHead>
                     <TableHead>Stock</TableHead>
                     <TableHead>Motivo</TableHead>
                   </TableRow>

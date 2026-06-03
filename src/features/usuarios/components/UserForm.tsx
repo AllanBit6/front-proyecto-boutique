@@ -87,7 +87,7 @@ export function UserForm({ roles, user, onSuccess }: UserFormProps) {
           <FieldError errors={[form.formState.errors.apellido]} />
         </Field>
         <Field data-invalid={Boolean(form.formState.errors.user_name)}>
-          <FieldLabel htmlFor="user_name">Usuario</FieldLabel>
+          <FieldLabel htmlFor="user_name">Nombre de acceso</FieldLabel>
           <Input
             id="user_name"
             autoComplete="username"
@@ -108,7 +108,7 @@ export function UserForm({ roles, user, onSuccess }: UserFormProps) {
           </Field>
         ) : null}
         <Field data-invalid={Boolean(form.formState.errors.rol_id)}>
-          <FieldLabel>Rol</FieldLabel>
+          <FieldLabel>Permiso</FieldLabel>
           <Controller
             control={form.control}
             name="rol_id"
@@ -122,7 +122,7 @@ export function UserForm({ roles, user, onSuccess }: UserFormProps) {
                 disabled={!roles.length}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Selecciona un rol" />
+                  <SelectValue placeholder="Selecciona permiso" />
                 </SelectTrigger>
                 <SelectContent>
                   {roles.map((role) => (

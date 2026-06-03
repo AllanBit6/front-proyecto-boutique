@@ -111,8 +111,8 @@ export function InventarioPage() {
           <div>
             <h1 className="page-heading">Inventario</h1>
             <p className="page-subtitle">
-              Consulta prendas, existencias, precios y codigos listos para la
-              venta.
+              Revisa lo disponible para vender y actualiza precios o tallas
+              cuando sea necesario.
             </p>
           </div>
           {canManageInventory ? (
@@ -131,7 +131,7 @@ export function InventarioPage() {
             <div>
               <CardTitle>Prendas disponibles</CardTitle>
               <CardDescription>
-                Existencias por talla, color, precio y codigo de barras.
+                Lista simple de productos disponibles en tienda.
               </CardDescription>
             </div>
             {canManageInventory ? (
@@ -145,7 +145,7 @@ export function InventarioPage() {
                   onClick={() => setIsCreateVariantOpen(true)}
                 >
                   <Plus />
-                  Agregar talla/color
+                  Nueva talla/color
                 </Button>
               </div>
             ) : null}
@@ -155,7 +155,7 @@ export function InventarioPage() {
               <SearchInput
                 value={variantSearch}
                 onChange={setVariantSearch}
-                placeholder="Buscar prenda, talla, color, SKU o codigo"
+                placeholder="Buscar prenda, talla, color o codigo"
               />
               <Select
                 value={variantProductFilter}
@@ -246,10 +246,9 @@ export function InventarioPage() {
       <Dialog open={isCreateVariantOpen} onOpenChange={setIsCreateVariantOpen}>
         <DialogContent className="max-h-[92svh] overflow-y-auto sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle>Agregar talla/color</DialogTitle>
+            <DialogTitle>Nueva talla o color</DialogTitle>
             <DialogDescription>
-              Usa esta opcion cuando la prenda ya existe y solo necesitas otra
-              presentacion.
+              Agrega otra talla o color para una prenda que ya existe.
             </DialogDescription>
           </DialogHeader>
           <VariantForm
@@ -286,9 +285,9 @@ export function InventarioPage() {
       >
         <DialogContent className="max-h-[92svh] overflow-y-auto sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle>Editar presentacion</DialogTitle>
+            <DialogTitle>Editar prenda</DialogTitle>
             <DialogDescription>
-              Actualiza talla/color, precios, SKU y alerta de stock.
+              Actualiza talla, color, precios y alerta de stock.
             </DialogDescription>
           </DialogHeader>
           {editVariantQuery.isLoading ? (
@@ -323,7 +322,7 @@ export function InventarioPage() {
 
       <ConfirmDeactivateDialog
         open={Boolean(deleteVariant)}
-        title="Desactivar presentacion"
+        title="Desactivar prenda"
         description={`Esta accion desactivara ${deleteVariant?.sku ?? ""}.`}
         isPending={deleteVariantMutation.isPending}
         onOpenChange={(open) => {

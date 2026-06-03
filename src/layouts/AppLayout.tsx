@@ -29,7 +29,7 @@ export function AppLayout() {
           </div>
           <RoleSwitcher />
         </header>
-        <main className="flex-1 p-4 md:p-6">
+        <main className="page-shell flex-1 p-4 md:p-6">
           <Outlet />
         </main>
       </SidebarInset>

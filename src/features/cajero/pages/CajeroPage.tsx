@@ -229,7 +229,7 @@ export function CajeroPage() {
         <div>
           <h1 className="page-heading">Venta de mostrador</h1>
           <p className="page-subtitle">
-            Escanea prendas, revisa existencias y cobra en una sola pantalla.
+            Escanea, cobra y termina la venta sin salir de esta pantalla.
           </p>
         </div>
       </div>
@@ -299,7 +299,7 @@ export function CajeroPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Prenda</TableHead>
-                  <TableHead>Disponible</TableHead>
+                  <TableHead>Stock</TableHead>
                   <TableHead>Cantidad</TableHead>
                   <TableHead>Total</TableHead>
                   <TableHead />
@@ -395,7 +395,7 @@ export function CajeroPage() {
           <CardHeader>
             <CardTitle>Cobro</CardTitle>
             <CardDescription>
-              Confirma cliente, forma de pago y total de la venta.
+              Confirma la forma de pago y finaliza la compra.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -420,7 +420,7 @@ export function CajeroPage() {
                   <Input id="nit" name="nit" defaultValue="CF" />
                 </Field>
                 <Field>
-                  <FieldLabel>Metodo de pago</FieldLabel>
+                  <FieldLabel>Forma de pago</FieldLabel>
                   <Select
                     value={paymentMethod}
                     onValueChange={(value) =>

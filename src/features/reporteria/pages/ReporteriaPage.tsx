@@ -32,14 +32,12 @@ export function ReporteriaPage() {
   return (
     <section className="space-y-4">
       <div>
-        <h1 className="page-heading">Pagos</h1>
-        <p className="page-subtitle">
-          Consulta los cobros generados por ventas y su estado registrado.
-        </p>
+        <h1 className="page-heading">Cobros</h1>
+        <p className="page-subtitle">Consulta pagos recibidos en las ventas.</p>
       </div>
       <Card>
         <CardHeader>
-          <CardTitle>Registro de pagos</CardTitle>
+          <CardTitle>Cobros registrados</CardTitle>
           <CardDescription>
             Cobros asociados a ventas emitidas desde el punto de venta.
           </CardDescription>
@@ -54,7 +52,7 @@ export function ReporteriaPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Fecha</TableHead>
-                  <TableHead>Metodo</TableHead>
+                  <TableHead>Forma de pago</TableHead>
                   <TableHead>Cliente</TableHead>
                   <TableHead>Monto</TableHead>
                   <TableHead>Estado</TableHead>
