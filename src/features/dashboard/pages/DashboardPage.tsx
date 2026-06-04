@@ -20,7 +20,7 @@ import {
   type ChartConfig,
 } from "@/components/ui/chart"
 import { useDashboard } from "@/features/admin/hooks/useAdmin"
-import { formatCurrency } from "@/features/admin/components/AdminTable"
+import { formatCurrency } from "@/features/admin/utils/formatters"
 
 const salesChartConfig = {
   total: {

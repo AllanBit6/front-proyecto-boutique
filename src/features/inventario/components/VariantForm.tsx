@@ -1,6 +1,6 @@
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useEffect } from "react"
-import { useForm } from "react-hook-form"
+import { useForm, useWatch } from "react-hook-form"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -97,13 +97,17 @@ export function VariantForm({
   )
   const hasCatalogs =
     selectableProducts.length > 0 && sizes.length > 0 && colors.length > 0
+  const selectedProductId = useWatch({
+    control: form.control,
+    name: "producto_id",
+  })
+  const selectedSizeId = useWatch({ control: form.control, name: "talla_id" })
+  const selectedColorId = useWatch({ control: form.control, name: "color_id" })
   const selectedProduct = selectableProducts.find(
-    (item) => item.id === form.watch("producto_id")
+    (item) => item.id === selectedProductId
   )
-  const selectedSize = sizes.find((item) => item.id === form.watch("talla_id"))
-  const selectedColor = colors.find(
-    (item) => item.id === form.watch("color_id")
-  )
+  const selectedSize = sizes.find((item) => item.id === selectedSizeId)
+  const selectedColor = colors.find((item) => item.id === selectedColorId)
 
   return (
     <form className="space-y-4" onSubmit={onSubmit}>
@@ -111,7 +115,7 @@ export function VariantForm({
         <Field data-invalid={Boolean(form.formState.errors.producto_id)}>
           <FieldLabel>Prenda</FieldLabel>
           <Select
-            value={form.watch("producto_id")}
+            value={selectedProductId}
             onValueChange={(value) =>
               form.setValue("producto_id", value ?? "", {
                 shouldValidate: true,
@@ -144,7 +148,7 @@ export function VariantForm({
           <Field data-invalid={Boolean(form.formState.errors.talla_id)}>
             <FieldLabel>Talla</FieldLabel>
             <Select
-              value={form.watch("talla_id")}
+              value={selectedSizeId}
               onValueChange={(value) =>
                 form.setValue("talla_id", value ?? "", {
                   shouldValidate: true,
@@ -170,7 +174,7 @@ export function VariantForm({
           <Field data-invalid={Boolean(form.formState.errors.color_id)}>
             <FieldLabel>Color</FieldLabel>
             <Select
-              value={form.watch("color_id")}
+              value={selectedColorId}
               onValueChange={(value) =>
                 form.setValue("color_id", value ?? "", {
                   shouldValidate: true,

@@ -2,7 +2,8 @@ import { SlidersHorizontal } from "lucide-react"
 import { useMemo, useState } from "react"
 import { toast } from "sonner"
 
-import { AdminPager, formatDate } from "@/features/admin/components/AdminTable"
+import { AdminPager } from "@/features/admin/components/AdminTable"
+import { formatDate } from "@/features/admin/utils/formatters"
 import {
   matchesDateRange,
   matchesTextSearch,

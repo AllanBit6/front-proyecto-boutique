@@ -1,5 +1,5 @@
 import { zodResolver } from "@hookform/resolvers/zod"
-import { useForm } from "react-hook-form"
+import { useForm, useWatch } from "react-hook-form"
 import { z } from "zod"
 
 import { Button } from "@/components/ui/button"
@@ -70,10 +70,10 @@ export function ProductWizardForm({
   const isPending =
     createBrand.isPending || createProduct.isPending || createVariant.isPending
   const hasCatalogs = sizes.length > 0 && colors.length > 0
-  const selectedSize = sizes.find((item) => item.id === form.watch("talla_id"))
-  const selectedColor = colors.find(
-    (item) => item.id === form.watch("color_id")
-  )
+  const selectedSizeId = useWatch({ control: form.control, name: "talla_id" })
+  const selectedColorId = useWatch({ control: form.control, name: "color_id" })
+  const selectedSize = sizes.find((item) => item.id === selectedSizeId)
+  const selectedColor = colors.find((item) => item.id === selectedColorId)
 
   const onSubmit = form.handleSubmit(async (values) => {
     const brandId = await resolveBrandId(values.marca_nombre, brands, (name) =>
@@ -150,7 +150,7 @@ export function ProductWizardForm({
           <Field data-invalid={Boolean(form.formState.errors.talla_id)}>
             <FieldLabel>Talla</FieldLabel>
             <Select
-              value={form.watch("talla_id")}
+              value={selectedSizeId}
               onValueChange={(value) =>
                 form.setValue("talla_id", value ?? "", {
                   shouldValidate: true,
@@ -176,7 +176,7 @@ export function ProductWizardForm({
           <Field data-invalid={Boolean(form.formState.errors.color_id)}>
             <FieldLabel>Color</FieldLabel>
             <Select
-              value={form.watch("color_id")}
+              value={selectedColorId}
               onValueChange={(value) =>
                 form.setValue("color_id", value ?? "", {
                   shouldValidate: true,

@@ -1,11 +1,8 @@
 import { useMemo, useState } from "react"
 import { toast } from "sonner"
 
-import {
-  AdminPager,
-  formatCurrency,
-  formatDate,
-} from "@/features/admin/components/AdminTable"
+import { AdminPager } from "@/features/admin/components/AdminTable"
+import { formatCurrency, formatDate } from "@/features/admin/utils/formatters"
 import {
   matchesDateRange,
   matchesTextSearch,

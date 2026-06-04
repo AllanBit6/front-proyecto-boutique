@@ -9,7 +9,7 @@ import {
 import { Fragment, useMemo, useState } from "react"
 import { toast } from "sonner"
 
-import { formatCurrency } from "@/features/admin/components/AdminTable"
+import { formatCurrency } from "@/features/admin/utils/formatters"
 import { useAllVariants } from "@/features/inventario/hooks/useProducts"
 import type { Variant } from "@/features/inventario/types/product"
 import {

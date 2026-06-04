@@ -8,6 +8,7 @@ const isDev = Boolean(process.env.VITE_DEV_SERVER_URL)
 const distPath = path.join(__dirname, "..", "dist")
 const envPath = path.join(__dirname, "..", ".env")
 const apiTarget = readEnvValue("VITE_API_TARGET") || "http://localhost:3000"
+const allowedNavigationProtocols = new Set(["http:", "https:"])
 
 let staticServer
 
@@ -82,9 +83,24 @@ function createWindow(startUrl) {
   win.loadURL(startUrl)
 
   win.webContents.setWindowOpenHandler(({ url }) => {
-    shell.openExternal(url)
+    if (isSafeExternalUrl(url)) {
+      shell.openExternal(url)
+    }
+
     return { action: "deny" }
   })
+
+  win.webContents.on("will-navigate", (event, url) => {
+    if (!isAllowedAppNavigation(url, startUrl)) {
+      event.preventDefault()
+    }
+  })
+
+  win.webContents.session.setPermissionRequestHandler(
+    (_webContents, _permission, callback) => {
+      callback(false)
+    }
+  )
 
   if (isDev) {
     win.webContents.openDevTools({ mode: "detach" })
@@ -108,6 +124,30 @@ function navigateTo(pathname, fallbackUrl) {
   win.loadURL(nextUrl.toString())
 }
 
+function isSafeExternalUrl(value) {
+  try {
+    const url = new URL(value)
+
+    return allowedNavigationProtocols.has(url.protocol)
+  } catch {
+    return false
+  }
+}
+
+function isAllowedAppNavigation(value, startUrl) {
+  try {
+    const url = new URL(value)
+    const appUrl = new URL(startUrl)
+
+    return (
+      allowedNavigationProtocols.has(url.protocol) &&
+      url.origin === appUrl.origin
+    )
+  } catch {
+    return false
+  }
+}
+
 function buildApplicationMenu(startUrl) {
   const navigationItems = systemRoutes.map((route) => ({
     label: route.label,
@@ -115,7 +155,7 @@ function buildApplicationMenu(startUrl) {
     click: () => navigateTo(route.path, startUrl),
   }))
 
-  return Menu.buildFromTemplate([
+  const template = [
     {
       label: "Sistema",
       submenu: [
@@ -142,10 +182,14 @@ function buildApplicationMenu(startUrl) {
       label: "Ventana",
       submenu: [
         { role: "minimize", label: "Minimizar" },
-        { role: "toggleDevTools", label: "Herramientas de desarrollo" },
+        ...(isDev
+          ? [{ role: "toggleDevTools", label: "Herramientas de desarrollo" }]
+          : []),
       ],
     },
-  ])
+  ]
+
+  return Menu.buildFromTemplate(template)
 }
 
 function isApiRequest(requestUrl) {
@@ -156,6 +200,13 @@ function isApiRequest(requestUrl) {
 
 function proxyApiRequest(request, response) {
   const target = new URL(request.url || "/", apiTarget)
+
+  if (!allowedNavigationProtocols.has(target.protocol)) {
+    response.statusCode = 502
+    response.end("El protocolo de la API no esta permitido.")
+    return
+  }
+
   const transport = target.protocol === "https:" ? https : http
   const headers = {
     ...request.headers,
@@ -191,8 +242,9 @@ function resolveStaticPath(requestUrl) {
   const decodedPath = decodeURIComponent(url.pathname)
   const relativePath = decodedPath === "/" ? "index.html" : decodedPath.slice(1)
   const requestedPath = path.normalize(path.join(distPath, relativePath))
+  const relativeToDist = path.relative(distPath, requestedPath)
 
-  if (!requestedPath.startsWith(distPath)) {
+  if (relativeToDist.startsWith("..") || path.isAbsolute(relativeToDist)) {
     return path.join(distPath, "index.html")
   }
 
@@ -214,6 +266,7 @@ function startStaticServer() {
       const filePath = resolveStaticPath(request.url || "/")
       const extension = path.extname(filePath)
 
+      setSecurityHeaders(response, extension)
       response.setHeader(
         "Content-Type",
         mimeTypes.get(extension) || "application/octet-stream"
@@ -239,6 +292,29 @@ function startStaticServer() {
       resolve(`http://localhost:${address.port}`)
     })
   })
+}
+
+function setSecurityHeaders(response, extension) {
+  response.setHeader("X-Content-Type-Options", "nosniff")
+  response.setHeader("Referrer-Policy", "no-referrer")
+  response.setHeader("X-Frame-Options", "DENY")
+
+  if (extension === ".html") {
+    response.setHeader(
+      "Content-Security-Policy",
+      [
+        "default-src 'self'",
+        "script-src 'self'",
+        "style-src 'self'",
+        "img-src 'self' data: blob:",
+        "font-src 'self'",
+        "connect-src 'self'",
+        "object-src 'none'",
+        "base-uri 'none'",
+        "frame-ancestors 'none'",
+      ].join("; ")
+    )
+  }
 }
 
 app.whenReady().then(async () => {

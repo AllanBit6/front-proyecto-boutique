@@ -1,6 +1,6 @@
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useEffect } from "react"
-import { Controller, useForm } from "react-hook-form"
+import { Controller, useForm, useWatch } from "react-hook-form"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -47,8 +47,15 @@ export function UserForm({ roles, user, onSuccess }: UserFormProps) {
 
   const onSubmit = form.handleSubmit(async (values) => {
     if (user) {
-      const { password: _password, ...input } = values
-      await updateUser.mutateAsync({ id: user.id, input })
+      await updateUser.mutateAsync({
+        id: user.id,
+        input: {
+          nombre: values.nombre,
+          apellido: values.apellido,
+          user_name: values.user_name,
+          rol_id: values.rol_id,
+        },
+      })
     } else {
       if (!values.password || values.password.length < 6) {
         form.setError("password", {
@@ -71,7 +78,8 @@ export function UserForm({ roles, user, onSuccess }: UserFormProps) {
   })
 
   const isPending = createUser.isPending || updateUser.isPending
-  const selectedRole = roles.find((role) => role.id === form.watch("rol_id"))
+  const selectedRoleId = useWatch({ control: form.control, name: "rol_id" })
+  const selectedRole = roles.find((role) => role.id === selectedRoleId)
 
   return (
     <form className="space-y-4" onSubmit={onSubmit}>

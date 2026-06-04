@@ -1,5 +1,5 @@
 import { Download } from "lucide-react"
-import { useEffect, useMemo, useState } from "react"
+import { useMemo, useState } from "react"
 import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
@@ -26,9 +26,16 @@ export function BarcodeDialog({
   open,
   onOpenChange,
 }: BarcodeDialogProps) {
-  const [generatedBarcode, setGeneratedBarcode] = useState("")
+  const [generatedBarcode, setGeneratedBarcode] = useState<{
+    variantId: string
+    value: string
+  } | null>(null)
   const updateVariant = useUpdateVariant()
-  const barcode = generatedBarcode || variant?.codigo_barras
+  const generatedBarcodeValue =
+    generatedBarcode && generatedBarcode.variantId === variant?.id
+      ? generatedBarcode.value
+      : ""
+  const barcode = generatedBarcodeValue || variant?.codigo_barras
   const sku =
     variant?.sku ||
     (variant
@@ -42,10 +49,13 @@ export function BarcodeDialog({
     () => (barcode ? createEan13Svg(barcode, sku) : ""),
     [barcode, sku]
   )
-
-  useEffect(() => {
-    setGeneratedBarcode("")
-  }, [variant?.id, open])
+  const barcodeSvgUrl = useMemo(
+    () =>
+      barcodeSvg
+        ? `data:image/svg+xml;charset=utf-8,${encodeURIComponent(barcodeSvg)}`
+        : "",
+    [barcodeSvg]
+  )
 
   function handleDownload() {
     if (!barcodeSvg || !barcode) {
@@ -99,7 +109,10 @@ export function BarcodeDialog({
     })
 
     const updatedVariant = await promise
-    setGeneratedBarcode(updatedVariant.codigo_barras || nextBarcode)
+    setGeneratedBarcode({
+      variantId: variant.id,
+      value: updatedVariant.codigo_barras || nextBarcode,
+    })
   }
 
   return (
@@ -114,9 +127,10 @@ export function BarcodeDialog({
         </DialogHeader>
         {barcodeSvg ? (
           <div className="overflow-x-auto rounded-lg border bg-white p-4">
-            <div
+            <img
+              alt={`Codigo de barras ${barcode}`}
               className="mx-auto w-fit"
-              dangerouslySetInnerHTML={{ __html: barcodeSvg }}
+              src={barcodeSvgUrl}
             />
           </div>
         ) : barcode ? (

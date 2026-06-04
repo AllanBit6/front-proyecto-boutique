@@ -110,7 +110,7 @@ export function useAllVariants() {
   return useQuery({
     queryKey: [...variantsQueryKey, "all"],
     queryFn: async () => {
-      const limit = 10
+      const limit = 100
       const firstPage = await fetchVariants({ page: 1, limit })
       const variants = [...firstPage.data]
 
