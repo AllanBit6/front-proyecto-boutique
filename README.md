@@ -95,6 +95,18 @@ Previsualizar build:
 npm run preview
 ```
 
+Empaquetar aplicacion de escritorio sin instalador:
+
+```bash
+npm run package
+```
+
+Generar instalador y portable para Windows:
+
+```bash
+npm run dist:win
+```
+
 ## Flujo recomendado
 
 1. Instalar dependencias:
@@ -206,3 +218,38 @@ dist/
 ```
 
 Sirve esa carpeta con el servidor o hosting que corresponda.
+
+## Distribuible de escritorio
+
+La aplicacion de Electron se empaqueta con `electron-builder`.
+
+Para generar una carpeta ejecutable sin instalador:
+
+```bash
+npm run package
+```
+
+Salida:
+
+```txt
+release/win-unpacked/POS Boutique.exe
+```
+
+Para generar el instalador y la version portable de Windows:
+
+```bash
+npm run dist:win
+```
+
+Salidas principales:
+
+```txt
+release/POS Boutique-Setup-0.0.1-x64.exe
+release/POS Boutique-Portable-0.0.1-x64.exe
+```
+
+Notas:
+
+- El instalador generado no esta firmado con certificado de codigo.
+- La app espera que el backend este disponible en `http://localhost:3000` por defecto.
+- Para apuntar a otro backend, configura la variable de entorno `VITE_API_TARGET` antes de abrir la app.
