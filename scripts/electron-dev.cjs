@@ -2,7 +2,7 @@ const http = require("node:http")
 const { spawn } = require("node:child_process")
 const electronPath = require("electron")
 
-const devServerUrl = "http://127.0.0.1:5173"
+const devServerUrl = "http://localhost:5173"
 const npmCommand = process.platform === "win32" ? "npm.cmd" : "npm"
 
 function spawnProcess(command, args, options = {}) {
@@ -43,7 +43,7 @@ async function main() {
     "dev",
     "--",
     "--host",
-    "127.0.0.1",
+    "localhost",
     "--strictPort",
   ])
 
