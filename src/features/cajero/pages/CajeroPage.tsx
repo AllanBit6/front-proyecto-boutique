@@ -491,8 +491,8 @@ export function CajeroPage() {
                   No se pudieron cargar los productos para vender.
                 </div>
               ) : filteredVariants.length > 0 ? (
-                <div className="max-h-[360px] overflow-auto rounded-md border">
-                  <Table className="min-w-[720px]">
+                <div className="max-h-90flow-auto rounded-md border">
+                  <Table className="min-w-180">
                     <TableHeader>
                       <TableRow>
                         <TableHead>SKU</TableHead>
@@ -583,7 +583,7 @@ export function CajeroPage() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="overflow-x-auto rounded-md border">
-                <Table className="min-w-[720px]">
+                <Table className="min-w-180">
                   <TableHeader>
                     <TableRow>
                       <TableHead>Prenda</TableHead>
@@ -709,7 +709,7 @@ export function CajeroPage() {
           </Card>
         </div>
 
-        <Card className="xl:sticky xl:top-[4.5rem] xl:self-start">
+        <Card className="xl:sticky xl:top-18 xl:self-start">
           <CardHeader>
             <CardTitle>Cobro</CardTitle>
           </CardHeader>
