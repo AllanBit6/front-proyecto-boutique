@@ -4,19 +4,17 @@ import { toast } from "sonner"
 
 import { AdminPager, formatDate } from "@/features/admin/components/AdminTable"
 import {
+  matchesDateRange,
+  matchesTextSearch,
+} from "@/features/admin/utils/tableFilters"
+import {
   useCreateInventoryAdjustment,
   useInventoryMovements,
 } from "@/features/admin/hooks/useAdmin"
 import { useVariants } from "@/features/inventario/hooks/useProducts"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 import {
@@ -45,6 +43,9 @@ const ADJUSTMENT_TYPES = [
 export function InventoryAdjustmentsPage() {
   const [page, setPage] = useState(1)
   const [movementType, setMovementType] = useState("all")
+  const [movementSearch, setMovementSearch] = useState("")
+  const [movementDateFrom, setMovementDateFrom] = useState("")
+  const [movementDateTo, setMovementDateTo] = useState("")
   const [adjustmentType, setAdjustmentType] = useState("INGRESO")
   const [variantId, setVariantId] = useState("")
   const [quantity, setQuantity] = useState("")
@@ -69,6 +70,28 @@ export function InventoryAdjustmentsPage() {
   } | null>(null)
   const selectedAdjustmentType = ADJUSTMENT_TYPES.find(
     (type) => type.value === adjustmentType
+  )
+  const filteredMovements = useMemo(
+    () =>
+      (movementsQuery.data?.data ?? []).filter(
+        (item) =>
+          matchesTextSearch(movementSearch, [
+            item.id,
+            item.prenda,
+            item.tipo,
+            item.origen,
+            item.motivo,
+            item.cantidad,
+            item.stockResultante,
+            item.usuario,
+          ]) && matchesDateRange(item.fecha, movementDateFrom, movementDateTo)
+      ),
+    [
+      movementDateFrom,
+      movementDateTo,
+      movementSearch,
+      movementsQuery.data?.data,
+    ]
   )
 
   async function submitAdjustment(form?: HTMLFormElement | null) {
@@ -159,9 +182,6 @@ export function InventoryAdjustmentsPage() {
     <section className="space-y-4">
       <div>
         <h1 className="page-heading">Ajustar stock</h1>
-        <p className="page-subtitle">
-          Corrige cantidades cuando encuentres diferencias en tienda o bodega.
-        </p>
       </div>
 
       <div className="grid gap-4 lg:grid-cols-[380px_minmax(0,1fr)]">
@@ -171,9 +191,6 @@ export function InventoryAdjustmentsPage() {
               <SlidersHorizontal className="size-4 text-primary" />
               Corregir cantidad
             </CardTitle>
-            <CardDescription>
-              Indica que prenda cambia, cuanto cambia y por que.
-            </CardDescription>
           </CardHeader>
           <CardContent>
             <form
@@ -300,9 +317,6 @@ export function InventoryAdjustmentsPage() {
           <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <CardTitle>Cambios de stock</CardTitle>
-              <CardDescription>
-                Entradas, salidas y correcciones registradas.
-              </CardDescription>
             </div>
             <Select
               value={movementType}
@@ -329,6 +343,23 @@ export function InventoryAdjustmentsPage() {
             </Select>
           </CardHeader>
           <CardContent className="space-y-3">
+            <div className="grid gap-2 md:grid-cols-[minmax(220px,1fr)_160px_160px]">
+              <Input
+                value={movementSearch}
+                onChange={(event) => setMovementSearch(event.target.value)}
+                placeholder="Buscar ID, prenda, motivo u origen"
+              />
+              <Input
+                type="date"
+                value={movementDateFrom}
+                onChange={(event) => setMovementDateFrom(event.target.value)}
+              />
+              <Input
+                type="date"
+                value={movementDateTo}
+                onChange={(event) => setMovementDateTo(event.target.value)}
+              />
+            </div>
             {movementsQuery.isLoading ? (
               <div className="text-sm text-muted-foreground">
                 Cargando movimientos...
@@ -350,7 +381,7 @@ export function InventoryAdjustmentsPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {(movementsQuery.data?.data ?? []).map((item) => (
+                  {filteredMovements.map((item) => (
                     <TableRow key={item.id}>
                       <TableCell>{formatDate(item.fecha)}</TableCell>
                       <TableCell>{item.prenda || "-"}</TableCell>
@@ -362,13 +393,13 @@ export function InventoryAdjustmentsPage() {
                       <TableCell>{item.motivo || item.origen}</TableCell>
                     </TableRow>
                   ))}
-                  {movementsQuery.data?.data.length === 0 ? (
+                  {filteredMovements.length === 0 ? (
                     <TableRow>
                       <TableCell
                         colSpan={6}
                         className="py-8 text-center text-sm text-muted-foreground"
                       >
-                        Todavia no hay cambios de stock registrados.
+                        No hay cambios de stock con esos filtros.
                       </TableCell>
                     </TableRow>
                   ) : null}

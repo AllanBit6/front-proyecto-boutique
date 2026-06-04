@@ -5,6 +5,9 @@ import {
   Bar,
   BarChart,
   CartesianGrid,
+  Cell,
+  Pie,
+  PieChart,
   XAxis,
   YAxis,
 } from "recharts"
@@ -33,12 +36,23 @@ const productChartConfig = {
   },
 } satisfies ChartConfig
 
+const PRODUCT_COLORS = [
+  "var(--chart-1)",
+  "var(--chart-2)",
+  "var(--chart-3)",
+  "var(--chart-4)",
+  "var(--chart-5)",
+  "var(--primary)",
+]
+
 export function DashboardPage() {
   const dashboardQuery = useDashboard()
   const metrics = dashboardQuery.data
   const weeklySales = metrics?.ventasSemanales ?? []
   const monthlySales = metrics?.ventasMes ?? metrics?.ventasAnio ?? []
-  const topProducts = metrics?.topProducts ?? metrics?.topVariantes ?? []
+  const topProducts = normalizeTopProducts(
+    metrics?.topProducts ?? metrics?.topVariantes ?? []
+  ).slice(0, 6)
   const cards = [
     {
       title: "Caja de hoy",
@@ -68,9 +82,6 @@ export function DashboardPage() {
     <section className="space-y-4">
       <div>
         <h1 className="page-heading">Resumen de tienda</h1>
-        <p className="page-subtitle">
-          Una vista rapida de ventas, ingresos y productos con mas movimiento.
-        </p>
       </div>
       <div className="grid gap-4 md:grid-cols-4">
         {cards.map((item) => {
@@ -101,22 +112,22 @@ export function DashboardPage() {
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_420px]">
         <Card>
           <CardHeader>
-            <CardTitle>Ventas esta semana</CardTitle>
+            <CardTitle>Ventas del mes</CardTitle>
           </CardHeader>
           <CardContent>
-            {weeklySales.length ? (
+            {monthlySales.length ? (
               <ChartContainer
                 className="aspect-auto h-[260px] w-full"
                 config={salesChartConfig}
               >
                 <AreaChart
                   accessibilityLayer
-                  data={weeklySales}
+                  data={monthlySales}
                   margin={{ left: 0, right: 12 }}
                 >
                   <CartesianGrid vertical={false} />
                   <XAxis
-                    dataKey="dia"
+                    dataKey="mes"
                     tickLine={false}
                     axisLine={false}
                     tickMargin={8}
@@ -137,7 +148,7 @@ export function DashboardPage() {
                 </AreaChart>
               </ChartContainer>
             ) : (
-              <EmptyChart message="Sin datos semanales disponibles." />
+              <EmptyChart message="Sin ventas mensuales disponibles." />
             )}
           </CardContent>
         </Card>
@@ -148,37 +159,71 @@ export function DashboardPage() {
           </CardHeader>
           <CardContent>
             {topProducts.length ? (
-              <ChartContainer
-                className="aspect-auto h-[260px] w-full"
-                config={productChartConfig}
-              >
-                <BarChart
-                  accessibilityLayer
-                  data={topProducts.slice(0, 6)}
-                  layout="vertical"
-                  margin={{ left: 8, right: 12 }}
+              <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_180px] xl:grid-cols-1">
+                <ChartContainer
+                  className="aspect-auto h-[220px] w-full"
+                  config={productChartConfig}
                 >
-                  <CartesianGrid horizontal={false} />
-                  <XAxis type="number" hide />
-                  <YAxis
-                    dataKey="nombre"
-                    type="category"
-                    tickLine={false}
-                    axisLine={false}
-                    tickMargin={8}
-                    width={120}
-                  />
-                  <ChartTooltip
-                    cursor={false}
-                    content={<ChartTooltipContent indicator="dot" />}
-                  />
-                  <Bar
-                    dataKey="cantidad"
-                    fill="var(--color-cantidad)"
-                    radius={4}
-                  />
-                </BarChart>
-              </ChartContainer>
+                  <PieChart accessibilityLayer>
+                    <ChartTooltip
+                      cursor={false}
+                      content={
+                        <ChartTooltipContent
+                          hideLabel
+                          nameKey="nombre"
+                          formatter={(value, name) => (
+                            <div className="flex min-w-32 items-center justify-between gap-3">
+                              <span className="text-muted-foreground">
+                                {name}
+                              </span>
+                              <span className="font-mono font-medium tabular-nums">
+                                {Number(value).toLocaleString()}
+                              </span>
+                            </div>
+                          )}
+                        />
+                      }
+                    />
+                    <Pie
+                      data={topProducts}
+                      dataKey="cantidad"
+                      nameKey="nombre"
+                      innerRadius={48}
+                      outerRadius={82}
+                      paddingAngle={2}
+                    >
+                      {topProducts.map((item, index) => (
+                        <Cell
+                          key={item.nombre}
+                          fill={PRODUCT_COLORS[index % PRODUCT_COLORS.length]}
+                        />
+                      ))}
+                    </Pie>
+                  </PieChart>
+                </ChartContainer>
+                <div className="space-y-2">
+                  {topProducts.map((item, index) => (
+                    <div
+                      key={item.nombre}
+                      className="flex items-center justify-between gap-2 text-sm"
+                    >
+                      <div className="flex min-w-0 items-center gap-2">
+                        <span
+                          className="size-2.5 shrink-0 rounded-sm"
+                          style={{
+                            backgroundColor:
+                              PRODUCT_COLORS[index % PRODUCT_COLORS.length],
+                          }}
+                        />
+                        <span className="truncate">{item.nombre}</span>
+                      </div>
+                      <span className="font-mono text-xs tabular-nums">
+                        {item.cantidad}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
             ) : (
               <EmptyChart message="Sin productos vendidos para mostrar." />
             )}
@@ -188,22 +233,22 @@ export function DashboardPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Ventas del mes</CardTitle>
+          <CardTitle>Ventas esta semana</CardTitle>
         </CardHeader>
         <CardContent>
-          {monthlySales.length ? (
+          {weeklySales.length ? (
             <ChartContainer
               className="aspect-auto h-[280px] w-full"
               config={salesChartConfig}
             >
               <BarChart
                 accessibilityLayer
-                data={monthlySales}
+                data={weeklySales}
                 margin={{ left: 0, right: 12 }}
               >
                 <CartesianGrid vertical={false} />
                 <XAxis
-                  dataKey="mes"
+                  dataKey="dia"
                   tickLine={false}
                   axisLine={false}
                   tickMargin={8}
@@ -217,11 +262,104 @@ export function DashboardPage() {
               </BarChart>
             </ChartContainer>
           ) : (
-            <EmptyChart message="Sin ventas mensuales disponibles." />
+            <EmptyChart message="Sin datos semanales disponibles." />
           )}
         </CardContent>
       </Card>
     </section>
+  )
+}
+
+function normalizeTopProducts(items: Array<Record<string, unknown>>) {
+  return items
+    .map((item, index) => {
+      const variant = readRecord(item.variante)
+      const product = readRecord(item.producto)
+      const nestedProduct = readRecord(variant?.producto)
+      const size = readRecord(variant?.talla)
+      const color = readRecord(variant?.color)
+      const productName =
+        readText(
+          item.nombre,
+          item.name,
+          item.producto_nombre,
+          item.nombre_producto,
+          item.productName,
+          item.nombreProducto,
+          item.prenda,
+          item.prenda_nombre,
+          item.descripcion,
+          item.articulo,
+          item.modelo,
+          product?.nombre,
+          nestedProduct?.nombre,
+          variant?.producto_nombre,
+          variant?.nombre,
+          variant?.sku,
+          item.producto
+        ) ?? `Producto ${index + 1}`
+      const variantDetail = [
+        readText(item.talla, item.talla_nombre, size?.nombre),
+        readText(item.color, item.color_nombre, color?.nombre),
+      ]
+        .filter(Boolean)
+        .join(" / ")
+      const name = variantDetail
+        ? `${productName} / ${variantDetail}`
+        : productName
+      const quantity = Number(
+        item.cantidad ??
+          item.cantidad_vendida ??
+          item.cantidadVendida ??
+          item.total ??
+          item.total_vendido ??
+          item.totalVendido ??
+          item.unidades ??
+          item.unidades_vendidas ??
+          item.unidadesVendidas ??
+          item.vendidos ??
+          (item._sum as Record<string, unknown> | undefined)?.cantidad ??
+          (item._count as Record<string, unknown> | undefined)?.cantidad ??
+          0
+      )
+
+      return {
+        nombre: name,
+        cantidad: quantity,
+      }
+    })
+    .filter((item) => item.nombre && item.cantidad > 0)
+}
+
+function readRecord(value: unknown) {
+  return value && typeof value === "object"
+    ? (value as Record<string, unknown>)
+    : undefined
+}
+
+function readText(...values: unknown[]) {
+  for (const value of values) {
+    if (typeof value === "string" && value.trim()) {
+      const text = value.trim()
+
+      if (isGenericProductLabel(text)) {
+        continue
+      }
+
+      return text
+    }
+
+    if (typeof value === "number") {
+      return String(value)
+    }
+  }
+
+  return undefined
+}
+
+function isGenericProductLabel(value: string) {
+  return ["producto", "productos", "product", "products"].includes(
+    value.toLocaleLowerCase()
   )
 }
 

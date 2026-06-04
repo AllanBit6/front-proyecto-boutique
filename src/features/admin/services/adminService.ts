@@ -47,8 +47,22 @@ export interface Sale {
   total: number
   activo: boolean
   cliente?: string
+  nit?: string
   usuario: string
   items: number
+}
+
+export interface SaleDetail extends Sale {
+  detalles: Array<{
+    id: string
+    prenda: string
+    sku?: string
+    codigoBarras?: string
+    cantidad: number
+    precioUnitario: number
+    subtotal: number
+  }>
+  pagos: Array<Payment>
 }
 
 export interface InventoryMovement {
@@ -68,9 +82,14 @@ export interface Payment {
   fecha: string
   metodo: string
   monto: number
+  montoRecibido?: number
+  cambio?: number
+  numeroReferencia?: string
   estado: string
   ventaId?: string
   cliente?: string
+  nit?: string
+  usuario?: string
 }
 
 interface ApiMeta {
@@ -192,6 +211,88 @@ function numberValue(value: unknown) {
   return Number(value ?? 0)
 }
 
+function readActiveState(item: Record<string, unknown>) {
+  const status = String(item.estado ?? item.status ?? "")
+    .trim()
+    .toLocaleLowerCase()
+
+  if (
+    ["anulada", "anulado", "cancelada", "cancelado", "void", "cancelled"].some(
+      (value) => status.includes(value)
+    )
+  ) {
+    return false
+  }
+
+  if (typeof item.activo === "boolean") {
+    return item.activo
+  }
+
+  if (typeof item.activo === "number") {
+    return item.activo === 1
+  }
+
+  if (typeof item.activo === "string") {
+    const active = item.activo.trim().toLocaleLowerCase()
+
+    if (
+      ["false", "0", "no", "inactivo", "anulado", "anulada"].includes(active)
+    ) {
+      return false
+    }
+
+    if (["true", "1", "si", "activo", "vigente"].includes(active)) {
+      return true
+    }
+  }
+
+  return true
+}
+
+function optionalNumberValue(value: unknown) {
+  if (value === null || value === undefined || value === "") {
+    return undefined
+  }
+
+  return Number(value)
+}
+
+function variantName(value: unknown) {
+  if (!value || typeof value !== "object") {
+    return ""
+  }
+
+  const variant = value as Record<string, unknown>
+  const product = variant.producto as Record<string, unknown> | undefined
+  const size = variant.talla as Record<string, unknown> | undefined
+  const color = variant.color as Record<string, unknown> | undefined
+
+  return [product?.nombre, size?.nombre, color?.nombre]
+    .filter(Boolean)
+    .join(" / ")
+}
+
+function normalizePayment(item: Record<string, unknown>): Payment {
+  const sale = item.venta as Record<string, unknown> | undefined
+
+  return {
+    id: String(item.id_pago ?? item.id ?? ""),
+    fecha: String(item.fecha_pago ?? ""),
+    metodo: String(item.metodo ?? ""),
+    monto: numberValue(item.monto),
+    montoRecibido: optionalNumberValue(item.monto_recibido),
+    cambio: optionalNumberValue(item.cambio ?? item.vuelto),
+    numeroReferencia: String(
+      item.numero_referencia ?? item.referencia ?? item.no_referencia ?? ""
+    ),
+    estado: String(item.estado ?? ""),
+    ventaId: String(item.venta_id ?? sale?.id_venta ?? ""),
+    cliente: String(sale?.nombre_cliente ?? ""),
+    nit: String(sale?.nit ?? ""),
+    usuario: fullName(sale?.usuario),
+  }
+}
+
 export async function fetchDashboard(): Promise<DashboardMetrics> {
   return request<DashboardMetrics>("/dashboard")
 }
@@ -284,7 +385,7 @@ export async function fetchPurchases(params: {
       id: String(item.id_compra ?? item.id ?? ""),
       fecha: String(item.fecha_compra ?? ""),
       total: numberValue(item.total),
-      activo: Boolean(item.activo),
+      activo: readActiveState(item),
       usuario: fullName(item.usuario),
       items: numberValue(
         (item._count as Record<string, unknown>)?.detalles_compras
@@ -329,8 +430,9 @@ export async function fetchSales(params: {
     id: String(item.id_venta ?? item.id ?? ""),
     fecha: String(item.fecha_venta ?? ""),
     total: numberValue(item.total),
-    activo: Boolean(item.activo),
+    activo: readActiveState(item),
     cliente: String(item.nombre_cliente ?? ""),
+    nit: String(item.nit ?? ""),
     usuario: fullName(item.usuario),
     items: numberValue(
       (item._count as Record<string, unknown>)?.detalles_venta
@@ -338,6 +440,53 @@ export async function fetchSales(params: {
   }))
 
   return toPaginated(response, sales, params)
+}
+
+export async function fetchSaleDetail(id: string): Promise<SaleDetail> {
+  const response = await request<unknown>(`/ventas/${id}`)
+  const item =
+    response && typeof response === "object" && "data" in response
+      ? ((response as Record<string, unknown>).data as Record<string, unknown>)
+      : (response as Record<string, unknown>)
+  const details = readArray<Record<string, unknown>>(item, [
+    "detalles_venta",
+    "detalles",
+    "items",
+  ])
+  const payments = readArray<Record<string, unknown>>(item, ["pagos"]).map(
+    normalizePayment
+  )
+
+  return {
+    id: String(item.id_venta ?? item.id ?? ""),
+    fecha: String(item.fecha_venta ?? ""),
+    total: numberValue(item.total),
+    activo: readActiveState(item),
+    cliente: String(item.nombre_cliente ?? ""),
+    nit: String(item.nit ?? ""),
+    usuario: fullName(item.usuario),
+    items: details.length,
+    detalles: details.map((detail) => {
+      const variant = detail.variante as Record<string, unknown> | undefined
+      const cantidad = numberValue(detail.cantidad)
+      const precioUnitario = numberValue(detail.precio_unitario)
+
+      return {
+        id: String(
+          detail.id_detalle_venta ?? detail.id ?? variant?.id_variante ?? ""
+        ),
+        prenda: variantName(variant) || String(detail.descripcion ?? ""),
+        sku: String(variant?.sku ?? ""),
+        codigoBarras: String(
+          variant?.codigo_barras ?? variant?.codigoBarras ?? ""
+        ),
+        cantidad,
+        precioUnitario,
+        subtotal: numberValue(detail.subtotal) || cantidad * precioUnitario,
+      }
+    }),
+    pagos: payments,
+  }
 }
 
 export async function cancelSale(input: { id: string; motivo: string }) {
@@ -407,19 +556,8 @@ export async function fetchPayments(params: {
     limit: String(params.limit),
   })
   const response = await request<unknown>(`/pagos?${search}`)
-  const payments = readArray<Record<string, unknown>>(response).map((item) => {
-    const sale = item.venta as Record<string, unknown> | undefined
-
-    return {
-      id: String(item.id_pago ?? item.id ?? ""),
-      fecha: String(item.fecha_pago ?? ""),
-      metodo: String(item.metodo ?? ""),
-      monto: numberValue(item.monto),
-      estado: String(item.estado ?? ""),
-      ventaId: String(item.venta_id ?? sale?.id_venta ?? ""),
-      cliente: String(sale?.nombre_cliente ?? ""),
-    }
-  })
+  const payments =
+    readArray<Record<string, unknown>>(response).map(normalizePayment)
 
   return toPaginated(response, payments, params)
 }

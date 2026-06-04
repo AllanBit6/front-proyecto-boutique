@@ -12,6 +12,7 @@ import {
   fetchInventoryMovements,
   fetchPayments,
   fetchPurchases,
+  fetchSaleDetail,
   fetchSales,
   openCashRegister,
 } from "@/features/admin/services/adminService"
@@ -23,6 +24,7 @@ export const adminKeys = {
   activeCash: ["admin-active-cash"],
   purchases: ["admin-purchases"],
   sales: ["admin-sales"],
+  saleDetail: ["admin-sale-detail"],
   movements: ["admin-movements"],
   payments: ["admin-payments"],
 }
@@ -112,6 +114,14 @@ export function useSales(params: { page: number; limit: number }) {
   return useQuery({
     queryKey: [...adminKeys.sales, params],
     queryFn: () => fetchSales(params),
+  })
+}
+
+export function useSaleDetail(id?: string) {
+  return useQuery({
+    queryKey: [...adminKeys.saleDetail, id],
+    queryFn: () => fetchSaleDetail(id ?? ""),
+    enabled: Boolean(id),
   })
 }
 

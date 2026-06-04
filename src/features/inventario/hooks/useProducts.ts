@@ -26,6 +26,7 @@ import type {
   CreateBrandInput,
   CreateCatalogInput,
   CreateVariantInput,
+  Variant,
   UpdateProductInput,
   UpdateVariantInput,
 } from "@/features/inventario/types/product"
@@ -102,6 +103,30 @@ export function useVariants(params: CatalogQueryParams) {
   return useQuery({
     queryKey: [...variantsQueryKey, params],
     queryFn: () => fetchVariants(params),
+  })
+}
+
+export function useAllVariants() {
+  return useQuery({
+    queryKey: [...variantsQueryKey, "all"],
+    queryFn: async () => {
+      const limit = 10
+      const firstPage = await fetchVariants({ page: 1, limit })
+      const variants = [...firstPage.data]
+
+      for (let page = 2; page <= firstPage.totalPages; page += 1) {
+        const nextPage = await fetchVariants({ page, limit })
+        variants.push(...nextPage.data)
+      }
+
+      const uniqueVariants = new Map<string, Variant>()
+
+      for (const variant of variants) {
+        uniqueVariants.set(variant.id, variant)
+      }
+
+      return Array.from(uniqueVariants.values())
+    },
   })
 }
 

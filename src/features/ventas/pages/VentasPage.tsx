@@ -1,20 +1,31 @@
-import { useState } from "react"
+import { useMemo, useState } from "react"
+import { toast } from "sonner"
 
 import {
   AdminPager,
   formatCurrency,
   formatDate,
 } from "@/features/admin/components/AdminTable"
-import { useCancelSale, useSales } from "@/features/admin/hooks/useAdmin"
-import { Button } from "@/components/ui/button"
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
+  matchesDateRange,
+  matchesTextSearch,
+} from "@/features/admin/utils/tableFilters"
+import {
+  useCancelSale,
+  useSaleDetail,
+  useSales,
+} from "@/features/admin/hooks/useAdmin"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 import {
   Table,
   TableBody,
@@ -28,31 +39,97 @@ const PAGE_SIZE = 10
 
 export function VentasPage() {
   const [page, setPage] = useState(1)
+  const [selectedSaleId, setSelectedSaleId] = useState<string>()
+  const [saleToCancel, setSaleToCancel] = useState<string>()
+  const [cancelReason, setCancelReason] = useState("")
+  const [search, setSearch] = useState("")
+  const [dateFrom, setDateFrom] = useState("")
+  const [dateTo, setDateTo] = useState("")
+  const [statusFilter, setStatusFilter] = useState("all")
   const salesQuery = useSales({ page, limit: PAGE_SIZE })
+  const saleDetailQuery = useSaleDetail(selectedSaleId)
   const cancelSale = useCancelSale()
+  const filteredSales = useMemo(
+    () =>
+      (salesQuery.data?.data ?? []).filter(
+        (item) =>
+          matchesTextSearch(search, [
+            item.id,
+            item.cliente,
+            item.nit,
+            item.usuario,
+            item.total,
+          ]) &&
+          matchesDateRange(item.fecha, dateFrom, dateTo) &&
+          (statusFilter === "all" ||
+            (statusFilter === "active" ? item.activo : !item.activo))
+      ),
+    [dateFrom, dateTo, salesQuery.data?.data, search, statusFilter]
+  )
 
-  async function handleCancel(id: string) {
-    const motivo = window.prompt("Motivo de anulacion")
-    if (!motivo) return
-    await cancelSale.mutateAsync({ id, motivo })
+  async function handleCancelSale(event?: React.FormEvent<HTMLFormElement>) {
+    event?.preventDefault()
+    const motivo = cancelReason.trim()
+
+    if (!saleToCancel || !motivo) {
+      toast.error("Ingresa el motivo de anulacion.")
+      return
+    }
+
+    const promise = cancelSale.mutateAsync({ id: saleToCancel, motivo })
+
+    toast.promise(promise, {
+      loading: "Anulando venta...",
+      success: "Venta anulada correctamente.",
+      error: (error) =>
+        error instanceof Error ? error.message : "No se pudo anular la venta.",
+    })
+
+    try {
+      await promise
+      setSaleToCancel(undefined)
+      setCancelReason("")
+    } catch {
+      // toast.promise displays the error.
+    }
   }
 
   return (
     <section className="space-y-4">
       <div>
         <h1 className="page-heading">Ventas</h1>
-        <p className="page-subtitle">
-          Revisa ventas realizadas, montos cobrados y anulaciones.
-        </p>
       </div>
       <Card>
         <CardHeader>
           <CardTitle>Ventas registradas</CardTitle>
-          <CardDescription>
-            Las ventas nuevas se registran desde el punto de venta.
-          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
+          <div className="grid gap-2 md:grid-cols-[minmax(220px,1fr)_160px_160px_150px]">
+            <Input
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="Buscar ID, cliente, NIT o vendedor"
+            />
+            <Input
+              type="date"
+              value={dateFrom}
+              onChange={(event) => setDateFrom(event.target.value)}
+            />
+            <Input
+              type="date"
+              value={dateTo}
+              onChange={(event) => setDateTo(event.target.value)}
+            />
+            <select
+              className="h-8 rounded-lg border border-input bg-transparent px-2.5 text-sm"
+              value={statusFilter}
+              onChange={(event) => setStatusFilter(event.target.value)}
+            >
+              <option value="all">Todo estado</option>
+              <option value="active">Vigentes</option>
+              <option value="cancelled">Anuladas</option>
+            </select>
+          </div>
           {salesQuery.isLoading ? (
             <div className="text-sm text-muted-foreground">
               Cargando ventas...
@@ -71,7 +148,7 @@ export function VentasPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {(salesQuery.data?.data ?? []).map((item) => (
+                {filteredSales.map((item) => (
                   <TableRow key={item.id}>
                     <TableCell>{formatDate(item.fecha)}</TableCell>
                     <TableCell>{item.cliente || "Consumidor final"}</TableCell>
@@ -84,17 +161,39 @@ export function VentasPage() {
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        disabled={!item.activo || cancelSale.isPending}
-                        onClick={() => void handleCancel(item.id)}
-                      >
-                        Anular
-                      </Button>
+                      <div className="flex justify-end gap-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setSelectedSaleId(item.id)}
+                        >
+                          Detalle
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          disabled={!item.activo || cancelSale.isPending}
+                          onClick={() => {
+                            setSaleToCancel(item.id)
+                            setCancelReason("")
+                          }}
+                        >
+                          Anular
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
+                {!filteredSales.length ? (
+                  <TableRow>
+                    <TableCell
+                      colSpan={7}
+                      className="py-8 text-center text-sm text-muted-foreground"
+                    >
+                      No hay ventas con esos filtros.
+                    </TableCell>
+                  </TableRow>
+                ) : null}
               </TableBody>
             </Table>
           )}
@@ -110,6 +209,194 @@ export function VentasPage() {
           ) : null}
         </CardContent>
       </Card>
+
+      <Dialog
+        open={Boolean(selectedSaleId)}
+        onOpenChange={(open) => {
+          if (!open) {
+            setSelectedSaleId(undefined)
+          }
+        }}
+      >
+        <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>Detalle de venta</DialogTitle>
+          </DialogHeader>
+          {saleDetailQuery.isLoading ? (
+            <div className="text-sm text-muted-foreground">
+              Cargando detalle...
+            </div>
+          ) : saleDetailQuery.data ? (
+            <div className="space-y-4">
+              <div className="grid gap-3 rounded-md border p-3 text-sm sm:grid-cols-2 lg:grid-cols-4">
+                <DetailItem
+                  label="Fecha"
+                  value={formatDate(saleDetailQuery.data.fecha)}
+                />
+                <DetailItem
+                  label="Cliente"
+                  value={saleDetailQuery.data.cliente || "Consumidor final"}
+                />
+                <DetailItem
+                  label="NIT"
+                  value={saleDetailQuery.data.nit || "CF"}
+                />
+                <DetailItem
+                  label="Vendedor"
+                  value={saleDetailQuery.data.usuario || "-"}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <h3 className="text-sm font-medium">Productos</h3>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Prenda</TableHead>
+                      <TableHead>Cantidad</TableHead>
+                      <TableHead>Precio</TableHead>
+                      <TableHead className="text-right">Subtotal</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {saleDetailQuery.data.detalles.length > 0 ? (
+                      saleDetailQuery.data.detalles.map((item) => (
+                        <TableRow key={item.id}>
+                          <TableCell>
+                            <div className="font-medium">
+                              {item.prenda || "-"}
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              {item.sku || item.codigoBarras || "Sin codigo"}
+                            </div>
+                          </TableCell>
+                          <TableCell>{item.cantidad}</TableCell>
+                          <TableCell>
+                            {formatCurrency(item.precioUnitario)}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            {formatCurrency(item.subtotal)}
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    ) : (
+                      <TableRow>
+                        <TableCell
+                          colSpan={4}
+                          className="text-center text-muted-foreground"
+                        >
+                          Sin productos en el detalle.
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+
+              <div className="space-y-2">
+                <h3 className="text-sm font-medium">Cobros</h3>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Metodo</TableHead>
+                      <TableHead>Referencia</TableHead>
+                      <TableHead>Recibido</TableHead>
+                      <TableHead className="text-right">Monto</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {saleDetailQuery.data.pagos.length > 0 ? (
+                      saleDetailQuery.data.pagos.map((item) => (
+                        <TableRow key={item.id}>
+                          <TableCell>{item.metodo}</TableCell>
+                          <TableCell>{item.numeroReferencia || "-"}</TableCell>
+                          <TableCell>
+                            {item.montoRecibido === undefined
+                              ? "-"
+                              : formatCurrency(item.montoRecibido)}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            {formatCurrency(item.monto)}
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    ) : (
+                      <TableRow>
+                        <TableCell
+                          colSpan={4}
+                          className="text-center text-muted-foreground"
+                        >
+                          Sin cobros en el detalle.
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+
+              <div className="flex justify-end rounded-md bg-muted px-3 py-2 text-sm font-medium">
+                Total: {formatCurrency(saleDetailQuery.data.total)}
+              </div>
+            </div>
+          ) : (
+            <div className="text-sm text-muted-foreground">
+              No se pudo cargar el detalle.
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={Boolean(saleToCancel)}
+        onOpenChange={(open) => {
+          if (!open) {
+            setSaleToCancel(undefined)
+            setCancelReason("")
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Anular venta</DialogTitle>
+          </DialogHeader>
+          <form className="space-y-3" onSubmit={handleCancelSale}>
+            <Textarea
+              value={cancelReason}
+              onChange={(event) => setCancelReason(event.target.value)}
+              placeholder="Motivo de anulacion"
+              rows={4}
+            />
+            <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setSaleToCancel(undefined)
+                  setCancelReason("")
+                }}
+              >
+                Cancelar
+              </Button>
+              <Button
+                type="submit"
+                variant="destructive"
+                disabled={!cancelReason.trim() || cancelSale.isPending}
+              >
+                {cancelSale.isPending ? "Anulando..." : "Confirmar anulacion"}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
     </section>
+  )
+}
+
+function DetailItem({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <div className="text-xs text-muted-foreground">{label}</div>
+      <div className="font-medium">{value}</div>
+    </div>
   )
 }

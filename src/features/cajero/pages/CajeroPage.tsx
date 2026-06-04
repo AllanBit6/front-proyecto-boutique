@@ -1,23 +1,25 @@
-import { Minus, Plus, ScanBarcode, ShoppingCart, Trash2 } from "lucide-react"
-import { useMemo, useState } from "react"
+import {
+  Minus,
+  Plus,
+  ScanBarcode,
+  Search,
+  ShoppingCart,
+  Trash2,
+} from "lucide-react"
+import { Fragment, useMemo, useState } from "react"
 import { toast } from "sonner"
 
 import { formatCurrency } from "@/features/admin/components/AdminTable"
-import { useVariants } from "@/features/inventario/hooks/useProducts"
+import { useAllVariants } from "@/features/inventario/hooks/useProducts"
 import type { Variant } from "@/features/inventario/types/product"
 import {
   useCreateSale,
   useFindVariantByBarcode,
 } from "@/features/cajero/hooks/usePos"
 import type { PaymentMethod } from "@/features/cajero/services/posService"
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 import {
@@ -53,6 +55,14 @@ function variantLabel(variant: Variant) {
     .join(" / ")
 }
 
+function normalizeSearch(value: string) {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim()
+    .toLocaleLowerCase()
+}
+
 function playScanBeep() {
   const AudioContextCtor =
     window.AudioContext ??
@@ -64,43 +74,97 @@ function playScanBeep() {
   }
 
   const audioContext = new AudioContextCtor()
-  const oscillator = audioContext.createOscillator()
+  const mainOscillator = audioContext.createOscillator()
+  const accentOscillator = audioContext.createOscillator()
   const gain = audioContext.createGain()
   const now = audioContext.currentTime
 
-  oscillator.type = "sine"
-  oscillator.frequency.setValueAtTime(880, now)
+  mainOscillator.type = "triangle"
+  mainOscillator.frequency.setValueAtTime(1046.5, now)
+  accentOscillator.type = "sine"
+  accentOscillator.frequency.setValueAtTime(1318.5, now + 0.08)
   gain.gain.setValueAtTime(0.0001, now)
-  gain.gain.exponentialRampToValueAtTime(0.08, now + 0.01)
-  gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.12)
-  oscillator.connect(gain)
+  gain.gain.exponentialRampToValueAtTime(0.18, now + 0.015)
+  gain.gain.exponentialRampToValueAtTime(0.09, now + 0.08)
+  gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.22)
+  mainOscillator.connect(gain)
+  accentOscillator.connect(gain)
   gain.connect(audioContext.destination)
-  oscillator.start(now)
-  oscillator.stop(now + 0.13)
-  oscillator.onended = () => void audioContext.close()
+  mainOscillator.start(now)
+  mainOscillator.stop(now + 0.2)
+  accentOscillator.start(now + 0.08)
+  accentOscillator.stop(now + 0.22)
+  accentOscillator.onended = () => void audioContext.close()
 }
 
 export function CajeroPage() {
   const [barcode, setBarcode] = useState("")
-  const [selectedVariantId, setSelectedVariantId] = useState("")
+  const [productSearch, setProductSearch] = useState("")
+  const [sizeFilter, setSizeFilter] = useState("all")
+  const [colorFilter, setColorFilter] = useState("all")
   const [cart, setCart] = useState<CartItem[]>([])
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("EFECTIVO")
   const [amountReceived, setAmountReceived] = useState("")
   const [referenceNumber, setReferenceNumber] = useState("")
   const [error, setError] = useState("")
-  const variantsQuery = useVariants({ page: 1, limit: 100 })
+  const variantsQuery = useAllVariants()
   const findByBarcode = useFindVariantByBarcode()
   const createSale = useCreateSale()
   const sellableVariants = useMemo(
     () =>
-      (variantsQuery.data?.data ?? []).filter(
+      (variantsQuery.data ?? []).filter(
         (variant) => variant.activo && variant.stock_actual > 0
       ),
-    [variantsQuery.data?.data]
+    [variantsQuery.data]
   )
-  const selectedVariant = sellableVariants.find(
-    (variant) => variant.id === selectedVariantId
+  const sizeOptions = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          sellableVariants
+            .map((variant) => variant.talla_nombre)
+            .filter(Boolean)
+        )
+      ).sort(),
+    [sellableVariants]
   )
+  const colorOptions = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          sellableVariants
+            .map((variant) => variant.color_nombre)
+            .filter(Boolean)
+        )
+      ).sort(),
+    [sellableVariants]
+  )
+  const filteredVariants = useMemo(() => {
+    const terms = normalizeSearch(productSearch).split(" ").filter(Boolean)
+
+    return sellableVariants.filter((variant) => {
+      if (sizeFilter !== "all" && variant.talla_nombre !== sizeFilter) {
+        return false
+      }
+
+      if (colorFilter !== "all" && variant.color_nombre !== colorFilter) {
+        return false
+      }
+
+      const searchable = normalizeSearch(
+        [
+          variant.producto_nombre,
+          variant.talla_nombre,
+          variant.color_nombre,
+          variant.sku,
+          variant.codigo_barras,
+          formatCurrency(variant.precio_venta),
+        ].join(" ")
+      )
+
+      return terms.every((term) => searchable.includes(term))
+    })
+  }, [colorFilter, productSearch, sellableVariants, sizeFilter])
   const selectedPaymentMethod = PAYMENT_METHODS.find(
     (method) => method.value === paymentMethod
   )
@@ -170,6 +234,12 @@ export function CajeroPage() {
         })
         .filter((item) => item.quantity > 0)
     )
+  }
+
+  function handleProductSelect(variant: Variant) {
+    if (addVariant(variant)) {
+      toast.success(`${variantLabel(variant)} agregado al carrito.`)
+    }
   }
 
   async function handleBarcodeSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -253,7 +323,8 @@ export function CajeroPage() {
       toast.promise(promise, {
         loading: "Registrando venta...",
         success: "Venta registrada correctamente.",
-        error: (error) => getErrorMessage(error, "No se pudo registrar la venta."),
+        error: (error) =>
+          getErrorMessage(error, "No se pudo registrar la venta."),
       })
 
       await promise
@@ -262,7 +333,10 @@ export function CajeroPage() {
       setReferenceNumber("")
       form?.reset()
     } catch (exception) {
-      const message = getErrorMessage(exception, "No se pudo registrar la venta.")
+      const message = getErrorMessage(
+        exception,
+        "No se pudo registrar la venta."
+      )
       setError(message)
     }
   }
@@ -277,9 +351,6 @@ export function CajeroPage() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="page-heading">Venta de mostrador</h1>
-          <p className="page-subtitle">
-            Escanea, cobra y termina la venta sin salir de esta pantalla.
-          </p>
         </div>
       </div>
 
@@ -290,168 +361,317 @@ export function CajeroPage() {
       ) : null}
 
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_380px]">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <ShoppingCart className="size-4 text-primary" />
-              Carrito
-            </CardTitle>
-            <CardDescription>
-              Agrega prendas por codigo de barras o buscandolas por nombre.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_minmax(220px,320px)]">
-              <form className="flex gap-2" onSubmit={handleBarcodeSubmit}>
-                <Input
-                  value={barcode}
-                  onChange={(event) => setBarcode(event.target.value)}
-                  placeholder="Escanear codigo de barras"
-                  disabled={findByBarcode.isPending}
-                />
-                <Button
-                  type="submit"
-                  size="icon"
-                  aria-label="Buscar codigo"
-                  disabled={findByBarcode.isPending}
+        <div className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Productos disponibles</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-2 2xl:grid-cols-[minmax(220px,300px)_minmax(260px,1fr)_160px_160px]">
+                <form
+                  className="flex min-w-0 gap-2"
+                  onSubmit={handleBarcodeSubmit}
                 >
-                  <ScanBarcode />
-                </Button>
-              </form>
-              <Select
-                value={selectedVariantId}
-                onValueChange={(value) => {
-                  const variant = sellableVariants.find(
-                    (item) => item.id === value
-                  )
-                  setSelectedVariantId("")
-                  if (variant) {
-                    addVariant(variant)
-                  }
-                }}
-              >
-                <SelectTrigger className="w-full">
-                  <span
-                    className={!selectedVariant ? "text-muted-foreground" : ""}
+                  <Input
+                    className="min-w-0"
+                    value={barcode}
+                    onChange={(event) => setBarcode(event.target.value)}
+                    placeholder="Escanear codigo"
+                    disabled={findByBarcode.isPending}
+                  />
+                  <Button
+                    type="submit"
+                    size="icon"
+                    aria-label="Buscar codigo"
+                    disabled={findByBarcode.isPending}
                   >
-                    {selectedVariant
-                      ? variantLabel(selectedVariant)
-                      : "Buscar prenda"}
-                  </span>
-                </SelectTrigger>
-                <SelectContent>
-                  {sellableVariants.map((variant) => (
-                    <SelectItem key={variant.id} value={variant.id}>
-                      {variantLabel(variant)} -{" "}
-                      {formatCurrency(variant.precio_venta)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Prenda</TableHead>
-                  <TableHead>Stock</TableHead>
-                  <TableHead>Cantidad</TableHead>
-                  <TableHead>Total</TableHead>
-                  <TableHead />
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {cart.map((item) => (
-                  <TableRow key={item.variant.id}>
-                    <TableCell>
-                      <div className="font-medium">
-                        {variantLabel(item.variant)}
-                      </div>
-                      <div className="text-xs text-muted-foreground">
-                        {item.variant.sku || item.variant.codigo_barras}
-                      </div>
-                    </TableCell>
-                    <TableCell>{item.variant.stock_actual}</TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-1">
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="icon"
-                          aria-label="Reducir"
-                          onClick={() =>
-                            updateQuantity(item.variant.id, item.quantity - 1)
-                          }
-                        >
-                          <Minus />
-                        </Button>
-                        <Input
-                          className="h-8 w-16 text-center"
-                          type="number"
-                          min="1"
-                          max={item.variant.stock_actual}
-                          value={item.quantity}
-                          onChange={(event) =>
-                            updateQuantity(
-                              item.variant.id,
-                              Number(event.target.value || 1)
-                            )
-                          }
-                        />
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="icon"
-                          aria-label="Aumentar"
-                          onClick={() =>
-                            updateQuantity(item.variant.id, item.quantity + 1)
-                          }
-                        >
-                          <Plus />
-                        </Button>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      {formatCurrency(
-                        item.quantity * item.variant.precio_venta
-                      )}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        aria-label="Quitar"
-                        onClick={() =>
-                          setCart((current) =>
-                            current.filter(
-                              (cartItem) =>
-                                cartItem.variant.id !== item.variant.id
-                            )
-                          )
-                        }
-                      >
-                        <Trash2 />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-            {cart.length === 0 ? (
-              <div className="rounded-md border py-8 text-center text-sm text-muted-foreground">
-                Escanea o selecciona una prenda para iniciar la venta.
+                    <ScanBarcode />
+                  </Button>
+                </form>
+                <div className="relative min-w-0">
+                  <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    className="min-w-0 pl-9"
+                    value={productSearch}
+                    onChange={(event) => setProductSearch(event.target.value)}
+                    placeholder="Buscar prenda, SKU, color o codigo"
+                    disabled={variantsQuery.isLoading}
+                  />
+                </div>
+                <Select
+                  value={sizeFilter}
+                  onValueChange={(value) => setSizeFilter(value ?? "all")}
+                >
+                  <SelectTrigger className="w-full min-w-0">
+                    <span className="truncate">
+                      {sizeFilter === "all" ? "Todas las tallas" : sizeFilter}
+                    </span>
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todas las tallas</SelectItem>
+                    {sizeOptions.map((size) => (
+                      <SelectItem key={size} value={size}>
+                        {size}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Select
+                  value={colorFilter}
+                  onValueChange={(value) => setColorFilter(value ?? "all")}
+                >
+                  <SelectTrigger className="w-full min-w-0">
+                    <span className="truncate">
+                      {colorFilter === "all"
+                        ? "Todos los colores"
+                        : colorFilter}
+                    </span>
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos los colores</SelectItem>
+                    {colorOptions.map((color) => (
+                      <SelectItem key={color} value={color}>
+                        {color}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
-            ) : null}
-          </CardContent>
-        </Card>
+              <div className="text-xs text-muted-foreground">
+                Mostrando {filteredVariants.length} de {sellableVariants.length}{" "}
+                productos disponibles.
+              </div>
+
+              {variantsQuery.isLoading ? (
+                <div className="rounded-md border py-8 text-center text-sm text-muted-foreground">
+                  Cargando productos...
+                </div>
+              ) : variantsQuery.isError ? (
+                <div className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-8 text-center text-sm text-destructive">
+                  No se pudieron cargar los productos para vender.
+                </div>
+              ) : filteredVariants.length > 0 ? (
+                <div className="max-h-[360px] overflow-auto rounded-md border">
+                  <Table className="min-w-[720px]">
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>SKU</TableHead>
+                        <TableHead>Prenda</TableHead>
+                        <TableHead>Talla / color</TableHead>
+                        <TableHead className="text-right">Precio</TableHead>
+                        <TableHead>Stock</TableHead>
+                        <TableHead className="w-28" />
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredVariants.map((variant) => {
+                        const cartQuantity =
+                          cart.find((item) => item.variant.id === variant.id)
+                            ?.quantity ?? 0
+                        const available = variant.stock_actual - cartQuantity
+                        const canAdd = available > 0
+
+                        return (
+                          <TableRow key={variant.id}>
+                            <TableCell className="font-medium">
+                              {variant.sku || variant.codigo_barras || "-"}
+                            </TableCell>
+                            <TableCell>
+                              <div className="font-medium">
+                                {variant.producto_nombre || "-"}
+                              </div>
+                              <div className="text-xs text-muted-foreground">
+                                {variant.codigo_barras ||
+                                  "Sin codigo de barras"}
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              {variant.talla_nombre || "-"} /{" "}
+                              {variant.color_nombre || "-"}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              {formatCurrency(variant.precio_venta)}
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant={canAdd ? "secondary" : "outline"}>
+                                {available} disp.
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <Button
+                                type="button"
+                                size="sm"
+                                disabled={!canAdd}
+                                onClick={() => handleProductSelect(variant)}
+                              >
+                                <Plus />
+                                Agregar
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        )
+                      })}
+                    </TableBody>
+                  </Table>
+                </div>
+              ) : (
+                <div className="rounded-md border border-dashed py-8 text-center text-sm text-muted-foreground">
+                  No hay productos disponibles con esos filtros.
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  <ShoppingCart className="size-4 text-primary" />
+                  Carrito
+                </CardTitle>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={cart.length === 0}
+                onClick={() => setCart([])}
+              >
+                <Trash2 />
+                Vaciar carrito
+              </Button>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="overflow-x-auto rounded-md border">
+                <Table className="min-w-[720px]">
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Prenda</TableHead>
+                      <TableHead>Codigo</TableHead>
+                      <TableHead>Precio</TableHead>
+                      <TableHead>Stock</TableHead>
+                      <TableHead className="text-right">Subtotal</TableHead>
+                      <TableHead />
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {cart.map((item) => (
+                      <Fragment key={item.variant.id}>
+                        <TableRow className="border-b-0">
+                          <TableCell>
+                            <div className="font-medium">
+                              {variantLabel(item.variant)}
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-muted-foreground">
+                            {item.variant.sku ||
+                              item.variant.codigo_barras ||
+                              "-"}
+                          </TableCell>
+                          <TableCell>
+                            {formatCurrency(item.variant.precio_venta)}
+                          </TableCell>
+                          <TableCell>{item.variant.stock_actual}</TableCell>
+                          <TableCell className="text-right font-medium">
+                            {formatCurrency(
+                              item.quantity * item.variant.precio_venta
+                            )}
+                          </TableCell>
+                          <TableCell />
+                        </TableRow>
+                        <TableRow className="bg-muted/30">
+                          <TableCell colSpan={6} className="py-2">
+                            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs font-medium text-muted-foreground">
+                                  Cantidad
+                                </span>
+                                <div className="flex items-center gap-1">
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="icon"
+                                    aria-label="Reducir"
+                                    onClick={() =>
+                                      updateQuantity(
+                                        item.variant.id,
+                                        item.quantity - 1
+                                      )
+                                    }
+                                  >
+                                    <Minus />
+                                  </Button>
+                                  <Input
+                                    className="h-8 w-16 text-center"
+                                    type="number"
+                                    min="1"
+                                    max={item.variant.stock_actual}
+                                    value={item.quantity}
+                                    onChange={(event) =>
+                                      updateQuantity(
+                                        item.variant.id,
+                                        Number(event.target.value || 1)
+                                      )
+                                    }
+                                  />
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="icon"
+                                    aria-label="Aumentar"
+                                    onClick={() =>
+                                      updateQuantity(
+                                        item.variant.id,
+                                        item.quantity + 1
+                                      )
+                                    }
+                                  >
+                                    <Plus />
+                                  </Button>
+                                </div>
+                              </div>
+                              <div className="flex items-center justify-between gap-3 sm:justify-end">
+                                <span className="text-xs text-muted-foreground">
+                                  Disponible: {item.variant.stock_actual}
+                                </span>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() =>
+                                    setCart((current) =>
+                                      current.filter(
+                                        (cartItem) =>
+                                          cartItem.variant.id !==
+                                          item.variant.id
+                                      )
+                                    )
+                                  }
+                                >
+                                  <Trash2 />
+                                  Quitar
+                                </Button>
+                              </div>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      </Fragment>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+              {cart.length === 0 ? (
+                <div className="rounded-md border py-8 text-center text-sm text-muted-foreground">
+                  Escanea o selecciona una prenda para iniciar la venta.
+                </div>
+              ) : null}
+            </CardContent>
+          </Card>
+        </div>
 
         <Card className="xl:sticky xl:top-[4.5rem] xl:self-start">
           <CardHeader>
             <CardTitle>Cobro</CardTitle>
-            <CardDescription>
-              Confirma la forma de pago y finaliza la compra.
-            </CardDescription>
           </CardHeader>
           <CardContent>
             <form className="space-y-4" noValidate onSubmit={handleCheckout}>
