@@ -45,6 +45,12 @@ export function ComprasPage() {
   const [purchaseDateFrom, setPurchaseDateFrom] = useState("")
   const [purchaseDateTo, setPurchaseDateTo] = useState("")
   const [purchaseStatus, setPurchaseStatus] = useState("all")
+  const [quantity, setQuantity] = useState("")
+  const [unitCost, setUnitCost] = useState("")
+  const [lastResult, setLastResult] = useState<{
+    type: "success" | "error" | "info"
+    message: string
+  } | null>(null)
   const purchasesQuery = usePurchases({ page, limit: PAGE_SIZE })
   const variantsQuery = useVariants({ page: 1, limit: 100 })
   const createPurchase = useCreatePurchase()
@@ -81,24 +87,41 @@ export function ComprasPage() {
 
   async function handleCreate(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    const form = new FormData(event.currentTarget)
-    const cantidad = Number(form.get("cantidad") ?? 0)
-    const precioUnitario = Number(form.get("precio_unitario") ?? 0)
+    const form = event.currentTarget
+    const cantidad = Number(quantity)
+    const precioUnitario = Number(unitCost)
 
     if (!variantId || !selectedVariant) {
+      setLastResult({
+        type: "error",
+        message: "Selecciona una prenda activa antes de registrar la compra.",
+      })
       toast.error("Selecciona una prenda para sumar stock.")
       return
     }
 
     if (!cantidad || cantidad <= 0) {
+      setLastResult({
+        type: "error",
+        message: "La cantidad debe ser mayor a cero.",
+      })
       toast.error("Ingresa una cantidad mayor a cero.")
       return
     }
 
-    if (precioUnitario < 0) {
+    if (Number.isNaN(precioUnitario) || precioUnitario < 0) {
+      setLastResult({
+        type: "error",
+        message: "El costo por unidad debe ser cero o mayor.",
+      })
       toast.error("Ingresa un costo valido.")
       return
     }
+
+    setLastResult({
+      type: "info",
+      message: `Registrando ${cantidad} unidades para ${selectedVariant.producto_nombre}.`,
+    })
 
     const promise = createPurchase.mutateAsync({
       variante_id: variantId,
@@ -112,9 +135,22 @@ export function ComprasPage() {
       error: (error) => getErrorMessage(error),
     })
 
-    await promise
-    setVariantId("")
-    event.currentTarget.reset()
+    try {
+      await promise
+      setLastResult({
+        type: "success",
+        message: "Compra registrada correctamente. El stock se actualizara en la lista.",
+      })
+      setVariantId("")
+      setQuantity("")
+      setUnitCost("")
+      form.reset()
+    } catch (error) {
+      setLastResult({
+        type: "error",
+        message: getErrorMessage(error),
+      })
+    }
   }
 
   async function handleCancel(id: string) {
@@ -128,7 +164,18 @@ export function ComprasPage() {
       error: (error) => getErrorMessage(error),
     })
 
-    await promise
+    try {
+      await promise
+      setLastResult({
+        type: "success",
+        message: "Compra anulada correctamente. El stock se actualizara en la lista.",
+      })
+    } catch (error) {
+      setLastResult({
+        type: "error",
+        message: getErrorMessage(error),
+      })
+    }
   }
 
   return (
@@ -142,7 +189,11 @@ export function ComprasPage() {
             <CardTitle>Producto recibido</CardTitle>
           </CardHeader>
           <CardContent>
-            <form className="space-y-3" onSubmit={handleCreate}>
+            <form
+              className="space-y-3"
+              noValidate
+              onSubmit={handleCreate}
+            >
               <FieldGroup className="gap-3">
                 <Field>
                   <FieldLabel>Prenda</FieldLabel>
@@ -175,6 +226,11 @@ export function ComprasPage() {
                       No hay prendas activas disponibles para recibir stock.
                     </div>
                   ) : null}
+                  {variantsQuery.isError ? (
+                    <div className="text-xs text-destructive">
+                      {getErrorMessage(variantsQuery.error)}
+                    </div>
+                  ) : null}
                 </Field>
                 <Field>
                   <FieldLabel htmlFor="cantidad">Cantidad</FieldLabel>
@@ -183,7 +239,8 @@ export function ComprasPage() {
                     name="cantidad"
                     type="number"
                     min="1"
-                    required
+                    value={quantity}
+                    onChange={(event) => setQuantity(event.target.value)}
                   />
                 </Field>
                 <Field>
@@ -196,19 +253,30 @@ export function ComprasPage() {
                     type="number"
                     min="0"
                     step="0.01"
-                    required
+                    value={unitCost}
+                    onChange={(event) => setUnitCost(event.target.value)}
                   />
                 </Field>
               </FieldGroup>
               <Button
-                disabled={
-                  createPurchase.isPending ||
-                  !variantId ||
-                  variantsQuery.isLoading
-                }
+                type="submit"
+                disabled={createPurchase.isPending || variantsQuery.isLoading}
               >
                 {createPurchase.isPending ? "Guardando..." : "Sumar al stock"}
               </Button>
+              {lastResult ? (
+                <div
+                  className={
+                    lastResult.type === "error"
+                      ? "rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive"
+                      : lastResult.type === "success"
+                        ? "rounded-md border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-700 dark:text-emerald-300"
+                        : "rounded-md border bg-muted px-3 py-2 text-sm text-muted-foreground"
+                  }
+                >
+                  {lastResult.message}
+                </div>
+              ) : null}
             </form>
           </CardContent>
         </Card>
@@ -246,6 +314,10 @@ export function ComprasPage() {
             {purchasesQuery.isLoading ? (
               <div className="text-sm text-muted-foreground">
                 Cargando compras...
+              </div>
+            ) : purchasesQuery.isError ? (
+              <div className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                {getErrorMessage(purchasesQuery.error)}
               </div>
             ) : (
               <Table>
