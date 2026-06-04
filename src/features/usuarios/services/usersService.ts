@@ -15,7 +15,9 @@ interface ApiRole {
 }
 
 interface ApiUser {
-  id: string
+  id?: string
+  id_usuario?: string
+  usuario_id?: string
   nombre?: string
   apellido?: string
   user_name?: string
@@ -99,7 +101,7 @@ function normalizeUser(user: ApiUser): User {
     ""
 
   return {
-    id: user.id,
+    id: user.id_usuario ?? user.usuario_id ?? user.id ?? user.user_name ?? "",
     nombre: user.nombre ?? "",
     apellido: user.apellido ?? "",
     user_name: user.user_name ?? "",

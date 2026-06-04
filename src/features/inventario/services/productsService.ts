@@ -249,16 +249,10 @@ export interface CatalogQueryParams {
 }
 
 function buildCatalogSearchParams(params: CatalogQueryParams) {
-  const searchParams = new URLSearchParams({
+  return new URLSearchParams({
     page: String(params.page),
     limit: String(params.limit),
   })
-
-  if (typeof params.activo === "boolean") {
-    searchParams.set("activo", String(params.activo))
-  }
-
-  return searchParams
 }
 
 export async function fetchProducts(
@@ -266,9 +260,13 @@ export async function fetchProducts(
 ): Promise<PaginatedData<Product>> {
   const searchParams = buildCatalogSearchParams(params)
   const response = await request<unknown>(`/productos?${searchParams}`)
-  const products = readArray<ApiProduct>(response, ["productos", "items"]).map(
-    normalizeProduct
-  )
+  const products = readArray<ApiProduct>(response, ["productos", "items"])
+    .map(normalizeProduct)
+    .filter((product) =>
+      typeof params.activo === "boolean"
+        ? product.activo === params.activo
+        : true
+    )
 
   return toPaginatedData(response, products, params)
 }
@@ -311,9 +309,13 @@ export async function fetchVariants(params: {
 }): Promise<PaginatedData<Variant>> {
   const searchParams = buildCatalogSearchParams(params)
   const response = await request<unknown>(`/variantes?${searchParams}`)
-  const variants = readArray<ApiVariant>(response, ["variantes", "items"]).map(
-    normalizeVariant
-  )
+  const variants = readArray<ApiVariant>(response, ["variantes", "items"])
+    .map(normalizeVariant)
+    .filter((variant) =>
+      typeof params.activo === "boolean"
+        ? variant.activo === params.activo
+        : true
+    )
 
   return toPaginatedData(response, variants, params)
 }

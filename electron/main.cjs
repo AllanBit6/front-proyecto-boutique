@@ -2,7 +2,7 @@ const fs = require("node:fs")
 const http = require("node:http")
 const https = require("node:https")
 const path = require("node:path")
-const { app, BrowserWindow, shell } = require("electron")
+const { app, BrowserWindow, Menu, shell } = require("electron")
 
 const isDev = Boolean(process.env.VITE_DEV_SERVER_URL)
 const distPath = path.join(__dirname, "..", "dist")
@@ -10,6 +10,25 @@ const envPath = path.join(__dirname, "..", ".env")
 const apiTarget = readEnvValue("VITE_API_TARGET") || "http://localhost:3000"
 
 let staticServer
+
+const systemRoutes = [
+  { label: "Inicio", path: "/dashboard", accelerator: "CommandOrControl+H" },
+  { label: "Vender", path: "/cajero", accelerator: "CommandOrControl+N" },
+  {
+    label: "Inventario",
+    path: "/inventario",
+    accelerator: "CommandOrControl+I",
+  },
+  { label: "Ventas", path: "/ventas", accelerator: "CommandOrControl+Shift+V" },
+  {
+    label: "Compras",
+    path: "/compras",
+    accelerator: "CommandOrControl+Shift+C",
+  },
+  { label: "Ajustes de stock", path: "/ajustes-inventario" },
+  { label: "Cobros y reportes", path: "/reportes" },
+  { label: "Usuarios", path: "/usuarios" },
+]
 
 const mimeTypes = new Map([
   [".css", "text/css; charset=utf-8"],
@@ -70,6 +89,63 @@ function createWindow(startUrl) {
   if (isDev) {
     win.webContents.openDevTools({ mode: "detach" })
   }
+}
+
+function getTargetWindow() {
+  return BrowserWindow.getFocusedWindow() || BrowserWindow.getAllWindows()[0]
+}
+
+function navigateTo(pathname, fallbackUrl) {
+  const win = getTargetWindow()
+
+  if (!win) {
+    return
+  }
+
+  const currentUrl = win.webContents.getURL() || fallbackUrl
+  const nextUrl = new URL(pathname, currentUrl)
+
+  win.loadURL(nextUrl.toString())
+}
+
+function buildApplicationMenu(startUrl) {
+  const navigationItems = systemRoutes.map((route) => ({
+    label: route.label,
+    accelerator: route.accelerator,
+    click: () => navigateTo(route.path, startUrl),
+  }))
+
+  return Menu.buildFromTemplate([
+    {
+      label: "Sistema",
+      submenu: [
+        ...navigationItems,
+        { type: "separator" },
+        { role: "close", label: "Cerrar ventana" },
+        { role: "quit", label: "Salir" },
+      ],
+    },
+    {
+      label: "Vista",
+      submenu: [
+        { role: "reload", label: "Recargar" },
+        { role: "forceReload", label: "Recargar sin cache" },
+        { type: "separator" },
+        { role: "resetZoom", label: "Tamano real" },
+        { role: "zoomIn", label: "Acercar" },
+        { role: "zoomOut", label: "Alejar" },
+        { type: "separator" },
+        { role: "togglefullscreen", label: "Pantalla completa" },
+      ],
+    },
+    {
+      label: "Ventana",
+      submenu: [
+        { role: "minimize", label: "Minimizar" },
+        { role: "toggleDevTools", label: "Herramientas de desarrollo" },
+      ],
+    },
+  ])
 }
 
 function isApiRequest(requestUrl) {
@@ -170,6 +246,7 @@ app.whenReady().then(async () => {
     ? process.env.VITE_DEV_SERVER_URL
     : await startStaticServer()
 
+  Menu.setApplicationMenu(buildApplicationMenu(startUrl))
   createWindow(startUrl)
 
   app.on("activate", () => {
