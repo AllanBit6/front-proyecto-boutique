@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import { toast } from "sonner"
 
 import {
@@ -47,7 +47,11 @@ export function ComprasPage() {
   const variantsQuery = useVariants({ page: 1, limit: 100 })
   const createPurchase = useCreatePurchase()
   const cancelPurchase = useCancelPurchase()
-  const selectedVariant = (variantsQuery.data?.data ?? []).find(
+  const activeVariants = useMemo(
+    () => (variantsQuery.data?.data ?? []).filter((variant) => variant.activo),
+    [variantsQuery.data?.data]
+  )
+  const selectedVariant = activeVariants.find(
     (variant) => variant.id === variantId
   )
 
@@ -140,7 +144,7 @@ export function ComprasPage() {
                       </span>
                     </SelectTrigger>
                     <SelectContent>
-                      {(variantsQuery.data?.data ?? []).map((variant) => (
+                      {activeVariants.map((variant) => (
                         <SelectItem key={variant.id} value={variant.id}>
                           {variant.producto_nombre} / {variant.talla_nombre} /{" "}
                           {variant.color_nombre}
@@ -148,6 +152,11 @@ export function ComprasPage() {
                       ))}
                     </SelectContent>
                   </Select>
+                  {!variantsQuery.isLoading && !activeVariants.length ? (
+                    <div className="text-xs text-destructive">
+                      No hay prendas activas disponibles para recibir stock.
+                    </div>
+                  ) : null}
                 </Field>
                 <Field>
                   <FieldLabel htmlFor="cantidad">Cantidad</FieldLabel>
@@ -173,7 +182,13 @@ export function ComprasPage() {
                   />
                 </Field>
               </FieldGroup>
-              <Button disabled={createPurchase.isPending || !variantId}>
+              <Button
+                disabled={
+                  createPurchase.isPending ||
+                  !variantId ||
+                  variantsQuery.isLoading
+                }
+              >
                 {createPurchase.isPending ? "Guardando..." : "Sumar al stock"}
               </Button>
             </form>

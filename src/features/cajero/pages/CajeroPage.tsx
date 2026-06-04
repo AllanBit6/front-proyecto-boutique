@@ -248,13 +248,6 @@ export function CajeroPage() {
         ],
       }
 
-      console.info("[sale] submit", {
-        payload,
-        cart,
-        total,
-        received,
-      })
-
       const promise = createSale.mutateAsync(payload)
 
       toast.promise(promise, {
@@ -270,14 +263,12 @@ export function CajeroPage() {
       form?.reset()
     } catch (exception) {
       const message = getErrorMessage(exception, "No se pudo registrar la venta.")
-      console.error("[sale] failed", exception)
       setError(message)
     }
   }
 
   async function handleCheckout(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    console.info("[sale] form submit triggered")
     await submitCheckout(event.currentTarget)
   }
 
@@ -545,7 +536,6 @@ export function CajeroPage() {
                 className="h-10 w-full"
                 disabled={cart.length === 0 || createSale.isPending}
                 onClick={(event) => {
-                  console.info("[sale] checkout button clicked")
                   void submitCheckout(event.currentTarget.form)
                 }}
               >

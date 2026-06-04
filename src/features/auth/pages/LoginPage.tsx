@@ -29,37 +29,17 @@ export function LoginPage() {
   }
 
   return (
-    <main className="relative grid min-h-svh overflow-hidden bg-background p-4 md:p-8">
-      <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_18%_18%,color-mix(in_oklch,var(--primary),transparent_72%),transparent_32%),radial-gradient(circle_at_85%_12%,color-mix(in_oklch,var(--accent),transparent_60%),transparent_30%),linear-gradient(135deg,color-mix(in_oklch,var(--background),var(--primary)_7%),var(--background)_42%,color-mix(in_oklch,var(--background),var(--accent)_10%))]" />
-      <div className="mx-auto grid w-full max-w-5xl items-center gap-8 lg:grid-cols-[minmax(0,1fr)_420px]">
-        <section className="hidden space-y-5 lg:block">
-          <div className="inline-flex items-center rounded-full border bg-card/75 px-3 py-1 text-xs font-medium text-muted-foreground shadow-sm backdrop-blur">
+    <main className="relative grid min-h-svh place-items-center overflow-hidden bg-background p-4 md:p-8">
+      <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_50%_18%,color-mix(in_oklch,var(--primary),transparent_78%),transparent_34%),linear-gradient(135deg,color-mix(in_oklch,var(--background),var(--primary)_5%),var(--background)_46%,color-mix(in_oklch,var(--background),var(--accent)_8%))]" />
+      <div className="w-full max-w-[420px] space-y-4">
+        <div className="text-center">
+          <h1 className="text-2xl font-semibold tracking-normal">
             Boutique POS
-          </div>
-          <div className="max-w-xl space-y-4">
-            <h1 className="text-4xl font-semibold tracking-normal text-foreground">
-              Venta e inventario listos para atender.
-            </h1>
-            <p className="text-base leading-7 text-muted-foreground">
-              Accede a un espacio simple para vender, revisar stock y mantener
-              la tienda al dia sin pantallas innecesarias.
-            </p>
-          </div>
-          <div className="grid max-w-lg grid-cols-3 gap-3">
-            <div className="rounded-lg border bg-card/80 p-3 shadow-sm backdrop-blur">
-              <div className="text-lg font-semibold">POS</div>
-              <div className="text-xs text-muted-foreground">Venta rapida</div>
-            </div>
-            <div className="rounded-lg border bg-card/80 p-3 shadow-sm backdrop-blur">
-              <div className="text-lg font-semibold">Stock</div>
-              <div className="text-xs text-muted-foreground">Control claro</div>
-            </div>
-            <div className="rounded-lg border bg-card/80 p-3 shadow-sm backdrop-blur">
-              <div className="text-lg font-semibold">Roles</div>
-              <div className="text-xs text-muted-foreground">Acceso seguro</div>
-            </div>
-          </div>
-        </section>
+          </h1>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Acceso para ventas, inventario y caja.
+          </p>
+        </div>
         <LoginForm className="w-full" />
       </div>
     </main>

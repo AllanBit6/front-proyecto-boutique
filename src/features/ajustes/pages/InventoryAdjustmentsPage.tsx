@@ -72,8 +72,6 @@ export function InventoryAdjustmentsPage() {
   )
 
   async function submitAdjustment(form?: HTMLFormElement | null) {
-    console.info("[stock adjustment] submit action triggered")
-
     const cantidad = Number(quantity)
     const motivo = reason.trim()
 
@@ -118,12 +116,6 @@ export function InventoryAdjustmentsPage() {
           ? cantidad
           : previousStock + cantidad
 
-    console.info("[stock adjustment] submit", {
-      payload,
-      selectedVariant,
-      previousStock,
-      expectedStock,
-    })
     setLastResult({
       type: "info",
       message: `Aplicando ajuste. Stock actual: ${previousStock}. Resultado esperado: ${expectedStock}.`,
@@ -144,14 +136,13 @@ export function InventoryAdjustmentsPage() {
       setLastResult({
         type: "success",
         message:
-          "Ajuste enviado correctamente. Si el stock visible no cambia, revisa la respuesta del backend en la consola.",
+          "Ajuste registrado correctamente. El inventario se actualizara en la lista.",
       })
       setVariantId("")
       setQuantity("")
       setReason("")
       form?.reset()
     } catch (error) {
-      console.error("[stock adjustment] failed", error)
       setLastResult({
         type: "error",
         message: getErrorMessage(error),
@@ -161,7 +152,6 @@ export function InventoryAdjustmentsPage() {
 
   async function handleAdjustment(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    console.info("[stock adjustment] form submit triggered")
     await submitAdjustment(event.currentTarget)
   }
 
@@ -192,7 +182,6 @@ export function InventoryAdjustmentsPage() {
               onSubmit={handleAdjustment}
               onInvalid={(event) => {
                 event.preventDefault()
-                console.warn("[stock adjustment] invalid form", event.target)
                 toast.error("Revisa los campos del ajuste de stock.")
               }}
             >
@@ -280,7 +269,6 @@ export function InventoryAdjustmentsPage() {
                 type="button"
                 className="w-full"
                 onClick={() => {
-                  console.info("[stock adjustment] button clicked")
                   void submitAdjustment()
                 }}
                 disabled={

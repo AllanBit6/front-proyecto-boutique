@@ -13,7 +13,6 @@ import {
 } from "@/components/ui/card"
 import {
   Field,
-  FieldDescription,
   FieldError,
   FieldGroup,
   FieldLabel,
@@ -73,9 +72,9 @@ export function LoginForm({
             <Store className="size-5" />
           </div>
           <div>
-            <CardTitle className="text-xl">Entrar al punto de venta</CardTitle>
+            <CardTitle className="text-xl">Iniciar sesion</CardTitle>
             <CardDescription className="mt-1 leading-6">
-              Accede para vender, consultar inventario o administrar la tienda.
+              Ingresa tus credenciales para continuar.
             </CardDescription>
           </div>
         </CardHeader>
@@ -91,7 +90,7 @@ export function LoginForm({
                     name="user_name"
                     className="h-10 pl-9"
                     autoComplete="username"
-                    placeholder="tu.usuario"
+                    placeholder="Usuario"
                     required
                   />
                 </div>
@@ -119,9 +118,6 @@ export function LoginForm({
                 >
                   {isSubmitting ? "Validando..." : "Entrar"}
                 </Button>
-                <FieldDescription className="text-center">
-                  Tu sesion queda protegida por el servidor.
-                </FieldDescription>
               </Field>
             </FieldGroup>
           </form>

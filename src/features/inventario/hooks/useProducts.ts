@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 
 import {
+  type CatalogQueryParams,
   createProduct,
   createBrand,
   createColor,
@@ -35,7 +36,7 @@ export const brandsQueryKey = ["marcas"]
 export const sizesQueryKey = ["tallas"]
 export const colorsQueryKey = ["colores"]
 
-export function useProducts(params: { page: number; limit: number }) {
+export function useProducts(params: CatalogQueryParams) {
   return useQuery({
     queryKey: [...productsQueryKey, params],
     queryFn: () => fetchProducts(params),
@@ -97,7 +98,7 @@ export function useDeleteProduct() {
   })
 }
 
-export function useVariants(params: { page: number; limit: number }) {
+export function useVariants(params: CatalogQueryParams) {
   return useQuery({
     queryKey: [...variantsQueryKey, params],
     queryFn: () => fetchVariants(params),

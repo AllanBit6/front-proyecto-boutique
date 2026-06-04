@@ -94,12 +94,6 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   if (!response.ok) {
     const message = await readErrorMessage(response)
 
-    console.error("[API error]", {
-      path,
-      status: response.status,
-      message,
-    })
-
     throw new Error(message || "No se pudo completar la solicitud.")
   }
 
@@ -309,6 +303,7 @@ export async function createPurchase(input: {
   return request("/compras", {
     method: "POST",
     body: JSON.stringify({
+      idempotency_key: crypto.randomUUID(),
       detalles: [input],
     }),
   })
@@ -397,15 +392,9 @@ export async function createInventoryAdjustment(input: {
   cantidad: number
   motivo: string
 }) {
-  console.info("[stock adjustment] request", input)
-
   return request("/movimientos-inventarios/ajuste", {
     method: "POST",
     body: JSON.stringify(input),
-  }).then((response) => {
-    console.info("[stock adjustment] response", response)
-
-    return response
   })
 }
 

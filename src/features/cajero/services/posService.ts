@@ -8,6 +8,9 @@ interface ApiCatalog {
   id_talla?: string
   id_color?: string
   nombre?: string
+  activo?: boolean | string | number
+  estado?: string
+  deleted_at?: string | null
 }
 
 interface ApiVariant {
@@ -65,12 +68,6 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 
   if (!response.ok) {
     const message = await readErrorMessage(response)
-
-    console.error("[API error]", {
-      path,
-      status: response.status,
-      message,
-    })
 
     throw new Error(message || "No se pudo completar la solicitud.")
   }
@@ -156,7 +153,7 @@ function normalizeVariant(variant: ApiVariant): Variant {
     precio_venta: Number(variant.precio_venta ?? 0),
     stock_minimo: variant.stock_minimo ?? 0,
     stock_actual: variant.stock_actual ?? 0,
-    activo: readActive(variant),
+    activo: readActive(variant) && readActive(variant.producto ?? {}),
   }
 }
 
@@ -196,14 +193,8 @@ export async function createSale(input: CreateSaleInput) {
     idempotency_key: crypto.randomUUID(),
   }
 
-  console.info("[sale] request", payload)
-
   return request("/ventas", {
     method: "POST",
     body: JSON.stringify(payload),
-  }).then((response) => {
-    console.info("[sale] response", response)
-
-    return response
   })
 }

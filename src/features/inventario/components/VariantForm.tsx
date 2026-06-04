@@ -61,6 +61,14 @@ export function VariantForm({
     const product = products.find((item) => item.id === values.producto_id)
     const size = sizes.find((item) => item.id === values.talla_id)
     const color = colors.find((item) => item.id === values.color_id)
+
+    if (!product || (!product.activo && product.id !== variant?.producto_id)) {
+      form.setError("producto_id", {
+        message: "Selecciona una prenda activa.",
+      })
+      return
+    }
+
     const input = {
       ...values,
       sku:
@@ -84,9 +92,12 @@ export function VariantForm({
   })
 
   const isPending = createVariant.isPending || updateVariant.isPending
+  const selectableProducts = products.filter(
+    (product) => product.activo || product.id === variant?.producto_id
+  )
   const hasCatalogs =
-    products.length > 0 && sizes.length > 0 && colors.length > 0
-  const selectedProduct = products.find(
+    selectableProducts.length > 0 && sizes.length > 0 && colors.length > 0
+  const selectedProduct = selectableProducts.find(
     (item) => item.id === form.watch("producto_id")
   )
   const selectedSize = sizes.find((item) => item.id === form.watch("talla_id"))
@@ -106,7 +117,7 @@ export function VariantForm({
                 shouldValidate: true,
               })
             }
-            disabled={!products.length}
+            disabled={!selectableProducts.length}
           >
             <SelectTrigger>
               <span className={!selectedProduct ? "text-muted-foreground" : ""}>
@@ -114,13 +125,19 @@ export function VariantForm({
               </span>
             </SelectTrigger>
             <SelectContent>
-              {products.map((product) => (
+              {selectableProducts.map((product) => (
                 <SelectItem key={product.id} value={product.id}>
                   {product.nombre}
+                  {!product.activo ? " (desactivada)" : ""}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
+          {!selectableProducts.length ? (
+            <div className="text-xs text-destructive">
+              No hay prendas activas disponibles.
+            </div>
+          ) : null}
           <FieldError errors={[form.formState.errors.producto_id]} />
         </Field>
         <div className="grid gap-3 sm:grid-cols-2">

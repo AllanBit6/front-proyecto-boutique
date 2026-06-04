@@ -45,7 +45,7 @@ import {
   useVariant,
   useVariants,
 } from "@/features/inventario/hooks/useProducts"
-import type { Variant } from "@/features/inventario/types/product"
+import type { Product, Variant } from "@/features/inventario/types/product"
 import { useAuthStore } from "@/store"
 
 const PAGE_SIZE = 10
@@ -65,6 +65,11 @@ export function InventarioPage() {
   const [deleteVariant, setDeleteVariant] = useState<Variant | null>(null)
   const [barcodeVariant, setBarcodeVariant] = useState<Variant | null>(null)
   const productOptionsQuery = useProducts({ page: 1, limit: CATALOG_LIMIT })
+  const activeProductOptionsQuery = useProducts({
+    page: 1,
+    limit: CATALOG_LIMIT,
+    activo: true,
+  })
   const variantsQuery = useVariants({ page: variantsPage, limit: PAGE_SIZE })
   const brandsQuery = useBrands(canManageInventory)
   const sizesQuery = useSizes(canManageInventory)
@@ -72,6 +77,13 @@ export function InventarioPage() {
   const editVariantQuery = useVariant(editingVariantId)
   const deleteVariantMutation = useDeleteVariant()
   const productOptions = productOptionsQuery.data?.data ?? []
+  const activeProductOptions = useMemo(
+    () =>
+      (activeProductOptionsQuery.data?.data ?? []).filter(
+        (product) => product.activo
+      ),
+    [activeProductOptionsQuery.data?.data]
+  )
   const variantsData = variantsQuery.data
   const brands = brandsQuery.data ?? []
   const sizes = sizesQuery.data ?? []
@@ -162,6 +174,7 @@ export function InventarioPage() {
                 </Button>
                 <Button
                   variant="outline"
+                  disabled={!activeProductOptions.length}
                   onClick={() => setIsCreateVariantOpen(true)}
                 >
                   <Plus />
@@ -276,7 +289,7 @@ export function InventarioPage() {
             </DialogDescription>
           </DialogHeader>
           <VariantForm
-            products={productOptions}
+            products={activeProductOptions}
             sizes={sizes}
             colors={colors}
             onSuccess={() => setIsCreateVariantOpen(false)}
@@ -320,7 +333,10 @@ export function InventarioPage() {
             </div>
           ) : editVariantQuery.data ? (
             <VariantForm
-              products={productOptions}
+              products={getEditableProductOptions(
+                productOptions,
+                editVariantQuery.data
+              )}
               sizes={sizes}
               colors={colors}
               variant={editVariantQuery.data}
@@ -449,8 +465,8 @@ function ConfirmDeactivateDialog({
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription>
-            {description} No se elimina de la base de datos; el backend aplica
-            borrado logico.
+            {description} La prenda quedara oculta para nuevas ventas, pero se
+            conservara su historial.
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>
@@ -520,4 +536,10 @@ function getVariantProductOptions(variants: Variant[]) {
   }
 
   return [...products.entries()].map(([id, nombre]) => ({ id, nombre }))
+}
+
+function getEditableProductOptions(products: Product[], variant?: Variant) {
+  return products.filter(
+    (product) => product.activo || product.id === variant?.producto_id
+  )
 }

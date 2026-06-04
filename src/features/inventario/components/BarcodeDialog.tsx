@@ -29,9 +29,18 @@ export function BarcodeDialog({
   const [generatedBarcode, setGeneratedBarcode] = useState("")
   const updateVariant = useUpdateVariant()
   const barcode = generatedBarcode || variant?.codigo_barras
+  const sku =
+    variant?.sku ||
+    (variant
+      ? buildSku(
+          variant.producto_nombre,
+          variant.talla_nombre,
+          variant.color_nombre
+        )
+      : "")
   const barcodeSvg = useMemo(
-    () => (barcode ? createEan13Svg(barcode) : ""),
-    [barcode]
+    () => (barcode ? createEan13Svg(barcode, sku) : ""),
+    [barcode, sku]
   )
 
   useEffect(() => {
@@ -196,7 +205,7 @@ const PARITY = [
   "LGGLGL",
 ]
 
-function createEan13Svg(value: string) {
+function createEan13Svg(value: string, sku: string) {
   if (!/^\d{13}$/.test(value)) {
     return ""
   }
@@ -218,8 +227,11 @@ function createEan13Svg(value: string) {
   const quiet = 18
   const barHeight = 72
   const guardHeight = 82
-  const textY = 108
+  const topPadding = sku ? 26 : 0
+  const barTop = 10 + topPadding
+  const textY = 108 + topPadding
   const width = quiet * 2 + bits.length * moduleWidth
+  const height = 118 + topPadding
   const bars = bits
     .split("")
     .map((bit, index) => {
@@ -234,15 +246,28 @@ function createEan13Svg(value: string) {
       const height = isGuard ? guardHeight : barHeight
       const x = quiet + index * moduleWidth
 
-      return `<rect x="${x}" y="10" width="${moduleWidth}" height="${height}" fill="#111827" />`
+      return `<rect x="${x}" y="${barTop}" width="${moduleWidth}" height="${height}" fill="#111827" />`
     })
     .join("")
 
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="118" viewBox="0 0 ${width} 118" role="img" aria-label="Codigo de barras ${value}">
+  const skuText = sku
+    ? `<text x="${width / 2}" y="18" font-family="Inter, Arial, sans-serif" font-size="13" font-weight="700" fill="#111827" text-anchor="middle">${escapeSvgText(sku)}</text>`
+    : ""
+
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" role="img" aria-label="Codigo de barras ${value}">
   <rect width="100%" height="100%" fill="#ffffff" />
+  ${skuText}
   ${bars}
   <text x="${quiet - 8}" y="${textY}" font-family="Inter, Arial, sans-serif" font-size="13" fill="#111827" text-anchor="middle">${value[0]}</text>
   <text x="${quiet + 24 * moduleWidth}" y="${textY}" font-family="Inter, Arial, sans-serif" font-size="13" fill="#111827" text-anchor="middle">${value.slice(1, 7)}</text>
   <text x="${quiet + 72 * moduleWidth}" y="${textY}" font-family="Inter, Arial, sans-serif" font-size="13" fill="#111827" text-anchor="middle">${value.slice(7)}</text>
 </svg>`
+}
+
+function escapeSvgText(value: string) {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
 }
