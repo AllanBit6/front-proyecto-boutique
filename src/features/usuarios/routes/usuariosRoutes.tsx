@@ -6,7 +6,7 @@ import type { FeatureRoute } from "@/shared/types/navigation"
 export const usuariosRoutes: FeatureRoute[] = [
   {
     path: "usuarios",
-    title: "Usuarios",
+    title: "Equipo",
     element: <UsuariosPage />,
     allowedRoles: ["admin"],
     icon: Users,

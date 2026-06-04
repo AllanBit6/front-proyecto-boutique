@@ -1,5 +1,5 @@
 import { zodResolver } from "@hookform/resolvers/zod"
-import { useForm } from "react-hook-form"
+import { useForm, useWatch } from "react-hook-form"
 import { z } from "zod"
 
 import { Button } from "@/components/ui/button"
@@ -16,7 +16,6 @@ import {
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue,
 } from "@/components/ui/select"
 import {
   useCreateBrand,
@@ -24,6 +23,7 @@ import {
   useCreateVariant,
 } from "@/features/inventario/hooks/useProducts"
 import type { CatalogOption } from "@/features/inventario/types/product"
+import { buildBarcode, buildSku } from "@/features/inventario/utils/codes"
 
 const productWizardSchema = z.object({
   nombre: z.string().min(2, "Ingresa al menos 2 caracteres"),
@@ -34,7 +34,6 @@ const productWizardSchema = z.object({
   precio_venta: z.number().min(0.01, "Ingresa un precio de venta"),
   precio_compra: z.number().min(0, "Ingresa un precio valido").optional(),
   stock_minimo: z.number().int().min(0, "Ingresa un stock valido").optional(),
-  sku: z.string().optional(),
 })
 
 type ProductWizardValues = z.infer<typeof productWizardSchema>
@@ -66,12 +65,15 @@ export function ProductWizardForm({
       precio_venta: 0,
       precio_compra: 0,
       stock_minimo: 1,
-      sku: "",
     },
   })
   const isPending =
     createBrand.isPending || createProduct.isPending || createVariant.isPending
   const hasCatalogs = sizes.length > 0 && colors.length > 0
+  const selectedSizeId = useWatch({ control: form.control, name: "talla_id" })
+  const selectedColorId = useWatch({ control: form.control, name: "color_id" })
+  const selectedSize = sizes.find((item) => item.id === selectedSizeId)
+  const selectedColor = colors.find((item) => item.id === selectedColorId)
 
   const onSubmit = form.handleSubmit(async (values) => {
     const brandId = await resolveBrandId(values.marca_nombre, brands, (name) =>
@@ -90,9 +92,8 @@ export function ProductWizardForm({
       producto_id: product.id,
       talla_id: values.talla_id,
       color_id: values.color_id,
-      sku:
-        values.sku?.trim() ||
-        buildSku(values.nombre, size?.nombre ?? "", color?.nombre ?? ""),
+      sku: buildSku(values.nombre, size?.nombre ?? "", color?.nombre ?? ""),
+      codigo_barras: buildBarcode(),
       precio_compra: values.precio_compra ?? 0,
       precio_venta: values.precio_venta,
       stock_minimo: values.stock_minimo ?? 1,
@@ -134,7 +135,7 @@ export function ProductWizardForm({
             form.formState.errors.caracteristica_distintiva
           )}
         >
-            <FieldLabel htmlFor="wizard_caracteristica">Detalle</FieldLabel>
+          <FieldLabel htmlFor="wizard_caracteristica">Detalle</FieldLabel>
           <Input
             id="wizard_caracteristica"
             placeholder="General"
@@ -149,7 +150,7 @@ export function ProductWizardForm({
           <Field data-invalid={Boolean(form.formState.errors.talla_id)}>
             <FieldLabel>Talla</FieldLabel>
             <Select
-              value={form.watch("talla_id")}
+              value={selectedSizeId}
               onValueChange={(value) =>
                 form.setValue("talla_id", value ?? "", {
                   shouldValidate: true,
@@ -158,7 +159,9 @@ export function ProductWizardForm({
               disabled={!sizes.length}
             >
               <SelectTrigger>
-                <SelectValue placeholder="Talla" />
+                <span className={!selectedSize ? "text-muted-foreground" : ""}>
+                  {selectedSize?.nombre ?? "Talla"}
+                </span>
               </SelectTrigger>
               <SelectContent>
                 {sizes.map((size) => (
@@ -173,7 +176,7 @@ export function ProductWizardForm({
           <Field data-invalid={Boolean(form.formState.errors.color_id)}>
             <FieldLabel>Color</FieldLabel>
             <Select
-              value={form.watch("color_id")}
+              value={selectedColorId}
               onValueChange={(value) =>
                 form.setValue("color_id", value ?? "", {
                   shouldValidate: true,
@@ -182,7 +185,9 @@ export function ProductWizardForm({
               disabled={!colors.length}
             >
               <SelectTrigger>
-                <SelectValue placeholder="Color" />
+                <span className={!selectedColor ? "text-muted-foreground" : ""}>
+                  {selectedColor?.nombre ?? "Color"}
+                </span>
               </SelectTrigger>
               <SelectContent>
                 {colors.map((color) => (
@@ -197,7 +202,9 @@ export function ProductWizardForm({
         </div>
         <div className="grid gap-3 sm:grid-cols-2">
           <Field data-invalid={Boolean(form.formState.errors.precio_venta)}>
-          <FieldLabel htmlFor="wizard_precio_venta">Precio al publico</FieldLabel>
+            <FieldLabel htmlFor="wizard_precio_venta">
+              Precio de venta
+            </FieldLabel>
             <Input
               id="wizard_precio_venta"
               type="number"
@@ -208,9 +215,7 @@ export function ProductWizardForm({
             <FieldError errors={[form.formState.errors.precio_venta]} />
           </Field>
           <Field data-invalid={Boolean(form.formState.errors.precio_compra)}>
-            <FieldLabel htmlFor="wizard_precio_compra">
-              Precio compra
-            </FieldLabel>
+            <FieldLabel htmlFor="wizard_precio_compra">Costo</FieldLabel>
             <Input
               id="wizard_precio_compra"
               type="number"
@@ -223,7 +228,9 @@ export function ProductWizardForm({
         </div>
         <div className="grid gap-3 sm:grid-cols-2">
           <Field data-invalid={Boolean(form.formState.errors.stock_minimo)}>
-            <FieldLabel htmlFor="wizard_stock_minimo">Alerta stock</FieldLabel>
+            <FieldLabel htmlFor="wizard_stock_minimo">
+              Avisar cuando queden
+            </FieldLabel>
             <Input
               id="wizard_stock_minimo"
               type="number"
@@ -233,16 +240,6 @@ export function ProductWizardForm({
             />
             <FieldDescription>Opcional.</FieldDescription>
             <FieldError errors={[form.formState.errors.stock_minimo]} />
-          </Field>
-          <Field data-invalid={Boolean(form.formState.errors.sku)}>
-            <FieldLabel htmlFor="wizard_sku">SKU</FieldLabel>
-            <Input
-              id="wizard_sku"
-              placeholder="Automatico"
-              {...form.register("sku")}
-            />
-            <FieldDescription>Opcional.</FieldDescription>
-            <FieldError errors={[form.formState.errors.sku]} />
           </Field>
         </div>
       </FieldGroup>
@@ -274,19 +271,4 @@ async function resolveBrandId(
   const newBrand = await createBrand(brandName.trim())
 
   return newBrand.id
-}
-
-function buildSku(productName: string, sizeName: string, colorName: string) {
-  const parts = [productName, sizeName, colorName]
-    .map((part) =>
-      part
-        .normalize("NFD")
-        .replace(/[\u0300-\u036f]/g, "")
-        .replace(/[^a-zA-Z0-9]/g, "")
-        .slice(0, 3)
-        .toUpperCase()
-    )
-    .filter(Boolean)
-
-  return [...parts, Date.now().toString().slice(-4)].join("-")
 }

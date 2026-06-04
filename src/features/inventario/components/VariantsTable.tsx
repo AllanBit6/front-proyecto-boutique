@@ -23,6 +23,7 @@ interface VariantsTableProps {
   onEdit: (variant: Variant) => void
   onDelete: (variant: Variant) => void
   onBarcode: (variant: Variant) => void
+  showActions?: boolean
 }
 
 export function VariantsTable({
@@ -30,6 +31,7 @@ export function VariantsTable({
   onEdit,
   onDelete,
   onBarcode,
+  showActions = true,
 }: VariantsTableProps) {
   if (!variants.length) {
     return (
@@ -43,12 +45,13 @@ export function VariantsTable({
     <Table>
       <TableHeader>
         <TableRow>
-          <TableHead>Codigo</TableHead>
+          <TableHead>SKU</TableHead>
           <TableHead>Prenda</TableHead>
           <TableHead>Talla / color</TableHead>
           <TableHead className="text-right">Precio</TableHead>
-          <TableHead>Disponibles</TableHead>
-          <TableHead className="w-10" />
+          <TableHead>Stock</TableHead>
+          <TableHead>Estado</TableHead>
+          {showActions ? <TableHead className="w-10" /> : null}
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -56,14 +59,14 @@ export function VariantsTable({
           const lowStock = variant.stock_actual <= variant.stock_minimo
 
           return (
-            <TableRow key={variant.id}>
+            <TableRow
+              key={variant.id}
+              className={!variant.activo ? "opacity-70" : undefined}
+            >
+              <TableCell className="font-medium">{variant.sku || "-"}</TableCell>
               <TableCell>
-                <div className="font-medium">{variant.sku}</div>
-                <div className="text-xs text-muted-foreground">
-                  {variant.codigo_barras}
-                </div>
+                {variant.producto_nombre || variant.producto_id}
               </TableCell>
-              <TableCell>{variant.producto_nombre || variant.producto_id}</TableCell>
               <TableCell>
                 {variant.talla_nombre || variant.talla_id} /{" "}
                 {variant.color_nombre || variant.color_id}
@@ -77,37 +80,44 @@ export function VariantsTable({
                 </Badge>
               </TableCell>
               <TableCell>
-                <DropdownMenu>
-                  <DropdownMenuTrigger
-                    render={
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        aria-label="Acciones de variante"
-                      />
-                    }
-                  >
-                    <MoreHorizontal />
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-36">
-                    <DropdownMenuItem onClick={() => onBarcode(variant)}>
-                      <Barcode />
-                      Codigo
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => onEdit(variant)}>
-                      <Edit />
-                      Editar
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      variant="destructive"
-                      onClick={() => onDelete(variant)}
-                    >
-                      <Trash2 />
-                      Desactivar
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                <Badge variant={variant.activo ? "secondary" : "outline"}>
+                  {variant.activo ? "Activo" : "Desactivado"}
+                </Badge>
               </TableCell>
+              {showActions ? (
+                <TableCell>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger
+                      render={
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          aria-label="Acciones de variante"
+                        />
+                      }
+                    >
+                      <MoreHorizontal />
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-36">
+                      <DropdownMenuItem onClick={() => onBarcode(variant)}>
+                        <Barcode />
+                        Ver codigo
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => onEdit(variant)}>
+                        <Edit />
+                        Editar
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        variant="destructive"
+                        onClick={() => onDelete(variant)}
+                      >
+                        <Trash2 />
+                        Desactivar
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </TableCell>
+              ) : null}
             </TableRow>
           )
         })}

@@ -30,7 +30,8 @@ const API_URL = import.meta.env.VITE_API_URL ?? ""
 function toAuthUser(user: ApiLoginUser): AuthUser {
   return {
     id: user.id,
-    name: [user.nombre, user.apellido].filter(Boolean).join(" ") || user.user_name,
+    name:
+      [user.nombre, user.apellido].filter(Boolean).join(" ") || user.user_name,
     userName: user.user_name,
     role: mapRole(user.rol),
     firstLogin: user.primer_login,
@@ -40,6 +41,10 @@ function toAuthUser(user: ApiLoginUser): AuthUser {
 function mapRole(role: string): Role {
   if (role === "administrador" || role === "admin") {
     return "admin"
+  }
+
+  if (role === "bodeguero" || role === "warehouse") {
+    return "warehouse"
   }
 
   return "cashier"
@@ -82,13 +87,16 @@ export async function changePassword(input: {
   currentPassword: string
   newPassword: string
 }): Promise<AuthUser | null> {
-  const response = await request<ChangePasswordResponse>("/usuarios/change-password", {
-    method: "PATCH",
-    body: JSON.stringify({
-      password_actual: input.currentPassword,
-      password_nuevo: input.newPassword,
-    }),
-  })
+  const response = await request<ChangePasswordResponse>(
+    "/usuarios/change-password",
+    {
+      method: "PATCH",
+      body: JSON.stringify({
+        password_actual: input.currentPassword,
+        password_nuevo: input.newPassword,
+      }),
+    }
+  )
 
   return response.usuario ? toAuthUser(response.usuario) : null
 }

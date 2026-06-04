@@ -44,8 +44,8 @@ export function UsersTable({
       <TableHeader>
         <TableRow>
           <TableHead>Nombre</TableHead>
-          <TableHead>Usuario</TableHead>
-          <TableHead>Rol</TableHead>
+          <TableHead>Acceso</TableHead>
+          <TableHead>Permiso</TableHead>
           <TableHead className="w-10" />
         </TableRow>
       </TableHeader>
@@ -57,7 +57,9 @@ export function UsersTable({
             </TableCell>
             <TableCell>{user.user_name}</TableCell>
             <TableCell>
-              <Badge variant="secondary">{user.rol_nombre || user.rol_id}</Badge>
+              <Badge variant="secondary">
+                {user.rol_nombre || user.rol_id}
+              </Badge>
             </TableCell>
             <TableCell>
               <DropdownMenu>
@@ -79,7 +81,7 @@ export function UsersTable({
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => onResetPassword(user)}>
                     <KeyRound />
-                    Reset password
+                    Cambiar contrasena
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     variant="destructive"

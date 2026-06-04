@@ -1,5 +1,5 @@
+import { ajustesRoutes } from "@/features/ajustes/routes/ajustesRoutes"
 import { authRoutes } from "@/features/auth/routes/authRoutes"
-import { cajaRoutes } from "@/features/caja/routes/cajaRoutes"
 import { cajeroRoutes } from "@/features/cajero/routes/cajeroRoutes"
 import { comprasRoutes } from "@/features/compras/routes/comprasRoutes"
 import { dashboardRoutes } from "@/features/dashboard/routes/dashboardRoutes"
@@ -11,11 +11,11 @@ import { ventasRoutes } from "@/features/ventas/routes/ventasRoutes"
 export const featureRoutes = [
   ...dashboardRoutes,
   ...cajeroRoutes,
-  ...cajaRoutes,
-  ...ventasRoutes,
-  ...inventarioRoutes,
-  ...comprasRoutes,
   ...usuariosRoutes,
+  ...inventarioRoutes,
+  ...ventasRoutes,
+  ...comprasRoutes,
+  ...ajustesRoutes,
   ...reporteriaRoutes,
   ...authRoutes,
 ]

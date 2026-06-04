@@ -6,7 +6,7 @@ import type { FeatureRoute } from "@/shared/types/navigation"
 export const dashboardRoutes: FeatureRoute[] = [
   {
     path: "dashboard",
-    title: "Dashboard",
+    title: "Resumen",
     element: <DashboardPage />,
     allowedRoles: ["admin", "cashier"],
     icon: LayoutDashboard,

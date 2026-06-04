@@ -1,6 +1,6 @@
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useEffect } from "react"
-import { useForm } from "react-hook-form"
+import { Controller, useForm, useWatch } from "react-hook-form"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -15,9 +15,11 @@ import {
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue,
 } from "@/components/ui/select"
-import { useCreateUser, useUpdateUser } from "@/features/usuarios/hooks/useUsers"
+import {
+  useCreateUser,
+  useUpdateUser,
+} from "@/features/usuarios/hooks/useUsers"
 import {
   type UserFormValues,
   userFormSchema,
@@ -45,8 +47,15 @@ export function UserForm({ roles, user, onSuccess }: UserFormProps) {
 
   const onSubmit = form.handleSubmit(async (values) => {
     if (user) {
-      const { password: _password, ...input } = values
-      await updateUser.mutateAsync({ id: user.id, input })
+      await updateUser.mutateAsync({
+        id: user.id,
+        input: {
+          nombre: values.nombre,
+          apellido: values.apellido,
+          user_name: values.user_name,
+          rol_id: values.rol_id,
+        },
+      })
     } else {
       if (!values.password || values.password.length < 6) {
         form.setError("password", {
@@ -69,6 +78,8 @@ export function UserForm({ roles, user, onSuccess }: UserFormProps) {
   })
 
   const isPending = createUser.isPending || updateUser.isPending
+  const selectedRoleId = useWatch({ control: form.control, name: "rol_id" })
+  const selectedRole = roles.find((role) => role.id === selectedRoleId)
 
   return (
     <form className="space-y-4" onSubmit={onSubmit}>
@@ -84,7 +95,7 @@ export function UserForm({ roles, user, onSuccess }: UserFormProps) {
           <FieldError errors={[form.formState.errors.apellido]} />
         </Field>
         <Field data-invalid={Boolean(form.formState.errors.user_name)}>
-          <FieldLabel htmlFor="user_name">Usuario</FieldLabel>
+          <FieldLabel htmlFor="user_name">Nombre de acceso</FieldLabel>
           <Input
             id="user_name"
             autoComplete="username"
@@ -105,25 +116,36 @@ export function UserForm({ roles, user, onSuccess }: UserFormProps) {
           </Field>
         ) : null}
         <Field data-invalid={Boolean(form.formState.errors.rol_id)}>
-          <FieldLabel>Rol</FieldLabel>
-          <Select
-            value={form.watch("rol_id")}
-            onValueChange={(value) =>
-              form.setValue("rol_id", value ?? "", { shouldValidate: true })
-            }
-            disabled={!roles.length}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Selecciona un rol" />
-            </SelectTrigger>
-            <SelectContent>
-              {roles.map((role) => (
-                <SelectItem key={role.id} value={role.id}>
-                  {role.nombre}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <FieldLabel>Permiso</FieldLabel>
+          <Controller
+            control={form.control}
+            name="rol_id"
+            render={({ field }) => (
+              <Select
+                value={field.value || undefined}
+                onValueChange={(value) => {
+                  field.onChange(value ?? "")
+                  field.onBlur()
+                }}
+                disabled={!roles.length}
+              >
+                <SelectTrigger>
+                  <span
+                    className={!selectedRole ? "text-muted-foreground" : ""}
+                  >
+                    {selectedRole?.nombre ?? "Selecciona permiso"}
+                  </span>
+                </SelectTrigger>
+                <SelectContent>
+                  {roles.map((role) => (
+                    <SelectItem key={role.id} value={role.id}>
+                      {role.nombre}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          />
           <FieldError errors={[form.formState.errors.rol_id]} />
         </Field>
       </FieldGroup>

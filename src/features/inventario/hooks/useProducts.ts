@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 
 import {
+  type CatalogQueryParams,
   createProduct,
   createBrand,
   createColor,
@@ -25,6 +26,7 @@ import type {
   CreateBrandInput,
   CreateCatalogInput,
   CreateVariantInput,
+  Variant,
   UpdateProductInput,
   UpdateVariantInput,
 } from "@/features/inventario/types/product"
@@ -35,7 +37,7 @@ export const brandsQueryKey = ["marcas"]
 export const sizesQueryKey = ["tallas"]
 export const colorsQueryKey = ["colores"]
 
-export function useProducts(params: { page: number; limit: number }) {
+export function useProducts(params: CatalogQueryParams) {
   return useQuery({
     queryKey: [...productsQueryKey, params],
     queryFn: () => fetchProducts(params),
@@ -97,10 +99,34 @@ export function useDeleteProduct() {
   })
 }
 
-export function useVariants(params: { page: number; limit: number }) {
+export function useVariants(params: CatalogQueryParams) {
   return useQuery({
     queryKey: [...variantsQueryKey, params],
     queryFn: () => fetchVariants(params),
+  })
+}
+
+export function useAllVariants() {
+  return useQuery({
+    queryKey: [...variantsQueryKey, "all"],
+    queryFn: async () => {
+      const limit = 100
+      const firstPage = await fetchVariants({ page: 1, limit })
+      const variants = [...firstPage.data]
+
+      for (let page = 2; page <= firstPage.totalPages; page += 1) {
+        const nextPage = await fetchVariants({ page, limit })
+        variants.push(...nextPage.data)
+      }
+
+      const uniqueVariants = new Map<string, Variant>()
+
+      for (const variant of variants) {
+        uniqueVariants.set(variant.id, variant)
+      }
+
+      return Array.from(uniqueVariants.values())
+    },
   })
 }
 
@@ -146,22 +172,25 @@ export function useDeleteVariant() {
   })
 }
 
-export function useBrands() {
+export function useBrands(enabled = true) {
   return useQuery({
+    enabled,
     queryKey: brandsQueryKey,
     queryFn: fetchBrands,
   })
 }
 
-export function useSizes() {
+export function useSizes(enabled = true) {
   return useQuery({
+    enabled,
     queryKey: sizesQueryKey,
     queryFn: fetchSizes,
   })
 }
 
-export function useColors() {
+export function useColors(enabled = true) {
   return useQuery({
+    enabled,
     queryKey: colorsQueryKey,
     queryFn: fetchColors,
   })
