@@ -97,6 +97,45 @@ function playScanBeep() {
   accentOscillator.onended = () => void audioContext.close()
 }
 
+function playSaleSuccess() {
+  const AudioContextCtor =
+    window.AudioContext ??
+    (window as Window & { webkitAudioContext?: typeof window.AudioContext })
+      .webkitAudioContext
+
+  if (!AudioContextCtor) {
+    return
+  }
+
+  const audioContext = new AudioContextCtor()
+  const primaryOsc = audioContext.createOscillator()
+  const secondaryOsc = audioContext.createOscillator()
+  const gain = audioContext.createGain()
+  const now = audioContext.currentTime
+
+  primaryOsc.type = "triangle"
+  secondaryOsc.type = "sine"
+  primaryOsc.frequency.setValueAtTime(880, now)
+  primaryOsc.frequency.exponentialRampToValueAtTime(1320, now + 0.12)
+  secondaryOsc.frequency.setValueAtTime(1320, now)
+  secondaryOsc.frequency.exponentialRampToValueAtTime(1760, now + 0.12)
+
+  gain.gain.setValueAtTime(0.0001, now)
+  gain.gain.exponentialRampToValueAtTime(0.16, now + 0.02)
+  gain.gain.exponentialRampToValueAtTime(0.08, now + 0.09)
+  gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.25)
+
+  primaryOsc.connect(gain)
+  secondaryOsc.connect(gain)
+  gain.connect(audioContext.destination)
+
+  primaryOsc.start(now)
+  secondaryOsc.start(now)
+  primaryOsc.stop(now + 0.25)
+  secondaryOsc.stop(now + 0.25)
+  primaryOsc.onended = () => void audioContext.close()
+}
+
 export function CajeroPage() {
   const [barcode, setBarcode] = useState("")
   const [productSearch, setProductSearch] = useState("")
@@ -328,6 +367,7 @@ export function CajeroPage() {
       })
 
       await promise
+      playSaleSuccess()
       setCart([])
       setAmountReceived("")
       setReferenceNumber("")
