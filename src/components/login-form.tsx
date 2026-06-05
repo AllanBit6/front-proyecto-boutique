@@ -104,6 +104,7 @@ export function LoginForm({
                     name="password"
                     className="h-10 pl-9"
                     type="password"
+                    placeholder="Contraseña"
                     autoComplete="current-password"
                     required
                   />
