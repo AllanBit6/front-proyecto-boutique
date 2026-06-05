@@ -58,7 +58,7 @@ export function LoginForm({
         replace: true,
       })
     } catch {
-      setError("Usuario o contrasena incorrectos.")
+      setError("Usuario o contraseña incorrectos.")
     } finally {
       setIsSubmitting(false)
     }
@@ -96,7 +96,7 @@ export function LoginForm({
                 </div>
               </Field>
               <Field>
-                <FieldLabel htmlFor="password">Contrasena</FieldLabel>
+                <FieldLabel htmlFor="password">Contraseña</FieldLabel>
                 <div className="relative">
                   <LockKeyhole className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
                   <Input

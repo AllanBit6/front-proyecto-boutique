@@ -105,7 +105,7 @@ export function UserForm({ roles, user, onSuccess }: UserFormProps) {
         </Field>
         {!isEditing ? (
           <Field data-invalid={Boolean(form.formState.errors.password)}>
-            <FieldLabel htmlFor="password">Contrasena</FieldLabel>
+            <FieldLabel htmlFor="password">Contraseña</FieldLabel>
             <Input
               id="password"
               type="password"

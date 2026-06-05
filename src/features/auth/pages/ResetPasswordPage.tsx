@@ -41,12 +41,12 @@ export function ResetPasswordPage() {
     setError(null)
 
     if (newPassword.length < 6) {
-      setError("La nueva contrasena debe tener al menos 6 caracteres.")
+      setError("La nueva contraseña debe tener al menos 6 caracteres.")
       return
     }
 
     if (newPassword !== confirmPassword) {
-      setError("La confirmacion no coincide con la nueva contrasena.")
+      setError("La confirmacion no coincide con la nueva contraseña.")
       return
     }
 
@@ -56,7 +56,7 @@ export function ResetPasswordPage() {
       await changePassword({ currentPassword, newPassword })
       navigate("/dashboard", { replace: true })
     } catch {
-      setError("No se pudo actualizar la contrasena. Revisa la contrasena actual.")
+      setError("No se pudo actualizar la contraseña. Revisa la contraseña actual.")
     } finally {
       setIsSubmitting(false)
     }
@@ -66,9 +66,9 @@ export function ResetPasswordPage() {
     <main className="grid min-h-svh place-items-center bg-muted/30 p-4">
       <Card className="w-full max-w-sm">
         <CardHeader>
-          <CardTitle>Actualiza tu contrasena</CardTitle>
+          <CardTitle>Actualiza tu contraseña</CardTitle>
           <CardDescription>
-            Antes de entrar al POS necesitas definir una contrasena nueva.
+            Antes de entrar al POS necesitas definir una contraseña nueva.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -76,7 +76,7 @@ export function ResetPasswordPage() {
             <FieldGroup>
               <Field>
                 <FieldLabel htmlFor="current_password">
-                  Contrasena temporal
+                  Contraseña temporal
                 </FieldLabel>
                 <Input
                   id="current_password"
@@ -87,7 +87,7 @@ export function ResetPasswordPage() {
                 />
               </Field>
               <Field>
-                <FieldLabel htmlFor="new_password">Nueva contrasena</FieldLabel>
+                <FieldLabel htmlFor="new_password">Nueva contraseña</FieldLabel>
                 <Input
                   id="new_password"
                   name="new_password"
@@ -98,7 +98,7 @@ export function ResetPasswordPage() {
               </Field>
               <Field>
                 <FieldLabel htmlFor="confirm_password">
-                  Confirmar contrasena
+                  Confirmar contraseña
                 </FieldLabel>
                 <Input
                   id="confirm_password"
@@ -111,7 +111,7 @@ export function ResetPasswordPage() {
               <Field>
                 {error ? <FieldError>{error}</FieldError> : null}
                 <Button type="submit" disabled={isSubmitting}>
-                  {isSubmitting ? "Actualizando..." : "Guardar contrasena"}
+                  {isSubmitting ? "Actualizando..." : "Guardar contraseña"}
                 </Button>
                 <FieldDescription className="text-center">
                   Luego entraras al sistema automaticamente.

@@ -81,7 +81,7 @@ export function UsersTable({
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => onResetPassword(user)}>
                     <KeyRound />
-                    Cambiar contrasena
+                    Cambiar contraseña
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     variant="destructive"

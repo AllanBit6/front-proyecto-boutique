@@ -178,9 +178,9 @@ export function UsuariosPage() {
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Resetear contrasena</DialogTitle>
+            <DialogTitle>Resetear contraseña</DialogTitle>
             <DialogDescription>
-              Define una contrasena temporal para {resetUser?.user_name}.
+              Define una contraseña temporal para {resetUser?.user_name}.
             </DialogDescription>
           </DialogHeader>
           {resetUser ? (

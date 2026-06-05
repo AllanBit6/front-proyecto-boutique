@@ -46,7 +46,7 @@ export function ResetPasswordForm({
     <form className="space-y-4" onSubmit={onSubmit}>
       <FieldGroup>
         <Field data-invalid={Boolean(form.formState.errors.password_nuevo)}>
-          <FieldLabel htmlFor="password_nuevo">Nueva contrasena</FieldLabel>
+          <FieldLabel htmlFor="password_nuevo">Nueva contraseña</FieldLabel>
           <Input
             id="password_nuevo"
             type="password"
@@ -57,7 +57,7 @@ export function ResetPasswordForm({
         </Field>
       </FieldGroup>
       <Button type="submit" disabled={resetPassword.isPending}>
-        {resetPassword.isPending ? "Guardando..." : "Resetear contrasena"}
+        {resetPassword.isPending ? "Guardando..." : "Resetear contraseña"}
       </Button>
     </form>
   )
