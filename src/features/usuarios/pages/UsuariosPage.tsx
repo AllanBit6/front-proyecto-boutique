@@ -1,14 +1,9 @@
 import { ChevronLeft, ChevronRight } from "lucide-react"
 import { useState } from "react"
+import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import {
   Dialog,
   DialogContent,
@@ -17,6 +12,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import {
+  FormSkeleton,
+  LoadTransition,
+  TableSkeleton,
+} from "@/components/ui/loading-skeletons"
 import { ResetPasswordForm } from "@/features/usuarios/components/ResetPasswordForm"
 import { UserForm } from "@/features/usuarios/components/UserForm"
 import { UsersTable } from "@/features/usuarios/components/UsersTable"
@@ -47,92 +47,107 @@ export function UsuariosPage() {
       return
     }
 
-    await deleteUserMutation.mutateAsync(deleteUser.id)
-    setDeleteUser(null)
+    const promise = deleteUserMutation.mutateAsync(deleteUser.id)
+
+    toast.promise(promise, {
+      loading: "Eliminando usuario...",
+      success: "Usuario eliminado correctamente.",
+      error: (error) =>
+        error instanceof Error
+          ? error.message
+          : "No se pudo eliminar el usuario.",
+    })
+
+    try {
+      await promise
+      setDeleteUser(null)
+    } catch {
+      // toast.promise displays the error.
+    }
   }
 
   return (
     <>
-      <section className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
-        <Card>
-          <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <CardTitle>Equipo</CardTitle>
-              <CardDescription>
-                Personas que pueden entrar al sistema.
-              </CardDescription>
-            </div>
-            {usersData ? (
-              <div className="text-sm text-muted-foreground">
-                {usersData.total} registros
+      <section className="space-y-4">
+        <div>
+          <h1 className="page-heading">Equipo</h1>
+        </div>
+        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
+          <Card>
+            <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <CardTitle>Usuarios</CardTitle>
               </div>
-            ) : null}
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {usersQuery.isLoading ? (
-              <div className="text-sm text-muted-foreground">
-                Cargando usuarios...
-              </div>
-            ) : usersQuery.isError ? (
-              <div className="text-sm text-destructive">
-                No se pudieron cargar los usuarios.
-              </div>
-            ) : (
-              <UsersTable
-                users={usersData?.users ?? []}
-                onEdit={(user) => setEditingUserId(user.id)}
-                onResetPassword={setResetUser}
-                onDelete={setDeleteUser}
-              />
-            )}
-            {usersData ? (
-              <div className="flex items-center justify-between gap-3 border-t pt-4">
+              {usersData ? (
                 <div className="text-sm text-muted-foreground">
-                  Pagina {usersData.page} de {usersData.totalPages}
+                  {usersData.total} registros
                 </div>
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={page <= 1 || usersQuery.isFetching}
-                    onClick={() => setPage((currentPage) => currentPage - 1)}
-                  >
-                    <ChevronLeft />
-                    Anterior
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={
-                      page >= usersData.totalPages || usersQuery.isFetching
-                    }
-                    onClick={() => setPage((currentPage) => currentPage + 1)}
-                  >
-                    Siguiente
-                    <ChevronRight />
-                  </Button>
+              ) : null}
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {usersQuery.isLoading ? (
+                <TableSkeleton columns={4} />
+              ) : usersQuery.isError ? (
+                <div className="text-sm text-destructive">
+                  No se pudieron cargar los usuarios.
                 </div>
-              </div>
-            ) : null}
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle>Nueva persona</CardTitle>
-            <CardDescription>
-              Define sus datos y que puede hacer.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {rolesQuery.isLoading ? (
-              <div className="text-sm text-muted-foreground">
-                Cargando roles...
-              </div>
-            ) : (
-              <UserForm roles={roles} />
-            )}
-          </CardContent>
-        </Card>
+              ) : (
+                <LoadTransition>
+                  <UsersTable
+                    users={usersData?.users ?? []}
+                    onEdit={(user) => setEditingUserId(user.id)}
+                    onResetPassword={setResetUser}
+                    onDelete={setDeleteUser}
+                  />
+                </LoadTransition>
+              )}
+              {usersData ? (
+                <div className="flex flex-col gap-3 border-t pt-4 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="text-sm text-muted-foreground">
+                    Página {usersData.page} de{" "}
+                    {Math.max(usersData.totalPages, 1)}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={page <= 1 || usersQuery.isFetching}
+                      onClick={() => setPage((currentPage) => currentPage - 1)}
+                    >
+                      <ChevronLeft />
+                      Anterior
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={
+                        page >= usersData.totalPages || usersQuery.isFetching
+                      }
+                      onClick={() => setPage((currentPage) => currentPage + 1)}
+                    >
+                      Siguiente
+                      <ChevronRight />
+                    </Button>
+                  </div>
+                </div>
+              ) : null}
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle>Nueva persona</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {rolesQuery.isLoading ? (
+                <FormSkeleton fields={5} />
+              ) : (
+                <LoadTransition>
+                  <UserForm roles={roles} />
+                </LoadTransition>
+              )}
+            </CardContent>
+          </Card>
+        </div>
       </section>
 
       <Dialog
@@ -146,20 +161,18 @@ export function UsuariosPage() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Editar usuario</DialogTitle>
-            <DialogDescription>
-              Actualiza los datos y rol del usuario.
-            </DialogDescription>
+            <DialogDescription>Datos y rol.</DialogDescription>
           </DialogHeader>
           {editUserQuery.isLoading ? (
-            <div className="text-sm text-muted-foreground">
-              Cargando usuario...
-            </div>
+            <FormSkeleton fields={5} />
           ) : editUserQuery.data ? (
-            <UserForm
-              roles={roles}
-              user={editUserQuery.data}
-              onSuccess={() => setEditingUserId(null)}
-            />
+            <LoadTransition>
+              <UserForm
+                roles={roles}
+                user={editUserQuery.data}
+                onSuccess={() => setEditingUserId(null)}
+              />
+            </LoadTransition>
           ) : (
             <div className="text-sm text-destructive">
               No se pudo cargar el usuario.
@@ -178,9 +191,9 @@ export function UsuariosPage() {
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Resetear contrasena</DialogTitle>
+            <DialogTitle>Resetear contraseña</DialogTitle>
             <DialogDescription>
-              Define una contrasena temporal para {resetUser?.user_name}.
+              Contraseña temporal para {resetUser?.user_name}.
             </DialogDescription>
           </DialogHeader>
           {resetUser ? (
@@ -204,8 +217,7 @@ export function UsuariosPage() {
           <DialogHeader>
             <DialogTitle>Eliminar usuario</DialogTitle>
             <DialogDescription>
-              Esta accion eliminara a {deleteUser?.user_name}. No se puede
-              deshacer desde esta pantalla.
+              Eliminar a {deleteUser?.user_name}. No se puede deshacer.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>

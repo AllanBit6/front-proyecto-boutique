@@ -15,8 +15,19 @@ import {
 import { useVariants } from "@/features/inventario/hooks/useProducts"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
+import {
+  LoadTransition,
+  TableSkeleton,
+} from "@/components/ui/loading-skeletons"
+import { Textarea } from "@/components/ui/textarea"
 import {
   Select,
   SelectContent,
@@ -24,6 +35,11 @@ import {
   SelectTrigger,
 } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
+import {
+  moneyValue,
+  normalizeTextInput,
+  positiveInteger,
+} from "@/shared/utils/security"
 import {
   Table,
   TableBody,
@@ -44,6 +60,8 @@ export function ComprasPage() {
   const [purchaseStatus, setPurchaseStatus] = useState("all")
   const [quantity, setQuantity] = useState("")
   const [unitCost, setUnitCost] = useState("")
+  const [purchaseToCancel, setPurchaseToCancel] = useState<string | null>(null)
+  const [cancelReason, setCancelReason] = useState("")
   const [lastResult, setLastResult] = useState<{
     type: "success" | "error" | "info"
     message: string
@@ -52,6 +70,12 @@ export function ComprasPage() {
   const variantsQuery = useVariants({ page: 1, limit: 100 })
   const createPurchase = useCreatePurchase()
   const cancelPurchase = useCancelPurchase()
+  const hasActivePurchaseFilters = Boolean(
+    purchaseSearch.trim() ||
+    purchaseDateFrom ||
+    purchaseDateTo ||
+    purchaseStatus !== "all"
+  )
   const activeVariants = useMemo(
     () => (variantsQuery.data?.data ?? []).filter((variant) => variant.activo),
     [variantsQuery.data?.data]
@@ -85,13 +109,13 @@ export function ComprasPage() {
   async function handleCreate(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
     const form = event.currentTarget
-    const cantidad = Number(quantity)
-    const precioUnitario = Number(unitCost)
+    const cantidad = positiveInteger(quantity)
+    const precioUnitario = moneyValue(unitCost)
 
     if (!variantId || !selectedVariant) {
       setLastResult({
         type: "error",
-        message: "Selecciona una prenda activa antes de registrar la compra.",
+        message: "Selecciona una prenda.",
       })
       toast.error("Selecciona una prenda para sumar stock.")
       return
@@ -106,18 +130,27 @@ export function ComprasPage() {
       return
     }
 
-    if (Number.isNaN(precioUnitario) || precioUnitario < 0) {
+    if (cantidad > 999999) {
+      setLastResult({
+        type: "error",
+        message: "La cantidad es demasiado alta.",
+      })
+      toast.error("Revisa la cantidad.")
+      return
+    }
+
+    if (precioUnitario < 0 || precioUnitario > 999999.99) {
       setLastResult({
         type: "error",
         message: "El costo por unidad debe ser cero o mayor.",
       })
-      toast.error("Ingresa un costo valido.")
+      toast.error("Ingresa un costo válido.")
       return
     }
 
     setLastResult({
       type: "info",
-      message: `Registrando ${cantidad} unidades para ${selectedVariant.producto_nombre}.`,
+      message: `Registrando ${cantidad} unidades.`,
     })
 
     const promise = createPurchase.mutateAsync({
@@ -136,7 +169,7 @@ export function ComprasPage() {
       await promise
       setLastResult({
         type: "success",
-        message: "Compra registrada correctamente. El stock se actualizara en la lista.",
+        message: "Compra registrada.",
       })
       setVariantId("")
       setQuantity("")
@@ -150,10 +183,16 @@ export function ComprasPage() {
     }
   }
 
-  async function handleCancel(id: string) {
-    const motivo = window.prompt("Motivo de anulacion")
-    if (!motivo) return
-    const promise = cancelPurchase.mutateAsync({ id, motivo })
+  async function handleCancel(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    const motivo = normalizeTextInput(cancelReason, { maxLength: 160 })
+
+    if (!purchaseToCancel || !motivo) {
+      toast.error("Ingresa el motivo de anulación.")
+      return
+    }
+
+    const promise = cancelPurchase.mutateAsync({ id: purchaseToCancel, motivo })
 
     toast.promise(promise, {
       loading: "Anulando compra...",
@@ -165,8 +204,10 @@ export function ComprasPage() {
       await promise
       setLastResult({
         type: "success",
-        message: "Compra anulada correctamente. El stock se actualizara en la lista.",
+        message: "Compra anulada.",
       })
+      setPurchaseToCancel(null)
+      setCancelReason("")
     } catch (error) {
       setLastResult({
         type: "error",
@@ -186,11 +227,7 @@ export function ComprasPage() {
             <CardTitle>Producto recibido</CardTitle>
           </CardHeader>
           <CardContent>
-            <form
-              className="space-y-3"
-              noValidate
-              onSubmit={handleCreate}
-            >
+            <form className="space-y-3" noValidate onSubmit={handleCreate}>
               <FieldGroup className="gap-3">
                 <Field>
                   <FieldLabel>Prenda</FieldLabel>
@@ -236,6 +273,7 @@ export function ComprasPage() {
                     name="cantidad"
                     type="number"
                     min="1"
+                    max="999999"
                     value={quantity}
                     onChange={(event) => setQuantity(event.target.value)}
                   />
@@ -249,6 +287,7 @@ export function ComprasPage() {
                     name="precio_unitario"
                     type="number"
                     min="0"
+                    max="999999.99"
                     step="0.01"
                     value={unitCost}
                     onChange={(event) => setUnitCost(event.target.value)}
@@ -285,85 +324,137 @@ export function ComprasPage() {
             <div className="grid gap-2 md:grid-cols-[minmax(220px,1fr)_160px_160px_150px]">
               <Input
                 value={purchaseSearch}
-                onChange={(event) => setPurchaseSearch(event.target.value)}
+                onChange={(event) => {
+                  setPurchaseSearch(event.target.value)
+                  setPage(1)
+                }}
                 placeholder="Buscar ID, usuario o total"
               />
               <Input
                 type="date"
                 value={purchaseDateFrom}
-                onChange={(event) => setPurchaseDateFrom(event.target.value)}
+                onChange={(event) => {
+                  setPurchaseDateFrom(event.target.value)
+                  setPage(1)
+                }}
               />
               <Input
                 type="date"
                 value={purchaseDateTo}
-                onChange={(event) => setPurchaseDateTo(event.target.value)}
+                onChange={(event) => {
+                  setPurchaseDateTo(event.target.value)
+                  setPage(1)
+                }}
               />
-              <select
-                className="h-8 rounded-lg border border-input bg-transparent px-2.5 text-sm"
+              <Select
                 value={purchaseStatus}
-                onChange={(event) => setPurchaseStatus(event.target.value)}
+                onValueChange={(value) => {
+                  setPurchaseStatus(value ?? "all")
+                  setPage(1)
+                }}
               >
-                <option value="all">Todo estado</option>
-                <option value="active">Vigentes</option>
-                <option value="cancelled">Anuladas</option>
-              </select>
+                <SelectTrigger className="w-full">
+                  <span>
+                    {purchaseStatus === "active"
+                      ? "Vigentes"
+                      : purchaseStatus === "cancelled"
+                        ? "Anuladas"
+                        : "Todo estado"}
+                  </span>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todo estado</SelectItem>
+                  <SelectItem value="active">Vigentes</SelectItem>
+                  <SelectItem value="cancelled">Anuladas</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
-            {purchasesQuery.isLoading ? (
-              <div className="text-sm text-muted-foreground">
-                Cargando compras...
+            {hasActivePurchaseFilters ? (
+              <div className="text-xs text-muted-foreground">
+                {filteredPurchases.length} resultados
               </div>
+            ) : null}
+            {purchasesQuery.isLoading ? (
+              <TableSkeleton columns={6} />
             ) : purchasesQuery.isError ? (
               <div className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
                 {getErrorMessage(purchasesQuery.error)}
               </div>
             ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Fecha</TableHead>
-                    <TableHead>Registrado por</TableHead>
-                    <TableHead>Prendas</TableHead>
-                    <TableHead>Total</TableHead>
-                    <TableHead>Estado</TableHead>
-                    <TableHead />
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredPurchases.map((item) => (
-                    <TableRow key={item.id}>
-                      <TableCell>{formatDate(item.fecha)}</TableCell>
-                      <TableCell>{item.usuario || "-"}</TableCell>
-                      <TableCell>{item.items}</TableCell>
-                      <TableCell>{formatCurrency(item.total)}</TableCell>
-                      <TableCell>
-                        <Badge variant={item.activo ? "secondary" : "outline"}>
-                          {item.activo ? "Vigente" : "Anulada"}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          disabled={!item.activo || cancelPurchase.isPending}
-                          onClick={() => void handleCancel(item.id)}
-                        >
-                          Anular
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                  {!filteredPurchases.length ? (
-                    <TableRow>
-                      <TableCell
-                        colSpan={6}
-                        className="py-8 text-center text-sm text-muted-foreground"
-                      >
-                        No hay compras con esos filtros.
-                      </TableCell>
-                    </TableRow>
-                  ) : null}
-                </TableBody>
-              </Table>
+              <LoadTransition>
+                <div className="rounded-md border">
+                  <Table className="min-w-[520px]">
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Fecha</TableHead>
+                        <TableHead className="hidden md:table-cell">
+                          Registrado por
+                        </TableHead>
+                        <TableHead className="hidden sm:table-cell">
+                          Prendas
+                        </TableHead>
+                        <TableHead>Total</TableHead>
+                        <TableHead>Estado</TableHead>
+                        <TableHead />
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredPurchases.map((item) => (
+                        <TableRow key={item.id}>
+                          <TableCell className="whitespace-normal">
+                            <div>{formatDate(item.fecha)}</div>
+                            <div className="text-xs text-muted-foreground md:hidden">
+                              {item.usuario || "Sin usuario"}
+                            </div>
+                            <div className="text-xs text-muted-foreground sm:hidden">
+                              {item.items} prendas
+                            </div>
+                          </TableCell>
+                          <TableCell className="hidden md:table-cell">
+                            {item.usuario || "-"}
+                          </TableCell>
+                          <TableCell className="hidden sm:table-cell">
+                            {item.items}
+                          </TableCell>
+                          <TableCell>{formatCurrency(item.total)}</TableCell>
+                          <TableCell>
+                            <Badge
+                              variant={item.activo ? "secondary" : "outline"}
+                            >
+                              {item.activo ? "Vigente" : "Anulada"}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              disabled={
+                                !item.activo || cancelPurchase.isPending
+                              }
+                              onClick={() => {
+                                setPurchaseToCancel(item.id)
+                                setCancelReason("")
+                              }}
+                            >
+                              Anular
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                      {!filteredPurchases.length ? (
+                        <TableRow>
+                          <TableCell
+                            colSpan={6}
+                            className="py-8 text-center text-sm text-muted-foreground"
+                          >
+                            Sin resultados.
+                          </TableCell>
+                        </TableRow>
+                      ) : null}
+                    </TableBody>
+                  </Table>
+                </div>
+              </LoadTransition>
             )}
             {purchasesQuery.data ? (
               <AdminPager
@@ -378,6 +469,53 @@ export function ComprasPage() {
           </CardContent>
         </Card>
       </div>
+      <Dialog
+        open={Boolean(purchaseToCancel)}
+        onOpenChange={(open) => {
+          if (!open) {
+            setPurchaseToCancel(null)
+            setCancelReason("")
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Anular compra</DialogTitle>
+          </DialogHeader>
+          <form className="space-y-3" onSubmit={handleCancel}>
+            <Textarea
+              value={cancelReason}
+              onChange={(event) =>
+                setCancelReason(
+                  normalizeTextInput(event.target.value, { maxLength: 160 })
+                )
+              }
+              placeholder="Motivo de anulación"
+              maxLength={160}
+              rows={4}
+            />
+            <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setPurchaseToCancel(null)
+                  setCancelReason("")
+                }}
+              >
+                Cancelar
+              </Button>
+              <Button
+                type="submit"
+                variant="destructive"
+                disabled={!cancelReason.trim() || cancelPurchase.isPending}
+              >
+                {cancelPurchase.isPending ? "Anulando..." : "Anular"}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
     </section>
   )
 }
@@ -387,5 +525,5 @@ function getErrorMessage(error: unknown) {
     return error.message
   }
 
-  return "No se pudo completar la operacion."
+  return "No se pudo completar la operación."
 }

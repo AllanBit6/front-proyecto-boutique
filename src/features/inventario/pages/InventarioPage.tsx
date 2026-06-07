@@ -9,13 +9,7 @@ import { useMemo, useState } from "react"
 import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import {
   Dialog,
   DialogContent,
@@ -25,6 +19,11 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
+import {
+  FormSkeleton,
+  LoadTransition,
+  TableSkeleton,
+} from "@/components/ui/loading-skeletons"
 import {
   Select,
   SelectContent,
@@ -97,10 +96,15 @@ export function InventarioPage() {
   )
   const selectedStockFilter =
     variantStockFilter === "low"
-      ? "Necesita reposicion"
+      ? "Necesita reposición"
       : variantStockFilter === "ok"
         ? "Disponible"
         : "Todo inventario"
+  const hasActiveVariantFilters = Boolean(
+    variantSearch.trim() ||
+    variantProductFilter !== "all" ||
+    variantStockFilter !== "all"
+  )
   const filteredVariants = useMemo(
     () =>
       filterVariants(variantsData?.data ?? [], {
@@ -132,8 +136,12 @@ export function InventarioPage() {
           : "No se pudo desactivar la prenda.",
     })
 
-    await promise
-    setDeleteVariant(null)
+    try {
+      await promise
+      setDeleteVariant(null)
+    } catch {
+      // toast.promise displays the error.
+    }
   }
 
   return (
@@ -142,10 +150,6 @@ export function InventarioPage() {
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="page-heading">Inventario</h1>
-            <p className="page-subtitle">
-              Revisa lo disponible para vender y actualiza precios o tallas
-              cuando sea necesario.
-            </p>
           </div>
           {canManageInventory ? (
             <Button
@@ -162,9 +166,6 @@ export function InventarioPage() {
           <CardHeader className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
             <div>
               <CardTitle>Prendas disponibles</CardTitle>
-              <CardDescription>
-                Lista simple de productos disponibles en tienda.
-              </CardDescription>
             </div>
             {canManageInventory ? (
               <div className="flex flex-col gap-2 sm:flex-row">
@@ -187,14 +188,18 @@ export function InventarioPage() {
             <div className="grid gap-2 md:grid-cols-[minmax(220px,1fr)_180px_160px]">
               <SearchInput
                 value={variantSearch}
-                onChange={setVariantSearch}
+                onChange={(value) => {
+                  setVariantSearch(value)
+                  setVariantsPage(1)
+                }}
                 placeholder="Buscar SKU, prenda, talla o color"
               />
               <Select
                 value={variantProductFilter}
-                onValueChange={(value) =>
+                onValueChange={(value) => {
                   setVariantProductFilter(value ?? "all")
-                }
+                  setVariantsPage(1)
+                }}
               >
                 <SelectTrigger>
                   <span>
@@ -214,34 +219,42 @@ export function InventarioPage() {
               </Select>
               <Select
                 value={variantStockFilter}
-                onValueChange={(value) => setVariantStockFilter(value ?? "all")}
+                onValueChange={(value) => {
+                  setVariantStockFilter(value ?? "all")
+                  setVariantsPage(1)
+                }}
               >
                 <SelectTrigger>
                   <span>{selectedStockFilter}</span>
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todo inventario</SelectItem>
-                  <SelectItem value="low">Necesita reposicion</SelectItem>
+                  <SelectItem value="low">Necesita reposición</SelectItem>
                   <SelectItem value="ok">Disponible</SelectItem>
                 </SelectContent>
               </Select>
             </div>
-            {variantsQuery.isLoading ? (
-              <div className="text-sm text-muted-foreground">
-                Cargando prendas...
+            {hasActiveVariantFilters ? (
+              <div className="text-xs text-muted-foreground">
+                {filteredVariants.length} resultados
               </div>
+            ) : null}
+            {variantsQuery.isLoading ? (
+              <TableSkeleton columns={7} />
             ) : variantsQuery.isError ? (
               <div className="text-sm text-destructive">
                 No se pudieron cargar las prendas.
               </div>
             ) : (
-              <VariantsTable
-                variants={filteredVariants}
-                onEdit={(variant) => setEditingVariantId(variant.id)}
-                onDelete={setDeleteVariant}
-                onBarcode={setBarcodeVariant}
-                showActions={canManageInventory}
-              />
+              <LoadTransition>
+                <VariantsTable
+                  variants={filteredVariants}
+                  onEdit={(variant) => setEditingVariantId(variant.id)}
+                  onDelete={setDeleteVariant}
+                  onBarcode={setBarcodeVariant}
+                  showActions={canManageInventory}
+                />
+              </LoadTransition>
             )}
             {variantsData ? (
               <PaginationControls
@@ -268,7 +281,7 @@ export function InventarioPage() {
           <DialogHeader>
             <DialogTitle>Registrar prenda</DialogTitle>
             <DialogDescription>
-              Crea la prenda y su primera talla/color en un solo paso.
+              Incluye su primera talla/color.
             </DialogDescription>
           </DialogHeader>
           <ProductWizardForm
@@ -284,9 +297,7 @@ export function InventarioPage() {
         <DialogContent className="max-h-[92svh] overflow-y-auto sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>Nueva talla o color</DialogTitle>
-            <DialogDescription>
-              Agrega otra talla o color para una prenda que ya existe.
-            </DialogDescription>
+            <DialogDescription>Para una prenda existente.</DialogDescription>
           </DialogHeader>
           <VariantForm
             products={activeProductOptions}
@@ -304,9 +315,7 @@ export function InventarioPage() {
         <DialogContent className="max-h-[88svh] overflow-y-auto sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>Tallas y colores</DialogTitle>
-            <DialogDescription>
-              Agrega opciones para usarlas al registrar prendas.
-            </DialogDescription>
+            <DialogDescription>Opciones para inventario.</DialogDescription>
           </DialogHeader>
           <CatalogManager sizes={sizes} colors={colors} />
         </DialogContent>
@@ -324,27 +333,27 @@ export function InventarioPage() {
           <DialogHeader>
             <DialogTitle>Editar prenda</DialogTitle>
             <DialogDescription>
-              Actualiza talla, color, precios y alerta de stock.
+              Talla, color, precios y stock.
             </DialogDescription>
           </DialogHeader>
           {editVariantQuery.isLoading ? (
-            <div className="text-sm text-muted-foreground">
-              Cargando presentacion...
-            </div>
+            <FormSkeleton fields={5} />
           ) : editVariantQuery.data ? (
-            <VariantForm
-              products={getEditableProductOptions(
-                productOptions,
-                editVariantQuery.data
-              )}
-              sizes={sizes}
-              colors={colors}
-              variant={editVariantQuery.data}
-              onSuccess={() => setEditingVariantId(null)}
-            />
+            <LoadTransition>
+              <VariantForm
+                products={getEditableProductOptions(
+                  productOptions,
+                  editVariantQuery.data
+                )}
+                sizes={sizes}
+                colors={colors}
+                variant={editVariantQuery.data}
+                onSuccess={() => setEditingVariantId(null)}
+              />
+            </LoadTransition>
           ) : (
             <div className="text-sm text-destructive">
-              No se pudo cargar la presentacion.
+              No se pudo cargar la presentación.
             </div>
           )}
         </DialogContent>
@@ -363,7 +372,7 @@ export function InventarioPage() {
       <ConfirmDeactivateDialog
         open={Boolean(deleteVariant)}
         title="Desactivar prenda"
-        description={`Esta accion desactivara ${deleteVariant?.sku ?? ""}.`}
+        description={`Esta acción desactivará ${deleteVariant?.sku ?? ""}.`}
         isPending={deleteVariantMutation.isPending}
         onOpenChange={(open) => {
           if (!open) {
@@ -418,7 +427,8 @@ function PaginationControls({
   return (
     <div className="flex flex-col gap-3 border-t pt-4 sm:flex-row sm:items-center sm:justify-between">
       <div className="text-sm text-muted-foreground">
-        {visible} visibles de {total} registros - Pagina {page} de {totalPages}
+        {visible} visibles de {total} registros - Página {page} de{" "}
+        {Math.max(totalPages, 1)}
       </div>
       <div className="flex items-center gap-2">
         <Button
@@ -465,8 +475,7 @@ function ConfirmDeactivateDialog({
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription>
-            {description} La prenda quedara oculta para nuevas ventas, pero se
-            conservara su historial.
+            {description} Se conserva el historial.
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>

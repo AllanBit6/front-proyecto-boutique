@@ -19,6 +19,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 import {
+  LoadTransition,
+  TableSkeleton,
+} from "@/components/ui/loading-skeletons"
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -32,6 +36,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { normalizeTextInput, positiveInteger } from "@/shared/utils/security"
 
 const PAGE_SIZE = 10
 
@@ -72,6 +77,9 @@ export function InventoryAdjustmentsPage() {
   const selectedAdjustmentType = ADJUSTMENT_TYPES.find(
     (type) => type.value === adjustmentType
   )
+  const hasActiveMovementFilters = Boolean(
+    movementSearch.trim() || movementDateFrom || movementDateTo
+  )
   const filteredMovements = useMemo(
     () =>
       (movementsQuery.data?.data ?? []).filter(
@@ -96,13 +104,13 @@ export function InventoryAdjustmentsPage() {
   )
 
   async function submitAdjustment(form?: HTMLFormElement | null) {
-    const cantidad = Number(quantity)
-    const motivo = reason.trim()
+    const cantidad = positiveInteger(quantity)
+    const motivo = normalizeTextInput(reason, { maxLength: 160 })
 
     if (!variantId || !selectedVariant) {
       setLastResult({
         type: "error",
-        message: "Selecciona una prenda activa antes de aplicar el ajuste.",
+        message: "Selecciona una prenda.",
       })
       toast.error("Selecciona una prenda para ajustar el stock.")
       return
@@ -114,6 +122,15 @@ export function InventoryAdjustmentsPage() {
         message: "La cantidad debe ser mayor a cero.",
       })
       toast.error("Ingresa una cantidad mayor a cero.")
+      return
+    }
+
+    if (cantidad > 999999) {
+      setLastResult({
+        type: "error",
+        message: "La cantidad es demasiado alta.",
+      })
+      toast.error("Revisa la cantidad.")
       return
     }
 
@@ -142,7 +159,7 @@ export function InventoryAdjustmentsPage() {
 
     setLastResult({
       type: "info",
-      message: `Aplicando ajuste. Stock actual: ${previousStock}. Resultado esperado: ${expectedStock}.`,
+      message: `Stock: ${previousStock} -> ${expectedStock}.`,
     })
 
     const promise = createAdjustment.mutateAsync({
@@ -159,8 +176,7 @@ export function InventoryAdjustmentsPage() {
       await promise
       setLastResult({
         type: "success",
-        message:
-          "Ajuste registrado correctamente. El inventario se actualizara en la lista.",
+        message: "Ajuste registrado.",
       })
       setVariantId("")
       setQuantity("")
@@ -240,6 +256,11 @@ export function InventoryAdjustmentsPage() {
                       No hay prendas activas disponibles para ajustar.
                     </div>
                   ) : null}
+                  {variantsQuery.isError ? (
+                    <div className="text-xs text-destructive">
+                      {getErrorMessage(variantsQuery.error)}
+                    </div>
+                  ) : null}
                 </Field>
                 <Field>
                   <FieldLabel>Que cambio haras</FieldLabel>
@@ -268,6 +289,7 @@ export function InventoryAdjustmentsPage() {
                     name="cantidad"
                     type="number"
                     min="1"
+                    max="999999"
                     value={quantity}
                     onChange={(event) => setQuantity(event.target.value)}
                   />
@@ -279,16 +301,20 @@ export function InventoryAdjustmentsPage() {
                     name="motivo"
                     placeholder="Conteo fisico, merma, correccion..."
                     value={reason}
-                    onChange={(event) => setReason(event.target.value)}
+                    onChange={(event) =>
+                      setReason(
+                        normalizeTextInput(event.target.value, {
+                          maxLength: 160,
+                        })
+                      )
+                    }
+                    maxLength={160}
                   />
                 </Field>
               </FieldGroup>
               <Button
-                type="button"
+                type="submit"
                 className="w-full"
-                onClick={() => {
-                  void submitAdjustment()
-                }}
                 disabled={
                   createAdjustment.isPending ||
                   !variantId ||
@@ -347,65 +373,97 @@ export function InventoryAdjustmentsPage() {
             <div className="grid gap-2 md:grid-cols-[minmax(220px,1fr)_160px_160px]">
               <Input
                 value={movementSearch}
-                onChange={(event) => setMovementSearch(event.target.value)}
+                onChange={(event) => {
+                  setMovementSearch(event.target.value)
+                  setPage(1)
+                }}
                 placeholder="Buscar ID, prenda, motivo u origen"
               />
               <Input
                 type="date"
                 value={movementDateFrom}
-                onChange={(event) => setMovementDateFrom(event.target.value)}
+                onChange={(event) => {
+                  setMovementDateFrom(event.target.value)
+                  setPage(1)
+                }}
               />
               <Input
                 type="date"
                 value={movementDateTo}
-                onChange={(event) => setMovementDateTo(event.target.value)}
+                onChange={(event) => {
+                  setMovementDateTo(event.target.value)
+                  setPage(1)
+                }}
               />
             </div>
-            {movementsQuery.isLoading ? (
-              <div className="text-sm text-muted-foreground">
-                Cargando movimientos...
+            {hasActiveMovementFilters ? (
+              <div className="text-xs text-muted-foreground">
+                {filteredMovements.length} resultados
               </div>
+            ) : null}
+            {movementsQuery.isLoading ? (
+              <TableSkeleton columns={6} />
             ) : movementsQuery.isError ? (
               <div className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
                 {getErrorMessage(movementsQuery.error)}
               </div>
             ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Fecha</TableHead>
-                    <TableHead>Prenda</TableHead>
-                    <TableHead>Cambio</TableHead>
-                    <TableHead>Cantidad</TableHead>
-                    <TableHead>Stock</TableHead>
-                    <TableHead>Motivo</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredMovements.map((item) => (
-                    <TableRow key={item.id}>
-                      <TableCell>{formatDate(item.fecha)}</TableCell>
-                      <TableCell>{item.prenda || "-"}</TableCell>
-                      <TableCell>
-                        <Badge variant="secondary">{item.tipo}</Badge>
-                      </TableCell>
-                      <TableCell>{item.cantidad}</TableCell>
-                      <TableCell>{item.stockResultante}</TableCell>
-                      <TableCell>{item.motivo || item.origen}</TableCell>
-                    </TableRow>
-                  ))}
-                  {filteredMovements.length === 0 ? (
-                    <TableRow>
-                      <TableCell
-                        colSpan={6}
-                        className="py-8 text-center text-sm text-muted-foreground"
-                      >
-                        No hay cambios de stock con esos filtros.
-                      </TableCell>
-                    </TableRow>
-                  ) : null}
-                </TableBody>
-              </Table>
+              <LoadTransition>
+                <div className="rounded-md border">
+                  <Table className="min-w-[560px]">
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Fecha</TableHead>
+                        <TableHead>Prenda</TableHead>
+                        <TableHead>Cambio</TableHead>
+                        <TableHead>Cantidad</TableHead>
+                        <TableHead className="hidden sm:table-cell">
+                          Stock
+                        </TableHead>
+                        <TableHead className="hidden md:table-cell">
+                          Motivo
+                        </TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredMovements.map((item) => (
+                        <TableRow key={item.id}>
+                          <TableCell>{formatDate(item.fecha)}</TableCell>
+                          <TableCell className="max-w-44 whitespace-normal">
+                            <div>{item.prenda || "-"}</div>
+                            <div className="text-xs text-muted-foreground md:hidden">
+                              {item.motivo || item.origen}
+                            </div>
+                            <div className="text-xs text-muted-foreground sm:hidden">
+                              Stock: {item.stockResultante}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="secondary">{item.tipo}</Badge>
+                          </TableCell>
+                          <TableCell>{item.cantidad}</TableCell>
+                          <TableCell className="hidden sm:table-cell">
+                            {item.stockResultante}
+                          </TableCell>
+                          <TableCell className="hidden max-w-48 whitespace-normal md:table-cell">
+                            {item.motivo || item.origen}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                      {filteredMovements.length === 0 ? (
+                        <TableRow>
+                          <TableCell
+                            colSpan={6}
+                            className="py-8 text-center text-sm text-muted-foreground"
+                          >
+                            Sin resultados.
+                          </TableCell>
+                        </TableRow>
+                      ) : null}
+                    </TableBody>
+                  </Table>
+                </div>
+              </LoadTransition>
             )}
             {movementsQuery.data ? (
               <AdminPager

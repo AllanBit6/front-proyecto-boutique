@@ -100,26 +100,30 @@ export function BarcodeDialog({
     })
 
     toast.promise(promise, {
-      loading: "Generando codigo de barras...",
-      success: "Codigo de barras listo.",
+      loading: "Generando código de barras...",
+      success: "Código de barras listo.",
       error: (error) =>
         error instanceof Error
           ? error.message
-          : "No se pudo generar el codigo.",
+          : "No se pudo generar el código.",
     })
 
-    const updatedVariant = await promise
-    setGeneratedBarcode({
-      variantId: variant.id,
-      value: updatedVariant.codigo_barras || nextBarcode,
-    })
+    try {
+      const updatedVariant = await promise
+      setGeneratedBarcode({
+        variantId: variant.id,
+        value: updatedVariant.codigo_barras || nextBarcode,
+      })
+    } catch {
+      // toast.promise displays the error.
+    }
   }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Codigo de barras</DialogTitle>
+          <DialogTitle>Código de barras</DialogTitle>
           <DialogDescription>
             {variant?.producto_nombre} / {variant?.talla_nombre} /{" "}
             {variant?.color_nombre}
@@ -128,19 +132,19 @@ export function BarcodeDialog({
         {barcodeSvg ? (
           <div className="overflow-x-auto rounded-lg border bg-white p-4">
             <img
-              alt={`Codigo de barras ${barcode}`}
+              alt={`Código de barras ${barcode}`}
               className="mx-auto w-fit"
               src={barcodeSvgUrl}
             />
           </div>
         ) : barcode ? (
           <div className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">
-            Este codigo no se puede imprimir como EAN-13. Genera uno nuevo para
+            Este código no se puede imprimir como EAN-13. Genera uno nuevo para
             esta prenda.
           </div>
         ) : (
           <div className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">
-            Esta prenda aun no tiene codigo de barras.
+            Esta prenda aún no tiene código de barras.
           </div>
         )}
         <DialogFooter>
@@ -160,8 +164,8 @@ export function BarcodeDialog({
               {updateVariant.isPending
                 ? "Creando..."
                 : barcode
-                  ? "Generar nuevo codigo"
-                  : "Crear codigo"}
+                  ? "Generar nuevo código"
+                  : "Crear código"}
             </Button>
           )}
         </DialogFooter>
@@ -254,9 +258,7 @@ function createEan13Svg(value: string, sku: string) {
       }
 
       const isGuard =
-        index < 3 ||
-        (index >= 45 && index < 50) ||
-        index >= bits.length - 3
+        index < 3 || (index >= 45 && index < 50) || index >= bits.length - 3
       const height = isGuard ? guardHeight : barHeight
       const x = quiet + index * moduleWidth
 
@@ -268,7 +270,7 @@ function createEan13Svg(value: string, sku: string) {
     ? `<text x="${width / 2}" y="18" font-family="Inter, Arial, sans-serif" font-size="13" font-weight="700" fill="#111827" text-anchor="middle">${escapeSvgText(sku)}</text>`
     : ""
 
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" role="img" aria-label="Codigo de barras ${value}">
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" role="img" aria-label="Código de barras ${value}">
   <rect width="100%" height="100%" fill="#ffffff" />
   ${skuText}
   ${bars}

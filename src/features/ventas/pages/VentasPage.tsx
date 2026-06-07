@@ -14,9 +14,20 @@ import {
 } from "@/features/admin/hooks/useAdmin"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import {
+  DetailSkeleton,
+  LoadTransition,
+  TableSkeleton,
+} from "@/components/ui/loading-skeletons"
 import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+} from "@/components/ui/select"
 import {
   Dialog,
   DialogContent,
@@ -31,6 +42,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { normalizeTextInput } from "@/shared/utils/security"
 
 const PAGE_SIZE = 10
 
@@ -46,6 +58,9 @@ export function VentasPage() {
   const salesQuery = useSales({ page, limit: PAGE_SIZE })
   const saleDetailQuery = useSaleDetail(selectedSaleId)
   const cancelSale = useCancelSale()
+  const hasActiveFilters = Boolean(
+    search.trim() || dateFrom || dateTo || statusFilter !== "all"
+  )
   const filteredSales = useMemo(
     () =>
       (salesQuery.data?.data ?? []).filter(
@@ -66,10 +81,10 @@ export function VentasPage() {
 
   async function handleCancelSale(event?: React.FormEvent<HTMLFormElement>) {
     event?.preventDefault()
-    const motivo = cancelReason.trim()
+    const motivo = normalizeTextInput(cancelReason, { maxLength: 160 })
 
     if (!saleToCancel || !motivo) {
-      toast.error("Ingresa el motivo de anulacion.")
+      toast.error("Ingresa el motivo de anulación.")
       return
     }
 
@@ -104,95 +119,151 @@ export function VentasPage() {
           <div className="grid gap-2 md:grid-cols-[minmax(220px,1fr)_160px_160px_150px]">
             <Input
               value={search}
-              onChange={(event) => setSearch(event.target.value)}
+              onChange={(event) => {
+                setSearch(event.target.value)
+                setPage(1)
+              }}
               placeholder="Buscar ID, cliente, NIT o vendedor"
             />
             <Input
               type="date"
               value={dateFrom}
-              onChange={(event) => setDateFrom(event.target.value)}
+              onChange={(event) => {
+                setDateFrom(event.target.value)
+                setPage(1)
+              }}
             />
             <Input
               type="date"
               value={dateTo}
-              onChange={(event) => setDateTo(event.target.value)}
+              onChange={(event) => {
+                setDateTo(event.target.value)
+                setPage(1)
+              }}
             />
-            <select
-              className="h-8 rounded-lg border border-input bg-transparent px-2.5 text-sm"
+            <Select
               value={statusFilter}
-              onChange={(event) => setStatusFilter(event.target.value)}
+              onValueChange={(value) => {
+                setStatusFilter(value ?? "all")
+                setPage(1)
+              }}
             >
-              <option value="all">Todo estado</option>
-              <option value="active">Vigentes</option>
-              <option value="cancelled">Anuladas</option>
-            </select>
+              <SelectTrigger className="w-full">
+                <span>
+                  {statusFilter === "active"
+                    ? "Vigentes"
+                    : statusFilter === "cancelled"
+                      ? "Anuladas"
+                      : "Todo estado"}
+                </span>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todo estado</SelectItem>
+                <SelectItem value="active">Vigentes</SelectItem>
+                <SelectItem value="cancelled">Anuladas</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
+          {hasActiveFilters ? (
+            <div className="text-xs text-muted-foreground">
+              {filteredSales.length} resultados
+            </div>
+          ) : null}
           {salesQuery.isLoading ? (
-            <div className="text-sm text-muted-foreground">
-              Cargando ventas...
+            <TableSkeleton columns={7} />
+          ) : salesQuery.isError ? (
+            <div className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+              {getErrorMessage(
+                salesQuery.error,
+                "No se pudieron cargar las ventas."
+              )}
             </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Fecha</TableHead>
-                  <TableHead>Cliente</TableHead>
-                  <TableHead>Vendedor</TableHead>
-                  <TableHead>Prendas</TableHead>
-                  <TableHead>Total</TableHead>
-                  <TableHead>Estado</TableHead>
-                  <TableHead />
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredSales.map((item) => (
-                  <TableRow key={item.id}>
-                    <TableCell>{formatDate(item.fecha)}</TableCell>
-                    <TableCell>{item.cliente || "Consumidor final"}</TableCell>
-                    <TableCell>{item.usuario || "-"}</TableCell>
-                    <TableCell>{item.items}</TableCell>
-                    <TableCell>{formatCurrency(item.total)}</TableCell>
-                    <TableCell>
-                      <Badge variant={item.activo ? "secondary" : "outline"}>
-                        {item.activo ? "Vigente" : "Anulada"}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-1">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setSelectedSaleId(item.id)}
+            <LoadTransition>
+              <div className="rounded-md border">
+                <Table className="min-w-[560px]">
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Fecha</TableHead>
+                      <TableHead>Cliente</TableHead>
+                      <TableHead className="hidden md:table-cell">
+                        Vendedor
+                      </TableHead>
+                      <TableHead className="hidden sm:table-cell">
+                        Prendas
+                      </TableHead>
+                      <TableHead>Total</TableHead>
+                      <TableHead>Estado</TableHead>
+                      <TableHead />
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredSales.map((item) => (
+                      <TableRow key={item.id}>
+                        <TableCell>{formatDate(item.fecha)}</TableCell>
+                        <TableCell className="max-w-44 whitespace-normal">
+                          <div className="font-medium">
+                            {item.cliente || "Consumidor final"}
+                          </div>
+                          <div className="text-xs text-muted-foreground md:hidden">
+                            {item.usuario || "Sin vendedor"}
+                          </div>
+                          <div className="text-xs text-muted-foreground sm:hidden">
+                            {item.items} prendas
+                          </div>
+                        </TableCell>
+                        <TableCell className="hidden md:table-cell">
+                          {item.usuario || "-"}
+                        </TableCell>
+                        <TableCell className="hidden sm:table-cell">
+                          {item.items}
+                        </TableCell>
+                        <TableCell>{formatCurrency(item.total)}</TableCell>
+                        <TableCell>
+                          <Badge
+                            variant={item.activo ? "secondary" : "outline"}
+                          >
+                            {item.activo ? "Vigente" : "Anulada"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex flex-col items-end gap-1 sm:flex-row sm:justify-end">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => setSelectedSaleId(item.id)}
+                            >
+                              Detalle
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              disabled={!item.activo || cancelSale.isPending}
+                              onClick={() => {
+                                setSaleToCancel(item.id)
+                                setCancelReason("")
+                              }}
+                            >
+                              Anular
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                    {!filteredSales.length ? (
+                      <TableRow>
+                        <TableCell
+                          colSpan={7}
+                          className="py-8 text-center text-sm text-muted-foreground"
                         >
-                          Detalle
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          disabled={!item.activo || cancelSale.isPending}
-                          onClick={() => {
-                            setSaleToCancel(item.id)
-                            setCancelReason("")
-                          }}
-                        >
-                          Anular
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-                {!filteredSales.length ? (
-                  <TableRow>
-                    <TableCell
-                      colSpan={7}
-                      className="py-8 text-center text-sm text-muted-foreground"
-                    >
-                      No hay ventas con esos filtros.
-                    </TableCell>
-                  </TableRow>
-                ) : null}
-              </TableBody>
-            </Table>
+                          Sin resultados.
+                        </TableCell>
+                      </TableRow>
+                    ) : null}
+                  </TableBody>
+                </Table>
+              </div>
+            </LoadTransition>
           )}
           {salesQuery.data ? (
             <AdminPager
@@ -220,121 +291,123 @@ export function VentasPage() {
             <DialogTitle>Detalle de venta</DialogTitle>
           </DialogHeader>
           {saleDetailQuery.isLoading ? (
-            <div className="text-sm text-muted-foreground">
-              Cargando detalle...
-            </div>
+            <DetailSkeleton items={4} />
           ) : saleDetailQuery.data ? (
-            <div className="space-y-4">
-              <div className="grid gap-3 rounded-md border p-3 text-sm sm:grid-cols-2 lg:grid-cols-4">
-                <DetailItem
-                  label="Fecha"
-                  value={formatDate(saleDetailQuery.data.fecha)}
-                />
-                <DetailItem
-                  label="Cliente"
-                  value={saleDetailQuery.data.cliente || "Consumidor final"}
-                />
-                <DetailItem
-                  label="NIT"
-                  value={saleDetailQuery.data.nit || "CF"}
-                />
-                <DetailItem
-                  label="Vendedor"
-                  value={saleDetailQuery.data.usuario || "-"}
-                />
-              </div>
+            <LoadTransition>
+              <div className="space-y-4">
+                <div className="grid gap-3 rounded-md border p-3 text-sm sm:grid-cols-2 lg:grid-cols-4">
+                  <DetailItem
+                    label="Fecha"
+                    value={formatDate(saleDetailQuery.data.fecha)}
+                  />
+                  <DetailItem
+                    label="Cliente"
+                    value={saleDetailQuery.data.cliente || "Consumidor final"}
+                  />
+                  <DetailItem
+                    label="NIT"
+                    value={saleDetailQuery.data.nit || "CF"}
+                  />
+                  <DetailItem
+                    label="Vendedor"
+                    value={saleDetailQuery.data.usuario || "-"}
+                  />
+                </div>
 
-              <div className="space-y-2">
-                <h3 className="text-sm font-medium">Productos</h3>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Prenda</TableHead>
-                      <TableHead>Cantidad</TableHead>
-                      <TableHead>Precio</TableHead>
-                      <TableHead className="text-right">Subtotal</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {saleDetailQuery.data.detalles.length > 0 ? (
-                      saleDetailQuery.data.detalles.map((item) => (
-                        <TableRow key={item.id}>
-                          <TableCell>
-                            <div className="font-medium">
-                              {item.prenda || "-"}
-                            </div>
-                            <div className="text-xs text-muted-foreground">
-                              {item.sku || item.codigoBarras || "Sin codigo"}
-                            </div>
-                          </TableCell>
-                          <TableCell>{item.cantidad}</TableCell>
-                          <TableCell>
-                            {formatCurrency(item.precioUnitario)}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            {formatCurrency(item.subtotal)}
+                <div className="space-y-2">
+                  <h3 className="text-sm font-medium">Productos</h3>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Prenda</TableHead>
+                        <TableHead>Cantidad</TableHead>
+                        <TableHead>Precio</TableHead>
+                        <TableHead className="text-right">Subtotal</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {saleDetailQuery.data.detalles.length > 0 ? (
+                        saleDetailQuery.data.detalles.map((item) => (
+                          <TableRow key={item.id}>
+                            <TableCell>
+                              <div className="font-medium">
+                                {item.prenda || "-"}
+                              </div>
+                              <div className="text-xs text-muted-foreground">
+                                {item.sku || item.codigoBarras || "Sin código"}
+                              </div>
+                            </TableCell>
+                            <TableCell>{item.cantidad}</TableCell>
+                            <TableCell>
+                              {formatCurrency(item.precioUnitario)}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              {formatCurrency(item.subtotal)}
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      ) : (
+                        <TableRow>
+                          <TableCell
+                            colSpan={4}
+                            className="text-center text-muted-foreground"
+                          >
+                            Sin productos en el detalle.
                           </TableCell>
                         </TableRow>
-                      ))
-                    ) : (
-                      <TableRow>
-                        <TableCell
-                          colSpan={4}
-                          className="text-center text-muted-foreground"
-                        >
-                          Sin productos en el detalle.
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
 
-              <div className="space-y-2">
-                <h3 className="text-sm font-medium">Cobros</h3>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Metodo</TableHead>
-                      <TableHead>Referencia</TableHead>
-                      <TableHead>Recibido</TableHead>
-                      <TableHead className="text-right">Monto</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {saleDetailQuery.data.pagos.length > 0 ? (
-                      saleDetailQuery.data.pagos.map((item) => (
-                        <TableRow key={item.id}>
-                          <TableCell>{item.metodo}</TableCell>
-                          <TableCell>{item.numeroReferencia || "-"}</TableCell>
-                          <TableCell>
-                            {item.montoRecibido === undefined
-                              ? "-"
-                              : formatCurrency(item.montoRecibido)}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            {formatCurrency(item.monto)}
+                <div className="space-y-2">
+                  <h3 className="text-sm font-medium">Cobros</h3>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Metodo</TableHead>
+                        <TableHead>Referencia</TableHead>
+                        <TableHead>Recibido</TableHead>
+                        <TableHead className="text-right">Monto</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {saleDetailQuery.data.pagos.length > 0 ? (
+                        saleDetailQuery.data.pagos.map((item) => (
+                          <TableRow key={item.id}>
+                            <TableCell>{item.metodo}</TableCell>
+                            <TableCell>
+                              {item.numeroReferencia || "-"}
+                            </TableCell>
+                            <TableCell>
+                              {item.montoRecibido === undefined
+                                ? "-"
+                                : formatCurrency(item.montoRecibido)}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              {formatCurrency(item.monto)}
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      ) : (
+                        <TableRow>
+                          <TableCell
+                            colSpan={4}
+                            className="text-center text-muted-foreground"
+                          >
+                            Sin cobros en el detalle.
                           </TableCell>
                         </TableRow>
-                      ))
-                    ) : (
-                      <TableRow>
-                        <TableCell
-                          colSpan={4}
-                          className="text-center text-muted-foreground"
-                        >
-                          Sin cobros en el detalle.
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
 
-              <div className="flex justify-end rounded-md bg-muted px-3 py-2 text-sm font-medium">
-                Total: {formatCurrency(saleDetailQuery.data.total)}
+                <div className="flex justify-end rounded-md bg-muted px-3 py-2 text-sm font-medium">
+                  Total: {formatCurrency(saleDetailQuery.data.total)}
+                </div>
               </div>
-            </div>
+            </LoadTransition>
           ) : (
             <div className="text-sm text-muted-foreground">
               No se pudo cargar el detalle.
@@ -359,8 +432,13 @@ export function VentasPage() {
           <form className="space-y-3" onSubmit={handleCancelSale}>
             <Textarea
               value={cancelReason}
-              onChange={(event) => setCancelReason(event.target.value)}
-              placeholder="Motivo de anulacion"
+              onChange={(event) =>
+                setCancelReason(
+                  normalizeTextInput(event.target.value, { maxLength: 160 })
+                )
+              }
+              placeholder="Motivo de anulación"
+              maxLength={160}
               rows={4}
             />
             <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
@@ -379,7 +457,7 @@ export function VentasPage() {
                 variant="destructive"
                 disabled={!cancelReason.trim() || cancelSale.isPending}
               >
-                {cancelSale.isPending ? "Anulando..." : "Confirmar anulacion"}
+                {cancelSale.isPending ? "Anulando..." : "Anular"}
               </Button>
             </div>
           </form>
@@ -396,4 +474,8 @@ function DetailItem({ label, value }: { label: string; value: string }) {
       <div className="font-medium">{value}</div>
     </div>
   )
+}
+
+function getErrorMessage(error: unknown, fallback: string) {
+  return error instanceof Error ? error.message : fallback
 }

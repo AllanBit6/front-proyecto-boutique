@@ -1,6 +1,7 @@
 import { zodResolver } from "@hookform/resolvers/zod"
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
 import { useForm } from "react-hook-form"
+import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -23,6 +24,7 @@ import type {
   CatalogOption,
   Product,
 } from "@/features/inventario/types/product"
+import { normalizeTextInput } from "@/shared/utils/security"
 
 interface ProductFormProps {
   brands: CatalogOption[]
@@ -30,14 +32,11 @@ interface ProductFormProps {
   onSuccess?: () => void
 }
 
-export function ProductForm({
-  brands,
-  product,
-  onSuccess,
-}: ProductFormProps) {
+export function ProductForm({ brands, product, onSuccess }: ProductFormProps) {
   const createBrand = useCreateBrand()
   const createProduct = useCreateProduct()
   const updateProduct = useUpdateProduct()
+  const [submitError, setSubmitError] = useState("")
   const form = useForm<ProductFormValues>({
     resolver: zodResolver(productSchema),
     defaultValues: getDefaultValues(product),
@@ -48,23 +47,42 @@ export function ProductForm({
   }, [form, product])
 
   const onSubmit = form.handleSubmit(async (values) => {
-    const brandId = await resolveBrandId(values.marca_nombre, brands, (name) =>
-      createBrand.mutateAsync({ nombre: name })
-    )
-    const input = {
-      nombre: values.nombre,
-      caracteristica_distintiva: values.caracteristica_distintiva,
-      marca_id: brandId,
-    }
+    setSubmitError("")
 
-    if (product) {
-      await updateProduct.mutateAsync({ id: product.id, input })
-    } else {
-      await createProduct.mutateAsync(input)
-    }
+    const promise = (async () => {
+      const brandId = await resolveBrandId(
+        values.marca_nombre,
+        brands,
+        (name) => createBrand.mutateAsync({ nombre: name })
+      )
+      const input = {
+        nombre: values.nombre,
+        caracteristica_distintiva: values.caracteristica_distintiva,
+        marca_id: brandId,
+      }
 
-    form.reset(getDefaultValues())
-    onSuccess?.()
+      if (product) {
+        await updateProduct.mutateAsync({ id: product.id, input })
+      } else {
+        await createProduct.mutateAsync(input)
+      }
+    })()
+
+    toast.promise(promise, {
+      loading: product ? "Guardando cambios..." : "Creando modelo...",
+      success: product
+        ? "Modelo actualizado correctamente."
+        : "Modelo creado correctamente.",
+      error: (error) => getErrorMessage(error, "No se pudo guardar el modelo."),
+    })
+
+    try {
+      await promise
+      form.reset(getDefaultValues())
+      onSuccess?.()
+    } catch (error) {
+      setSubmitError(getErrorMessage(error, "No se pudo guardar el modelo."))
+    }
   })
 
   const isPending =
@@ -75,7 +93,11 @@ export function ProductForm({
       <FieldGroup>
         <Field data-invalid={Boolean(form.formState.errors.nombre)}>
           <FieldLabel htmlFor="nombre_producto">Nombre</FieldLabel>
-          <Input id="nombre_producto" {...form.register("nombre")} />
+          <Input
+            id="nombre_producto"
+            maxLength={80}
+            {...form.register("nombre")}
+          />
           <FieldError errors={[form.formState.errors.nombre]} />
         </Field>
         <Field
@@ -88,6 +110,7 @@ export function ProductForm({
           </FieldLabel>
           <Input
             id="caracteristica_distintiva"
+            maxLength={120}
             {...form.register("caracteristica_distintiva")}
           />
           <FieldError
@@ -100,6 +123,7 @@ export function ProductForm({
             id="marca_nombre"
             list="marcas-disponibles"
             placeholder="Escribe o selecciona una marca"
+            maxLength={80}
             {...form.register("marca_nombre")}
           />
           <datalist id="marcas-disponibles">
@@ -110,7 +134,8 @@ export function ProductForm({
           <FieldError errors={[form.formState.errors.marca_nombre]} />
         </Field>
       </FieldGroup>
-      <Button type="submit" disabled={isPending}>
+      {submitError ? <FieldError>{submitError}</FieldError> : null}
+      <Button className="w-full" type="submit" disabled={isPending}>
         {isPending
           ? "Guardando..."
           : product
@@ -119,6 +144,10 @@ export function ProductForm({
       </Button>
     </form>
   )
+}
+
+function getErrorMessage(error: unknown, fallback: string) {
+  return error instanceof Error ? error.message : fallback
 }
 
 function getDefaultValues(product?: Product): ProductFormValues {
@@ -130,7 +159,7 @@ function getDefaultValues(product?: Product): ProductFormValues {
 }
 
 function normalizeBrandName(name: string) {
-  return name.trim().toLocaleLowerCase()
+  return normalizeTextInput(name, { maxLength: 80, lowercase: true })
 }
 
 async function resolveBrandId(
@@ -147,7 +176,9 @@ async function resolveBrandId(
     return existingBrand.id
   }
 
-  const newBrand = await createBrand(brandName.trim())
+  const newBrand = await createBrand(
+    normalizeTextInput(brandName, { maxLength: 80 })
+  )
 
   return newBrand.id
 }

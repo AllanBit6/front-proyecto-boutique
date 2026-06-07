@@ -11,6 +11,7 @@ import type {
   Variant,
 } from "@/features/inventario/types/product"
 import { buildBarcode } from "@/features/inventario/utils/codes"
+import { readSafeApiError } from "@/shared/utils/apiErrors"
 
 const API_URL = import.meta.env.VITE_API_URL ?? ""
 
@@ -77,7 +78,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   })
 
   if (!response.ok) {
-    const message = await response.text()
+    const message = await readSafeApiError(response)
     throw new Error(message || "No se pudo completar la solicitud.")
   }
 
@@ -122,7 +123,9 @@ function readMeta(response: unknown): ApiMeta {
   const record = response as Record<string, unknown>
   const meta = record.meta ?? record.pagination
 
-  return meta && typeof meta === "object" ? (meta as ApiMeta) : (record as ApiMeta)
+  return meta && typeof meta === "object"
+    ? (meta as ApiMeta)
+    : (record as ApiMeta)
 }
 
 function readRecord<T>(response: unknown, keys: string[] = []): T {
@@ -147,7 +150,10 @@ function readRecord<T>(response: unknown, keys: string[] = []): T {
   return record as T
 }
 
-function normalizeCatalog(item: ApiCatalog, idKey: keyof ApiCatalog): CatalogOption {
+function normalizeCatalog(
+  item: ApiCatalog,
+  idKey: keyof ApiCatalog
+): CatalogOption {
   return {
     id: String(item[idKey] ?? item.id ?? ""),
     nombre: item.nombre ?? "",
@@ -187,7 +193,8 @@ function normalizeProduct(product: ApiProduct): Product {
     id: product.id_producto ?? product.id ?? "",
     nombre: product.nombre ?? "",
     caracteristica_distintiva: product.caracteristica_distintiva ?? "",
-    marca_id: product.marca_id ?? product.marca?.id_marca ?? product.marca?.id ?? "",
+    marca_id:
+      product.marca_id ?? product.marca?.id_marca ?? product.marca?.id ?? "",
     marca_nombre: product.marca?.nombre ?? "",
     activo: readActive(product),
   }
@@ -197,11 +204,16 @@ function normalizeVariant(variant: ApiVariant): Variant {
   return {
     id: variant.id_variante ?? variant.id ?? "",
     producto_id:
-      variant.producto_id ?? variant.producto?.id_producto ?? variant.producto?.id ?? "",
+      variant.producto_id ??
+      variant.producto?.id_producto ??
+      variant.producto?.id ??
+      "",
     producto_nombre: variant.producto?.nombre ?? "",
-    talla_id: variant.talla_id ?? variant.talla?.id_talla ?? variant.talla?.id ?? "",
+    talla_id:
+      variant.talla_id ?? variant.talla?.id_talla ?? variant.talla?.id ?? "",
     talla_nombre: variant.talla?.nombre ?? "",
-    color_id: variant.color_id ?? variant.color?.id_color ?? variant.color?.id ?? "",
+    color_id:
+      variant.color_id ?? variant.color?.id_color ?? variant.color?.id ?? "",
     color_nombre: variant.color?.nombre ?? "",
     sku: variant.sku ?? "",
     codigo_barras: variant.codigo_barras ?? variant.codigoBarras ?? "",
@@ -277,7 +289,9 @@ export async function fetchProduct(id: string): Promise<Product> {
   return normalizeProduct(readRecord<ApiProduct>(response, ["producto"]))
 }
 
-export async function createProduct(input: CreateProductInput): Promise<Product> {
+export async function createProduct(
+  input: CreateProductInput
+): Promise<Product> {
   const response = await request<unknown>("/productos", {
     method: "POST",
     body: JSON.stringify(input),
@@ -326,7 +340,9 @@ export async function fetchVariant(id: string): Promise<Variant> {
   return normalizeVariant(readRecord<ApiVariant>(response, ["variante"]))
 }
 
-export async function createVariant(input: CreateVariantInput): Promise<Variant> {
+export async function createVariant(
+  input: CreateVariantInput
+): Promise<Variant> {
   const codigoBarras = input.codigo_barras || buildBarcode()
   const payload = {
     ...input,
@@ -336,7 +352,9 @@ export async function createVariant(input: CreateVariantInput): Promise<Variant>
     method: "POST",
     body: JSON.stringify(payload),
   })
-  const variant = normalizeVariant(readRecord<ApiVariant>(response, ["variante"]))
+  const variant = normalizeVariant(
+    readRecord<ApiVariant>(response, ["variante"])
+  )
 
   if (variant.id && !variant.codigo_barras) {
     const updateResponse = await request<unknown>(`/variantes/${variant.id}`, {
@@ -385,7 +403,9 @@ export async function fetchBrands(): Promise<CatalogOption[]> {
   )
 }
 
-export async function createBrand(input: CreateBrandInput): Promise<CatalogOption> {
+export async function createBrand(
+  input: CreateBrandInput
+): Promise<CatalogOption> {
   const response = await request<ApiCatalog>("/marcas", {
     method: "POST",
     body: JSON.stringify(input),
@@ -402,7 +422,9 @@ export async function fetchSizes(): Promise<CatalogOption[]> {
   )
 }
 
-export async function createSize(input: CreateCatalogInput): Promise<CatalogOption> {
+export async function createSize(
+  input: CreateCatalogInput
+): Promise<CatalogOption> {
   const response = await request<ApiCatalog>("/tallas", {
     method: "POST",
     body: JSON.stringify(input),
@@ -423,7 +445,9 @@ export async function fetchColors(): Promise<CatalogOption[]> {
   )
 }
 
-export async function createColor(input: CreateCatalogInput): Promise<CatalogOption> {
+export async function createColor(
+  input: CreateCatalogInput
+): Promise<CatalogOption> {
   const response = await request<ApiCatalog>("/colores", {
     method: "POST",
     body: JSON.stringify(input),

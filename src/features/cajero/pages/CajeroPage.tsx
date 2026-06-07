@@ -6,7 +6,7 @@ import {
   ShoppingCart,
   Trash2,
 } from "lucide-react"
-import { Fragment, useMemo, useState } from "react"
+import { Fragment, useEffect, useMemo, useRef, useState } from "react"
 import { toast } from "sonner"
 
 import { formatCurrency } from "@/features/admin/utils/formatters"
@@ -17,11 +17,20 @@ import {
   useFindVariantByBarcode,
 } from "@/features/cajero/hooks/usePos"
 import type { PaymentMethod } from "@/features/cajero/services/posService"
+import {
+  moneyValue,
+  normalizeCodeInput,
+  normalizeTextInput,
+} from "@/shared/utils/security"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
+import {
+  LoadTransition,
+  TableSkeleton,
+} from "@/components/ui/loading-skeletons"
 import {
   Select,
   SelectContent,
@@ -44,8 +53,8 @@ interface CartItem {
 
 const PAYMENT_METHODS: Array<{ value: PaymentMethod; label: string }> = [
   { value: "EFECTIVO", label: "Efectivo" },
-  { value: "TARJETA_CREDITO", label: "Tarjeta credito" },
-  { value: "TARJETA_DEBITO", label: "Tarjeta debito" },
+  { value: "TARJETA_CREDITO", label: "Tarjeta crédito" },
+  { value: "TARJETA_DEBITO", label: "Tarjeta débito" },
   { value: "TRANSFERENCIA", label: "Transferencia" },
 ]
 
@@ -146,6 +155,8 @@ export function CajeroPage() {
   const [amountReceived, setAmountReceived] = useState("")
   const [referenceNumber, setReferenceNumber] = useState("")
   const [error, setError] = useState("")
+  const barcodeInputRef = useRef<HTMLInputElement>(null)
+  const [shouldFocusBarcode, setShouldFocusBarcode] = useState(true)
   const variantsQuery = useAllVariants()
   const findByBarcode = useFindVariantByBarcode()
   const createSale = useCreateSale()
@@ -215,9 +226,27 @@ export function CajeroPage() {
       ),
     [cart]
   )
-  const received = Number(amountReceived || 0)
+  const received = moneyValue(amountReceived)
   const change =
     paymentMethod === "EFECTIVO" ? Math.max(0, received - total) : 0
+
+  useEffect(() => {
+    if (findByBarcode.isPending || !shouldFocusBarcode) {
+      return
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      barcodeInputRef.current?.focus()
+      barcodeInputRef.current?.select()
+      setShouldFocusBarcode(false)
+    }, 0)
+
+    return () => window.clearTimeout(timeoutId)
+  }, [findByBarcode.isPending, shouldFocusBarcode])
+
+  function requestBarcodeFocus() {
+    setShouldFocusBarcode(true)
+  }
 
   function addVariant(variant: Variant) {
     setError("")
@@ -256,6 +285,10 @@ export function CajeroPage() {
 
   function updateQuantity(variantId: string, quantity: number) {
     setError("")
+    const nextQuantity = Math.max(
+      1,
+      Math.trunc(Number.isFinite(quantity) ? quantity : 1)
+    )
     setCart((current) =>
       current
         .map((item) => {
@@ -265,10 +298,7 @@ export function CajeroPage() {
 
           return {
             ...item,
-            quantity: Math.min(
-              Math.max(1, quantity),
-              item.variant.stock_actual
-            ),
+            quantity: Math.min(nextQuantity, item.variant.stock_actual),
           }
         })
         .filter((item) => item.quantity > 0)
@@ -279,13 +309,15 @@ export function CajeroPage() {
     if (addVariant(variant)) {
       toast.success(`${variantLabel(variant)} agregado al carrito.`)
     }
+    requestBarcodeFocus()
   }
 
   async function handleBarcodeSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    const code = barcode.trim()
+    const code = normalizeCodeInput(barcode)
 
     if (!code) {
+      requestBarcodeFocus()
       return
     }
 
@@ -300,9 +332,11 @@ export function CajeroPage() {
       const message =
         exception instanceof Error
           ? exception.message
-          : "No se encontro el codigo."
+          : "No se encontró el código."
       setError(message)
       toast.error(message)
+    } finally {
+      requestBarcodeFocus()
     }
   }
 
@@ -334,11 +368,15 @@ export function CajeroPage() {
 
     try {
       const formData = form ? new FormData(form) : new FormData()
+      const customerName =
+        normalizeTextInput(formData.get("nombre_cliente"), {
+          maxLength: 80,
+        }) || "Cliente final"
+      const customerNit = normalizeCodeInput(formData.get("nit"), 20) || "CF"
+      const reference = normalizeCodeInput(referenceNumber, 60)
       const payload = {
-        nombre_cliente: String(
-          formData.get("nombre_cliente") || "Cliente final"
-        ),
-        nit: String(formData.get("nit") || "CF"),
+        nombre_cliente: customerName,
+        nit: customerNit,
         detalles: cart.map((item) => ({
           variante_id: item.variant.id,
           cantidad: item.quantity,
@@ -350,9 +388,7 @@ export function CajeroPage() {
             monto: total,
             monto_recibido: paymentMethod === "EFECTIVO" ? received : undefined,
             numero_referencia:
-              paymentMethod === "EFECTIVO"
-                ? undefined
-                : referenceNumber || undefined,
+              paymentMethod === "EFECTIVO" ? undefined : reference || undefined,
           },
         ],
       }
@@ -372,6 +408,7 @@ export function CajeroPage() {
       setAmountReceived("")
       setReferenceNumber("")
       form?.reset()
+      requestBarcodeFocus()
     } catch (exception) {
       const message = getErrorMessage(
         exception,
@@ -404,7 +441,7 @@ export function CajeroPage() {
         <div className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>Productos disponibles</CardTitle>
+              <CardTitle>Productos</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               <div className="grid grid-cols-1 gap-3 md:grid-cols-2 2xl:grid-cols-[minmax(220px,300px)_minmax(260px,1fr)_160px_160px]">
@@ -413,16 +450,21 @@ export function CajeroPage() {
                   onSubmit={handleBarcodeSubmit}
                 >
                   <Input
+                    ref={barcodeInputRef}
                     className="min-w-0"
                     value={barcode}
-                    onChange={(event) => setBarcode(event.target.value)}
-                    placeholder="Escanear codigo"
+                    onChange={(event) =>
+                      setBarcode(normalizeCodeInput(event.target.value))
+                    }
+                    placeholder="Código"
+                    autoComplete="off"
+                    maxLength={64}
                     disabled={findByBarcode.isPending}
                   />
                   <Button
                     type="submit"
                     size="icon"
-                    aria-label="Buscar codigo"
+                    aria-label="Buscar código"
                     disabled={findByBarcode.isPending}
                   >
                     <ScanBarcode />
@@ -433,8 +475,15 @@ export function CajeroPage() {
                   <Input
                     className="min-w-0 pl-9"
                     value={productSearch}
-                    onChange={(event) => setProductSearch(event.target.value)}
-                    placeholder="Buscar prenda, SKU, color o codigo"
+                    onChange={(event) =>
+                      setProductSearch(
+                        normalizeTextInput(event.target.value, {
+                          maxLength: 80,
+                        })
+                      )
+                    }
+                    placeholder="Buscar producto"
+                    maxLength={80}
                     disabled={variantsQuery.isLoading}
                   />
                 </div>
@@ -478,85 +527,89 @@ export function CajeroPage() {
                 </Select>
               </div>
               <div className="text-xs text-muted-foreground">
-                Mostrando {filteredVariants.length} de {sellableVariants.length}{" "}
-                productos disponibles.
+                {filteredVariants.length} de {sellableVariants.length}
               </div>
 
               {variantsQuery.isLoading ? (
-                <div className="rounded-md border py-8 text-center text-sm text-muted-foreground">
-                  Cargando productos...
-                </div>
+                <TableSkeleton columns={6} rows={5} />
               ) : variantsQuery.isError ? (
                 <div className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-8 text-center text-sm text-destructive">
-                  No se pudieron cargar los productos para vender.
+                  No se pudieron cargar los productos.
                 </div>
               ) : filteredVariants.length > 0 ? (
-                <div className="max-h-90flow-auto rounded-md border">
-                  <Table className="min-w-180">
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>SKU</TableHead>
-                        <TableHead>Prenda</TableHead>
-                        <TableHead>Talla / color</TableHead>
-                        <TableHead className="text-right">Precio</TableHead>
-                        <TableHead>Stock</TableHead>
-                        <TableHead className="w-28" />
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {filteredVariants.map((variant) => {
-                        const cartQuantity =
-                          cart.find((item) => item.variant.id === variant.id)
-                            ?.quantity ?? 0
-                        const available = variant.stock_actual - cartQuantity
-                        const canAdd = available > 0
+                <LoadTransition>
+                  <div className="max-h-[360px] overflow-auto rounded-md border">
+                    <Table className="min-w-[560px]">
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="hidden md:table-cell">
+                            SKU
+                          </TableHead>
+                          <TableHead>Prenda</TableHead>
+                          <TableHead>Talla / color</TableHead>
+                          <TableHead className="text-right">Precio</TableHead>
+                          <TableHead>Stock</TableHead>
+                          <TableHead className="w-28" />
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {filteredVariants.map((variant) => {
+                          const cartQuantity =
+                            cart.find((item) => item.variant.id === variant.id)
+                              ?.quantity ?? 0
+                          const available = variant.stock_actual - cartQuantity
+                          const canAdd = available > 0
 
-                        return (
-                          <TableRow key={variant.id}>
-                            <TableCell className="font-medium">
-                              {variant.sku || variant.codigo_barras || "-"}
-                            </TableCell>
-                            <TableCell>
-                              <div className="font-medium">
-                                {variant.producto_nombre || "-"}
-                              </div>
-                              <div className="text-xs text-muted-foreground">
-                                {variant.codigo_barras ||
-                                  "Sin codigo de barras"}
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              {variant.talla_nombre || "-"} /{" "}
-                              {variant.color_nombre || "-"}
-                            </TableCell>
-                            <TableCell className="text-right">
-                              {formatCurrency(variant.precio_venta)}
-                            </TableCell>
-                            <TableCell>
-                              <Badge variant={canAdd ? "secondary" : "outline"}>
-                                {available} disp.
-                              </Badge>
-                            </TableCell>
-                            <TableCell className="text-right">
-                              <Button
-                                type="button"
-                                size="sm"
-                                disabled={!canAdd}
-                                onClick={() => handleProductSelect(variant)}
-                              >
-                                <Plus />
-                                Agregar
-                              </Button>
-                            </TableCell>
-                          </TableRow>
-                        )
-                      })}
-                    </TableBody>
-                  </Table>
-                </div>
+                          return (
+                            <TableRow key={variant.id}>
+                              <TableCell className="hidden font-medium md:table-cell">
+                                {variant.sku || variant.codigo_barras || "-"}
+                              </TableCell>
+                              <TableCell className="max-w-48 whitespace-normal">
+                                <div className="font-medium">
+                                  {variant.producto_nombre || "-"}
+                                </div>
+                                <div className="text-xs text-muted-foreground">
+                                  {variant.codigo_barras ||
+                                    variant.sku ||
+                                    "Sin código de barras"}
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                {variant.talla_nombre || "-"} /{" "}
+                                {variant.color_nombre || "-"}
+                              </TableCell>
+                              <TableCell className="text-right">
+                                {formatCurrency(variant.precio_venta)}
+                              </TableCell>
+                              <TableCell>
+                                <Badge
+                                  variant={canAdd ? "secondary" : "outline"}
+                                >
+                                  {available} disp.
+                                </Badge>
+                              </TableCell>
+                              <TableCell className="text-right">
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  disabled={!canAdd}
+                                  onClick={() => handleProductSelect(variant)}
+                                >
+                                  <Plus />
+                                  Agregar
+                                </Button>
+                              </TableCell>
+                            </TableRow>
+                          )
+                        })}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </LoadTransition>
               ) : (
                 <div className="rounded-md border border-dashed py-8 text-center text-sm text-muted-foreground">
-                  No hay productos disponibles con esos filtros.
+                  Sin resultados.
                 </div>
               )}
             </CardContent>
@@ -582,129 +635,149 @@ export function CajeroPage() {
               </Button>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="overflow-x-auto rounded-md border">
-                <Table className="min-w-180">
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Prenda</TableHead>
-                      <TableHead>Codigo</TableHead>
-                      <TableHead>Precio</TableHead>
-                      <TableHead>Stock</TableHead>
-                      <TableHead className="text-right">Subtotal</TableHead>
-                      <TableHead />
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {cart.map((item) => (
-                      <Fragment key={item.variant.id}>
-                        <TableRow className="border-b-0">
-                          <TableCell>
-                            <div className="font-medium">
-                              {variantLabel(item.variant)}
-                            </div>
-                          </TableCell>
-                          <TableCell className="text-muted-foreground">
-                            {item.variant.sku ||
-                              item.variant.codigo_barras ||
-                              "-"}
-                          </TableCell>
-                          <TableCell>
-                            {formatCurrency(item.variant.precio_venta)}
-                          </TableCell>
-                          <TableCell>{item.variant.stock_actual}</TableCell>
-                          <TableCell className="text-right font-medium">
-                            {formatCurrency(
-                              item.quantity * item.variant.precio_venta
-                            )}
-                          </TableCell>
-                          <TableCell />
-                        </TableRow>
-                        <TableRow className="bg-muted/30">
-                          <TableCell colSpan={6} className="py-2">
-                            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                              <div className="flex items-center gap-2">
-                                <span className="text-xs font-medium text-muted-foreground">
-                                  Cantidad
-                                </span>
-                                <div className="flex items-center gap-1">
+              {cart.length > 0 ? (
+                <div className="rounded-md border">
+                  <Table className="min-w-[560px]">
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Prenda</TableHead>
+                        <TableHead className="hidden md:table-cell">
+                          Código
+                        </TableHead>
+                        <TableHead>Precio</TableHead>
+                        <TableHead className="hidden sm:table-cell">
+                          Stock
+                        </TableHead>
+                        <TableHead className="text-right">Subtotal</TableHead>
+                        <TableHead />
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {cart.map((item) => (
+                        <Fragment key={item.variant.id}>
+                          <TableRow className="border-b-0">
+                            <TableCell className="max-w-48 whitespace-normal">
+                              <div className="font-medium">
+                                {variantLabel(item.variant)}
+                              </div>
+                              <div className="text-xs text-muted-foreground md:hidden">
+                                {item.variant.sku ||
+                                  item.variant.codigo_barras ||
+                                  "Sin código"}
+                              </div>
+                              <div className="text-xs text-muted-foreground sm:hidden">
+                                Stock: {item.variant.stock_actual}
+                              </div>
+                            </TableCell>
+                            <TableCell className="hidden text-muted-foreground md:table-cell">
+                              {item.variant.sku ||
+                                item.variant.codigo_barras ||
+                                "-"}
+                            </TableCell>
+                            <TableCell>
+                              {formatCurrency(item.variant.precio_venta)}
+                            </TableCell>
+                            <TableCell className="hidden sm:table-cell">
+                              {item.variant.stock_actual}
+                            </TableCell>
+                            <TableCell className="text-right font-medium">
+                              {formatCurrency(
+                                item.quantity * item.variant.precio_venta
+                              )}
+                            </TableCell>
+                            <TableCell />
+                          </TableRow>
+                          <TableRow className="bg-muted/30">
+                            <TableCell colSpan={6} className="py-2">
+                              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                                <div className="flex items-center gap-2">
+                                  <span className="text-xs font-medium text-muted-foreground">
+                                    Cantidad
+                                  </span>
+                                  <div className="flex items-center gap-1">
+                                    <Button
+                                      type="button"
+                                      variant="outline"
+                                      size="icon"
+                                      aria-label="Reducir"
+                                      disabled={item.quantity <= 1}
+                                      onClick={() =>
+                                        updateQuantity(
+                                          item.variant.id,
+                                          item.quantity - 1
+                                        )
+                                      }
+                                    >
+                                      <Minus />
+                                    </Button>
+                                    <Input
+                                      className="h-8 w-16 text-center"
+                                      type="number"
+                                      min="1"
+                                      max={item.variant.stock_actual}
+                                      value={item.quantity}
+                                      onChange={(event) =>
+                                        updateQuantity(
+                                          item.variant.id,
+                                          Number(event.target.value || 1)
+                                        )
+                                      }
+                                    />
+                                    <Button
+                                      type="button"
+                                      variant="outline"
+                                      size="icon"
+                                      aria-label="Aumentar"
+                                      disabled={
+                                        item.quantity >=
+                                        item.variant.stock_actual
+                                      }
+                                      onClick={() =>
+                                        updateQuantity(
+                                          item.variant.id,
+                                          item.quantity + 1
+                                        )
+                                      }
+                                    >
+                                      <Plus />
+                                    </Button>
+                                  </div>
+                                </div>
+                                <div className="flex items-center justify-between gap-3 sm:justify-end">
+                                  <span className="text-xs text-muted-foreground">
+                                    Disponible: {item.variant.stock_actual}
+                                  </span>
                                   <Button
                                     type="button"
-                                    variant="outline"
-                                    size="icon"
-                                    aria-label="Reducir"
+                                    variant="ghost"
+                                    size="sm"
                                     onClick={() =>
-                                      updateQuantity(
-                                        item.variant.id,
-                                        item.quantity - 1
+                                      setCart((current) =>
+                                        current.filter(
+                                          (cartItem) =>
+                                            cartItem.variant.id !==
+                                            item.variant.id
+                                        )
                                       )
                                     }
                                   >
-                                    <Minus />
-                                  </Button>
-                                  <Input
-                                    className="h-8 w-16 text-center"
-                                    type="number"
-                                    min="1"
-                                    max={item.variant.stock_actual}
-                                    value={item.quantity}
-                                    onChange={(event) =>
-                                      updateQuantity(
-                                        item.variant.id,
-                                        Number(event.target.value || 1)
-                                      )
-                                    }
-                                  />
-                                  <Button
-                                    type="button"
-                                    variant="outline"
-                                    size="icon"
-                                    aria-label="Aumentar"
-                                    onClick={() =>
-                                      updateQuantity(
-                                        item.variant.id,
-                                        item.quantity + 1
-                                      )
-                                    }
-                                  >
-                                    <Plus />
+                                    <Trash2 />
+                                    Quitar
                                   </Button>
                                 </div>
                               </div>
-                              <div className="flex items-center justify-between gap-3 sm:justify-end">
-                                <span className="text-xs text-muted-foreground">
-                                  Disponible: {item.variant.stock_actual}
-                                </span>
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() =>
-                                    setCart((current) =>
-                                      current.filter(
-                                        (cartItem) =>
-                                          cartItem.variant.id !==
-                                          item.variant.id
-                                      )
-                                    )
-                                  }
-                                >
-                                  <Trash2 />
-                                  Quitar
-                                </Button>
-                              </div>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      </Fragment>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-              {cart.length === 0 ? (
-                <div className="rounded-md border py-8 text-center text-sm text-muted-foreground">
-                  Escanea o selecciona una prenda para iniciar la venta.
+                            </TableCell>
+                          </TableRow>
+                        </Fragment>
+                      ))}
+                    </TableBody>
+                  </Table>
                 </div>
-              ) : null}
+              ) : (
+                <div className="rounded-md border py-8 text-center text-sm text-muted-foreground">
+                  Carrito vacío.
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>
@@ -728,11 +801,12 @@ export function CajeroPage() {
                     id="nombre_cliente"
                     name="nombre_cliente"
                     defaultValue="Cliente final"
+                    maxLength={80}
                   />
                 </Field>
                 <Field>
                   <FieldLabel htmlFor="nit">NIT</FieldLabel>
-                  <Input id="nit" name="nit" defaultValue="CF" />
+                  <Input id="nit" name="nit" defaultValue="CF" maxLength={20} />
                 </Field>
                 <Field>
                   <FieldLabel>Forma de pago</FieldLabel>
@@ -764,6 +838,7 @@ export function CajeroPage() {
                         id="monto_recibido"
                         type="number"
                         min={total}
+                        max="999999.99"
                         step="0.01"
                         value={amountReceived}
                         onChange={(event) =>
@@ -785,19 +860,19 @@ export function CajeroPage() {
                       id="numero_referencia"
                       value={referenceNumber}
                       onChange={(event) =>
-                        setReferenceNumber(event.target.value)
+                        setReferenceNumber(
+                          normalizeCodeInput(event.target.value, 60)
+                        )
                       }
+                      maxLength={60}
                     />
                   </Field>
                 )}
               </FieldGroup>
               <Button
-                type="button"
+                type="submit"
                 className="h-10 w-full"
                 disabled={cart.length === 0 || createSale.isPending}
-                onClick={(event) => {
-                  void submitCheckout(event.currentTarget.form)
-                }}
               >
                 {createSale.isPending ? "Registrando..." : "Finalizar venta"}
               </Button>

@@ -21,6 +21,9 @@ export function useCreateSale() {
     mutationFn: (input: CreateSaleInput) => createSale(input),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: adminKeys.sales })
+      void queryClient.invalidateQueries({ queryKey: adminKeys.payments })
+      void queryClient.invalidateQueries({ queryKey: adminKeys.cash })
+      void queryClient.invalidateQueries({ queryKey: adminKeys.activeCash })
       void queryClient.invalidateQueries({ queryKey: adminKeys.dashboard })
       void queryClient.invalidateQueries({ queryKey: variantsQueryKey })
     },

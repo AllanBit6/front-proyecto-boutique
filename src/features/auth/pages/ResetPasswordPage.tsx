@@ -2,22 +2,28 @@ import { useState } from "react"
 import { Navigate, useNavigate } from "react-router-dom"
 
 import { Button } from "@/components/ui/button"
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import {
   Field,
-  FieldDescription,
   FieldError,
   FieldGroup,
   FieldLabel,
 } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 import { useAuthStore } from "@/store"
+import type { Role } from "@/shared/types/domain"
+
+function getHomePath(role: Role) {
+  if (role === "cashier") {
+    return "/cajero"
+  }
+
+  if (role === "warehouse") {
+    return "/inventario"
+  }
+
+  return "/dashboard"
+}
 
 export function ResetPasswordPage() {
   const navigate = useNavigate()
@@ -40,13 +46,23 @@ export function ResetPasswordPage() {
 
     setError(null)
 
-    if (newPassword.length < 6) {
-      setError("La nueva contrasena debe tener al menos 6 caracteres.")
+    if (newPassword.length < 8) {
+      setError("La nueva contraseña debe tener al menos 8 caracteres.")
+      return
+    }
+
+    if (newPassword.length > 128) {
+      setError("La nueva contraseña no puede superar 128 caracteres.")
+      return
+    }
+
+    if (!/[A-Za-z]/.test(newPassword) || !/[0-9]/.test(newPassword)) {
+      setError("La nueva contraseña debe incluir letras y números.")
       return
     }
 
     if (newPassword !== confirmPassword) {
-      setError("La confirmacion no coincide con la nueva contrasena.")
+      setError("La confirmación no coincide con la nueva contraseña.")
       return
     }
 
@@ -54,68 +70,72 @@ export function ResetPasswordPage() {
 
     try {
       await changePassword({ currentPassword, newPassword })
-      navigate("/dashboard", { replace: true })
+      const updatedUser = useAuthStore.getState().user
+      navigate(getHomePath(updatedUser?.role ?? user!.role), { replace: true })
     } catch {
-      setError("No se pudo actualizar la contrasena. Revisa la contrasena actual.")
+      setError(
+        "No se pudo actualizar la contraseña. Revisa la contraseña actual."
+      )
     } finally {
       setIsSubmitting(false)
     }
   }
 
   return (
-    <main className="grid min-h-svh place-items-center bg-muted/30 p-4">
+    <main className="auth-route-enter grid min-h-svh place-items-center bg-muted/30 p-4">
       <Card className="w-full max-w-sm">
         <CardHeader>
-          <CardTitle>Actualiza tu contrasena</CardTitle>
-          <CardDescription>
-            Antes de entrar al POS necesitas definir una contrasena nueva.
-          </CardDescription>
+          <CardTitle>Nueva contraseña</CardTitle>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit}>
             <FieldGroup>
               <Field>
                 <FieldLabel htmlFor="current_password">
-                  Contrasena temporal
+                  Contraseña temporal
                 </FieldLabel>
                 <Input
                   id="current_password"
                   name="current_password"
                   type="password"
                   autoComplete="current-password"
+                  maxLength={128}
                   required
                 />
               </Field>
               <Field>
-                <FieldLabel htmlFor="new_password">Nueva contrasena</FieldLabel>
+                <FieldLabel htmlFor="new_password">Nueva contraseña</FieldLabel>
                 <Input
                   id="new_password"
                   name="new_password"
                   type="password"
                   autoComplete="new-password"
+                  maxLength={128}
                   required
                 />
               </Field>
               <Field>
                 <FieldLabel htmlFor="confirm_password">
-                  Confirmar contrasena
+                  Confirmar contraseña
                 </FieldLabel>
                 <Input
                   id="confirm_password"
                   name="confirm_password"
                   type="password"
                   autoComplete="new-password"
+                  maxLength={128}
                   required
                 />
               </Field>
               <Field>
                 {error ? <FieldError>{error}</FieldError> : null}
-                <Button type="submit" disabled={isSubmitting}>
-                  {isSubmitting ? "Actualizando..." : "Guardar contrasena"}
+                <Button
+                  className="w-full"
+                  type="submit"
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting ? "Actualizando..." : "Guardar contraseña"}
                 </Button>
-                <FieldDescription className="text-center">
-                  Luego entraras al sistema automaticamente.
-                </FieldDescription>
               </Field>
             </FieldGroup>
           </form>

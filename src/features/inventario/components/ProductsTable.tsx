@@ -34,69 +34,81 @@ export function ProductsTable({
   if (!products.length) {
     return (
       <div className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">
-        No hay modelos base para mostrar.
+        Sin modelos.
       </div>
     )
   }
 
   return (
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead>Modelo</TableHead>
-          <TableHead>Marca</TableHead>
-          <TableHead>Estado</TableHead>
-          {showActions ? <TableHead className="w-10" /> : null}
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {products.map((product) => (
-          <TableRow key={product.id}>
-            <TableCell>
-              <div className="font-medium">{product.nombre}</div>
-              <div className="text-xs text-muted-foreground">
-                {product.caracteristica_distintiva}
-              </div>
-            </TableCell>
-            <TableCell>{product.marca_nombre || product.marca_id}</TableCell>
-            <TableCell>
-              <Badge variant={product.activo ? "secondary" : "outline"}>
-                {product.activo ? "Activo" : "Desactivado"}
-              </Badge>
-            </TableCell>
-            {showActions ? (
-              <TableCell>
-                <DropdownMenu>
-                  <DropdownMenuTrigger
-                    render={
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        aria-label="Acciones de producto"
-                      />
-                    }
-                  >
-                    <MoreHorizontal />
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-36">
-                    <DropdownMenuItem onClick={() => onEdit(product)}>
-                      <Edit />
-                      Editar
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      variant="destructive"
-                      onClick={() => onDelete(product)}
-                    >
-                      <Trash2 />
-                      Desactivar
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </TableCell>
-            ) : null}
+    <div className="rounded-md border">
+      <Table className="min-w-[420px]">
+        <TableHeader>
+          <TableRow>
+            <TableHead>Modelo</TableHead>
+            <TableHead className="hidden sm:table-cell">Marca</TableHead>
+            <TableHead className="hidden sm:table-cell">Estado</TableHead>
+            {showActions ? <TableHead className="w-10" /> : null}
           </TableRow>
-        ))}
-      </TableBody>
-    </Table>
+        </TableHeader>
+        <TableBody>
+          {products.map((product) => (
+            <TableRow key={product.id}>
+              <TableCell className="max-w-56 whitespace-normal">
+                <div className="font-medium">{product.nombre}</div>
+                <div className="text-xs text-muted-foreground">
+                  {product.caracteristica_distintiva}
+                </div>
+                <div className="mt-1 flex flex-wrap items-center gap-2 sm:hidden">
+                  <span className="text-xs text-muted-foreground">
+                    {product.marca_nombre || product.marca_id}
+                  </span>
+                  <Badge variant={product.activo ? "secondary" : "outline"}>
+                    {product.activo ? "Activo" : "Desactivado"}
+                  </Badge>
+                </div>
+              </TableCell>
+              <TableCell className="hidden sm:table-cell">
+                {product.marca_nombre || product.marca_id}
+              </TableCell>
+              <TableCell className="hidden sm:table-cell">
+                <Badge variant={product.activo ? "secondary" : "outline"}>
+                  {product.activo ? "Activo" : "Desactivado"}
+                </Badge>
+              </TableCell>
+              {showActions ? (
+                <TableCell>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger
+                      render={
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          aria-label="Acciones de producto"
+                        />
+                      }
+                    >
+                      <MoreHorizontal />
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-36">
+                      <DropdownMenuItem onClick={() => onEdit(product)}>
+                        <Edit />
+                        Editar
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        variant="destructive"
+                        onClick={() => onDelete(product)}
+                      >
+                        <Trash2 />
+                        Desactivar
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </TableCell>
+              ) : null}
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </div>
   )
 }

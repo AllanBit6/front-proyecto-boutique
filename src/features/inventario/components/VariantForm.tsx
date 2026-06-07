@@ -1,6 +1,7 @@
 import { zodResolver } from "@hookform/resolvers/zod"
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
 import { useForm, useWatch } from "react-hook-form"
+import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -48,6 +49,7 @@ export function VariantForm({
 }: VariantFormProps) {
   const createVariant = useCreateVariant()
   const updateVariant = useUpdateVariant()
+  const [submitError, setSubmitError] = useState("")
   const form = useForm<VariantFormValues>({
     resolver: zodResolver(variantSchema),
     defaultValues: getDefaultValues(variant),
@@ -58,6 +60,7 @@ export function VariantForm({
   }, [form, variant])
 
   const onSubmit = form.handleSubmit(async (values) => {
+    setSubmitError("")
     const product = products.find((item) => item.id === values.producto_id)
     const size = sizes.find((item) => item.id === values.talla_id)
     const color = colors.find((item) => item.id === values.color_id)
@@ -81,14 +84,28 @@ export function VariantForm({
       codigo_barras: variant?.codigo_barras || buildBarcode(),
     }
 
-    if (variant) {
-      await updateVariant.mutateAsync({ id: variant.id, input })
-    } else {
-      await createVariant.mutateAsync(input)
-    }
+    const promise = variant
+      ? updateVariant.mutateAsync({ id: variant.id, input })
+      : createVariant.mutateAsync(input)
 
-    form.reset(getDefaultValues())
-    onSuccess?.()
+    toast.promise(promise, {
+      loading: variant ? "Guardando cambios..." : "Creando talla/color...",
+      success: variant
+        ? "Talla/color actualizada correctamente."
+        : "Talla/color creada correctamente.",
+      error: (error) =>
+        getErrorMessage(error, "No se pudo guardar la talla/color."),
+    })
+
+    try {
+      await promise
+      form.reset(getDefaultValues())
+      onSuccess?.()
+    } catch (error) {
+      setSubmitError(
+        getErrorMessage(error, "No se pudo guardar la talla/color.")
+      )
+    }
   })
 
   const isPending = createVariant.isPending || updateVariant.isPending
@@ -205,6 +222,7 @@ export function VariantForm({
               id="precio_compra"
               type="number"
               min="0"
+              max="999999.99"
               step="0.01"
               {...form.register("precio_compra", { valueAsNumber: true })}
             />
@@ -216,6 +234,7 @@ export function VariantForm({
               id="precio_venta"
               type="number"
               min="0"
+              max="999999.99"
               step="0.01"
               {...form.register("precio_venta", { valueAsNumber: true })}
             />
@@ -228,13 +247,24 @@ export function VariantForm({
             id="stock_minimo"
             type="number"
             min="0"
+            max="999999"
             step="1"
             {...form.register("stock_minimo", { valueAsNumber: true })}
           />
           <FieldError errors={[form.formState.errors.stock_minimo]} />
         </Field>
       </FieldGroup>
-      <Button type="submit" disabled={isPending || !hasCatalogs}>
+      {!hasCatalogs ? (
+        <div className="rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-800 dark:text-amber-200">
+          Necesitas una prenda activa, una talla y un color para guardar.
+        </div>
+      ) : null}
+      {submitError ? <FieldError>{submitError}</FieldError> : null}
+      <Button
+        className="w-full"
+        type="submit"
+        disabled={isPending || !hasCatalogs}
+      >
         {isPending
           ? "Guardando..."
           : variant
@@ -243,6 +273,10 @@ export function VariantForm({
       </Button>
     </form>
   )
+}
+
+function getErrorMessage(error: unknown, fallback: string) {
+  return error instanceof Error ? error.message : fallback
 }
 
 function getDefaultValues(variant?: Variant): VariantFormValues {
