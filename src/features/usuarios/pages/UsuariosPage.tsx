@@ -69,86 +69,95 @@ export function UsuariosPage() {
 
   return (
     <>
-      <section className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
-        <Card>
-          <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <CardTitle>Equipo</CardTitle>
-              <CardDescription>
-                Personas que pueden entrar al sistema.
-              </CardDescription>
-            </div>
-            {usersData ? (
-              <div className="text-sm text-muted-foreground">
-                {usersData.total} registros
+      <section className="space-y-4">
+        <div>
+          <h1 className="page-heading">Equipo</h1>
+          <p className="page-subtitle">
+            Personas que pueden entrar al sistema.
+          </p>
+        </div>
+        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
+          <Card>
+            <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <CardTitle>Usuarios</CardTitle>
+                <CardDescription>
+                  Administra accesos y permisos.
+                </CardDescription>
               </div>
-            ) : null}
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {usersQuery.isLoading ? (
-              <div className="text-sm text-muted-foreground">
-                Cargando usuarios...
-              </div>
-            ) : usersQuery.isError ? (
-              <div className="text-sm text-destructive">
-                No se pudieron cargar los usuarios.
-              </div>
-            ) : (
-              <UsersTable
-                users={usersData?.users ?? []}
-                onEdit={(user) => setEditingUserId(user.id)}
-                onResetPassword={setResetUser}
-                onDelete={setDeleteUser}
-              />
-            )}
-            {usersData ? (
-              <div className="flex flex-col gap-3 border-t pt-4 sm:flex-row sm:items-center sm:justify-between">
+              {usersData ? (
                 <div className="text-sm text-muted-foreground">
-                  Página {usersData.page} de {Math.max(usersData.totalPages, 1)}
+                  {usersData.total} registros
                 </div>
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={page <= 1 || usersQuery.isFetching}
-                    onClick={() => setPage((currentPage) => currentPage - 1)}
-                  >
-                    <ChevronLeft />
-                    Anterior
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={
-                      page >= usersData.totalPages || usersQuery.isFetching
-                    }
-                    onClick={() => setPage((currentPage) => currentPage + 1)}
-                  >
-                    Siguiente
-                    <ChevronRight />
-                  </Button>
+              ) : null}
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {usersQuery.isLoading ? (
+                <div className="text-sm text-muted-foreground">
+                  Cargando usuarios...
                 </div>
-              </div>
-            ) : null}
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle>Nueva persona</CardTitle>
-            <CardDescription>
-              Define sus datos y que puede hacer.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {rolesQuery.isLoading ? (
-              <div className="text-sm text-muted-foreground">
-                Cargando roles...
-              </div>
-            ) : (
-              <UserForm roles={roles} />
-            )}
-          </CardContent>
-        </Card>
+              ) : usersQuery.isError ? (
+                <div className="text-sm text-destructive">
+                  No se pudieron cargar los usuarios.
+                </div>
+              ) : (
+                <UsersTable
+                  users={usersData?.users ?? []}
+                  onEdit={(user) => setEditingUserId(user.id)}
+                  onResetPassword={setResetUser}
+                  onDelete={setDeleteUser}
+                />
+              )}
+              {usersData ? (
+                <div className="flex flex-col gap-3 border-t pt-4 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="text-sm text-muted-foreground">
+                    Página {usersData.page} de{" "}
+                    {Math.max(usersData.totalPages, 1)}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={page <= 1 || usersQuery.isFetching}
+                      onClick={() => setPage((currentPage) => currentPage - 1)}
+                    >
+                      <ChevronLeft />
+                      Anterior
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={
+                        page >= usersData.totalPages || usersQuery.isFetching
+                      }
+                      onClick={() => setPage((currentPage) => currentPage + 1)}
+                    >
+                      Siguiente
+                      <ChevronRight />
+                    </Button>
+                  </div>
+                </div>
+              ) : null}
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle>Nueva persona</CardTitle>
+              <CardDescription>
+                Define sus datos y qué puede hacer.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {rolesQuery.isLoading ? (
+                <div className="text-sm text-muted-foreground">
+                  Cargando roles...
+                </div>
+              ) : (
+                <UserForm roles={roles} />
+              )}
+            </CardContent>
+          </Card>
+        </div>
       </section>
 
       <Dialog
