@@ -61,6 +61,12 @@ export function ComprasPage() {
   const variantsQuery = useVariants({ page: 1, limit: 100 })
   const createPurchase = useCreatePurchase()
   const cancelPurchase = useCancelPurchase()
+  const hasActivePurchaseFilters = Boolean(
+    purchaseSearch.trim() ||
+    purchaseDateFrom ||
+    purchaseDateTo ||
+    purchaseStatus !== "all"
+  )
   const activeVariants = useMemo(
     () => (variantsQuery.data?.data ?? []).filter((variant) => variant.activo),
     [variantsQuery.data?.data]
@@ -120,7 +126,7 @@ export function ComprasPage() {
         type: "error",
         message: "El costo por unidad debe ser cero o mayor.",
       })
-      toast.error("Ingresa un costo valido.")
+      toast.error("Ingresa un costo válido.")
       return
     }
 
@@ -345,6 +351,11 @@ export function ComprasPage() {
                 </SelectContent>
               </Select>
             </div>
+            {hasActivePurchaseFilters ? (
+              <div className="text-xs text-muted-foreground">
+                Filtrando esta página: {filteredPurchases.length} resultados.
+              </div>
+            ) : null}
             {purchasesQuery.isLoading ? (
               <div className="text-sm text-muted-foreground">
                 Cargando compras...
@@ -417,7 +428,7 @@ export function ComprasPage() {
                           colSpan={6}
                           className="py-8 text-center text-sm text-muted-foreground"
                         >
-                          No hay compras con esos filtros.
+                          No hay compras en esta página con esos filtros.
                         </TableCell>
                       </TableRow>
                     ) : null}

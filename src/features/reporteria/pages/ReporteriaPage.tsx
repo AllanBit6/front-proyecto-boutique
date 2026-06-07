@@ -44,6 +44,13 @@ export function ReporteriaPage() {
   const [methodFilter, setMethodFilter] = useState("all")
   const [statusFilter, setStatusFilter] = useState("all")
   const paymentsQuery = usePayments({ page: paymentPage, limit: PAGE_SIZE })
+  const hasActiveFilters = Boolean(
+    search.trim() ||
+    dateFrom ||
+    dateTo ||
+    methodFilter !== "all" ||
+    statusFilter !== "all"
+  )
   const filteredPayments = useMemo(
     () =>
       (paymentsQuery.data?.data ?? []).filter(
@@ -164,6 +171,11 @@ export function ReporteriaPage() {
               </SelectContent>
             </Select>
           </div>
+          {hasActiveFilters ? (
+            <div className="text-xs text-muted-foreground">
+              Filtrando esta página: {filteredPayments.length} resultados.
+            </div>
+          ) : null}
           {paymentsQuery.isLoading ? (
             <div className="text-sm text-muted-foreground">
               Cargando pagos...
@@ -229,7 +241,7 @@ export function ReporteriaPage() {
                         colSpan={6}
                         className="py-8 text-center text-sm text-muted-foreground"
                       >
-                        No hay cobros con esos filtros.
+                        No hay cobros en esta página con esos filtros.
                       </TableCell>
                     </TableRow>
                   ) : null}

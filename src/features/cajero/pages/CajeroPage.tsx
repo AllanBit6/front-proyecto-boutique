@@ -44,8 +44,8 @@ interface CartItem {
 
 const PAYMENT_METHODS: Array<{ value: PaymentMethod; label: string }> = [
   { value: "EFECTIVO", label: "Efectivo" },
-  { value: "TARJETA_CREDITO", label: "Tarjeta credito" },
-  { value: "TARJETA_DEBITO", label: "Tarjeta debito" },
+  { value: "TARJETA_CREDITO", label: "Tarjeta crédito" },
+  { value: "TARJETA_DEBITO", label: "Tarjeta débito" },
   { value: "TRANSFERENCIA", label: "Transferencia" },
 ]
 
@@ -842,12 +842,9 @@ export function CajeroPage() {
                 )}
               </FieldGroup>
               <Button
-                type="button"
+                type="submit"
                 className="h-10 w-full"
                 disabled={cart.length === 0 || createSale.isPending}
-                onClick={(event) => {
-                  void submitCheckout(event.currentTarget.form)
-                }}
               >
                 {createSale.isPending ? "Registrando..." : "Finalizar venta"}
               </Button>

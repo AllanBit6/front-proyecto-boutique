@@ -97,10 +97,15 @@ export function InventarioPage() {
   )
   const selectedStockFilter =
     variantStockFilter === "low"
-      ? "Necesita reposicion"
+      ? "Necesita reposición"
       : variantStockFilter === "ok"
         ? "Disponible"
         : "Todo inventario"
+  const hasActiveVariantFilters = Boolean(
+    variantSearch.trim() ||
+    variantProductFilter !== "all" ||
+    variantStockFilter !== "all"
+  )
   const filteredVariants = useMemo(
     () =>
       filterVariants(variantsData?.data ?? [], {
@@ -232,11 +237,16 @@ export function InventarioPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todo inventario</SelectItem>
-                  <SelectItem value="low">Necesita reposicion</SelectItem>
+                  <SelectItem value="low">Necesita reposición</SelectItem>
                   <SelectItem value="ok">Disponible</SelectItem>
                 </SelectContent>
               </Select>
             </div>
+            {hasActiveVariantFilters ? (
+              <div className="text-xs text-muted-foreground">
+                Filtrando esta página: {filteredVariants.length} resultados.
+              </div>
+            ) : null}
             {variantsQuery.isLoading ? (
               <div className="text-sm text-muted-foreground">
                 Cargando prendas...

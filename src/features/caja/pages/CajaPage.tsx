@@ -52,6 +52,15 @@ export function CajaPage() {
   const openCash = useOpenCashRegister()
   const closeCash = useCloseCashRegister()
   const activeCash = activeCashQuery.data
+  const cashCardTitle =
+    activeCashQuery.isLoading || activeCashQuery.isError
+      ? "Estado de caja"
+      : activeCash
+        ? "Caja activa"
+        : "Abrir caja"
+  const hasActiveCashFilters = Boolean(
+    cashSearch.trim() || cashDateFrom || cashDateTo || cashStatus !== "all"
+  )
   const filteredCashRegisters = useMemo(
     () =>
       (cashQuery.data?.data ?? []).filter(
@@ -122,7 +131,7 @@ export function CajaPage() {
       <div className="grid gap-4 lg:grid-cols-[360px_minmax(0,1fr)]">
         <Card>
           <CardHeader>
-            <CardTitle>{activeCash ? "Caja activa" : "Abrir caja"}</CardTitle>
+            <CardTitle>{cashCardTitle}</CardTitle>
             {activeCash ? (
               <CardDescription>
                 Abierta: {formatDate(activeCash.fechaApertura)}
@@ -249,6 +258,12 @@ export function CajaPage() {
                 </SelectContent>
               </Select>
             </div>
+            {hasActiveCashFilters ? (
+              <div className="text-xs text-muted-foreground">
+                Filtrando esta página: {filteredCashRegisters.length}{" "}
+                resultados.
+              </div>
+            ) : null}
             {cashQuery.isLoading ? (
               <div className="text-sm text-muted-foreground">
                 Cargando cajas...
@@ -296,7 +311,7 @@ export function CajaPage() {
                           colSpan={4}
                           className="py-8 text-center text-sm text-muted-foreground"
                         >
-                          No hay cajas con esos filtros.
+                          No hay cajas en esta página con esos filtros.
                         </TableCell>
                       </TableRow>
                     ) : null}

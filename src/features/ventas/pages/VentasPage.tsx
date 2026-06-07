@@ -52,6 +52,9 @@ export function VentasPage() {
   const salesQuery = useSales({ page, limit: PAGE_SIZE })
   const saleDetailQuery = useSaleDetail(selectedSaleId)
   const cancelSale = useCancelSale()
+  const hasActiveFilters = Boolean(
+    search.trim() || dateFrom || dateTo || statusFilter !== "all"
+  )
   const filteredSales = useMemo(
     () =>
       (salesQuery.data?.data ?? []).filter(
@@ -155,6 +158,11 @@ export function VentasPage() {
               </SelectContent>
             </Select>
           </div>
+          {hasActiveFilters ? (
+            <div className="text-xs text-muted-foreground">
+              Filtrando esta página: {filteredSales.length} resultados.
+            </div>
+          ) : null}
           {salesQuery.isLoading ? (
             <div className="text-sm text-muted-foreground">
               Cargando ventas...
@@ -241,7 +249,7 @@ export function VentasPage() {
                         colSpan={7}
                         className="py-8 text-center text-sm text-muted-foreground"
                       >
-                        No hay ventas con esos filtros.
+                        No hay ventas en esta página con esos filtros.
                       </TableCell>
                     </TableRow>
                   ) : null}

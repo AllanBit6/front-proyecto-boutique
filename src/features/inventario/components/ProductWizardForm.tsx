@@ -34,8 +34,8 @@ const productWizardSchema = z.object({
   talla_id: z.string().min(1, "Selecciona una talla"),
   color_id: z.string().min(1, "Selecciona un color"),
   precio_venta: z.number().min(0.01, "Ingresa un precio de venta"),
-  precio_compra: z.number().min(0, "Ingresa un precio valido").optional(),
-  stock_minimo: z.number().int().min(0, "Ingresa un stock valido").optional(),
+  precio_compra: z.number().min(0, "Ingresa un precio válido").optional(),
+  stock_minimo: z.number().int().min(0, "Ingresa un stock válido").optional(),
 })
 
 type ProductWizardValues = z.infer<typeof productWizardSchema>

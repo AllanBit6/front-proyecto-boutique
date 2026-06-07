@@ -72,6 +72,9 @@ export function InventoryAdjustmentsPage() {
   const selectedAdjustmentType = ADJUSTMENT_TYPES.find(
     (type) => type.value === adjustmentType
   )
+  const hasActiveMovementFilters = Boolean(
+    movementSearch.trim() || movementDateFrom || movementDateTo
+  )
   const filteredMovements = useMemo(
     () =>
       (movementsQuery.data?.data ?? []).filter(
@@ -289,11 +292,8 @@ export function InventoryAdjustmentsPage() {
                 </Field>
               </FieldGroup>
               <Button
-                type="button"
+                type="submit"
                 className="w-full"
-                onClick={() => {
-                  void submitAdjustment()
-                }}
                 disabled={
                   createAdjustment.isPending ||
                   !variantId ||
@@ -375,6 +375,11 @@ export function InventoryAdjustmentsPage() {
                 }}
               />
             </div>
+            {hasActiveMovementFilters ? (
+              <div className="text-xs text-muted-foreground">
+                Filtrando esta página: {filteredMovements.length} resultados.
+              </div>
+            ) : null}
             {movementsQuery.isLoading ? (
               <div className="text-sm text-muted-foreground">
                 Cargando movimientos...
@@ -431,7 +436,8 @@ export function InventoryAdjustmentsPage() {
                           colSpan={6}
                           className="py-8 text-center text-sm text-muted-foreground"
                         >
-                          No hay cambios de stock con esos filtros.
+                          No hay cambios de stock en esta página con esos
+                          filtros.
                         </TableCell>
                       </TableRow>
                     ) : null}

@@ -101,7 +101,7 @@ export function BarcodeDialog({
 
     toast.promise(promise, {
       loading: "Generando código de barras...",
-      success: "Codigo de barras listo.",
+      success: "Código de barras listo.",
       error: (error) =>
         error instanceof Error
           ? error.message
@@ -123,7 +123,7 @@ export function BarcodeDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Codigo de barras</DialogTitle>
+          <DialogTitle>Código de barras</DialogTitle>
           <DialogDescription>
             {variant?.producto_nombre} / {variant?.talla_nombre} /{" "}
             {variant?.color_nombre}
@@ -132,7 +132,7 @@ export function BarcodeDialog({
         {barcodeSvg ? (
           <div className="overflow-x-auto rounded-lg border bg-white p-4">
             <img
-              alt={`Codigo de barras ${barcode}`}
+              alt={`Código de barras ${barcode}`}
               className="mx-auto w-fit"
               src={barcodeSvgUrl}
             />
@@ -270,7 +270,7 @@ function createEan13Svg(value: string, sku: string) {
     ? `<text x="${width / 2}" y="18" font-family="Inter, Arial, sans-serif" font-size="13" font-weight="700" fill="#111827" text-anchor="middle">${escapeSvgText(sku)}</text>`
     : ""
 
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" role="img" aria-label="Codigo de barras ${value}">
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" role="img" aria-label="Código de barras ${value}">
   <rect width="100%" height="100%" fill="#ffffff" />
   ${skuText}
   ${bars}
