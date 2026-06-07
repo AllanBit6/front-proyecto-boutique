@@ -3,13 +3,7 @@ import { useState } from "react"
 import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import {
   Dialog,
   DialogContent,
@@ -72,18 +66,12 @@ export function UsuariosPage() {
       <section className="space-y-4">
         <div>
           <h1 className="page-heading">Equipo</h1>
-          <p className="page-subtitle">
-            Personas que pueden entrar al sistema.
-          </p>
         </div>
         <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
           <Card>
             <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <CardTitle>Usuarios</CardTitle>
-                <CardDescription>
-                  Administra accesos y permisos.
-                </CardDescription>
               </div>
               {usersData ? (
                 <div className="text-sm text-muted-foreground">
@@ -143,9 +131,6 @@ export function UsuariosPage() {
           <Card>
             <CardHeader>
               <CardTitle>Nueva persona</CardTitle>
-              <CardDescription>
-                Define sus datos y qué puede hacer.
-              </CardDescription>
             </CardHeader>
             <CardContent>
               {rolesQuery.isLoading ? (
@@ -171,9 +156,7 @@ export function UsuariosPage() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Editar usuario</DialogTitle>
-            <DialogDescription>
-              Actualiza los datos y rol del usuario.
-            </DialogDescription>
+            <DialogDescription>Datos y rol.</DialogDescription>
           </DialogHeader>
           {editUserQuery.isLoading ? (
             <div className="text-sm text-muted-foreground">
@@ -205,7 +188,7 @@ export function UsuariosPage() {
           <DialogHeader>
             <DialogTitle>Resetear contraseña</DialogTitle>
             <DialogDescription>
-              Define una contraseña temporal para {resetUser?.user_name}.
+              Contraseña temporal para {resetUser?.user_name}.
             </DialogDescription>
           </DialogHeader>
           {resetUser ? (
@@ -229,8 +212,7 @@ export function UsuariosPage() {
           <DialogHeader>
             <DialogTitle>Eliminar usuario</DialogTitle>
             <DialogDescription>
-              Esta acción eliminará a {deleteUser?.user_name}. No se puede
-              deshacer desde esta pantalla.
+              Eliminar a {deleteUser?.user_name}. No se puede deshacer.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>

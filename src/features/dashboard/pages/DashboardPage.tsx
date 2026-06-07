@@ -112,9 +112,7 @@ export function DashboardPage() {
         })}
       </div>
       {dashboardQuery.isLoading ? (
-        <div className="text-sm text-muted-foreground">
-          Cargando métricas...
-        </div>
+        <div className="text-sm text-muted-foreground">Cargando...</div>
       ) : dashboardQuery.isError ? (
         <div className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
           No se pudieron cargar las métricas del resumen.
@@ -127,7 +125,7 @@ export function DashboardPage() {
           </CardHeader>
           <CardContent>
             {isLoading ? (
-              <EmptyChart message="Cargando ventas mensuales..." />
+              <EmptyChart message="Cargando..." />
             ) : monthlySales.length ? (
               <ChartContainer
                 className="aspect-auto h-[260px] w-full"
@@ -161,7 +159,7 @@ export function DashboardPage() {
                 </AreaChart>
               </ChartContainer>
             ) : (
-              <EmptyChart message="Sin ventas mensuales disponibles." />
+              <EmptyChart message="Sin datos." />
             )}
           </CardContent>
         </Card>
@@ -172,7 +170,7 @@ export function DashboardPage() {
           </CardHeader>
           <CardContent>
             {isLoading ? (
-              <EmptyChart message="Cargando productos vendidos..." />
+              <EmptyChart message="Cargando..." />
             ) : topProducts.length ? (
               <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_180px] xl:grid-cols-1">
                 <ChartContainer
@@ -240,7 +238,7 @@ export function DashboardPage() {
                 </div>
               </div>
             ) : (
-              <EmptyChart message="Sin productos vendidos para mostrar." />
+              <EmptyChart message="Sin datos." />
             )}
           </CardContent>
         </Card>
@@ -252,7 +250,7 @@ export function DashboardPage() {
         </CardHeader>
         <CardContent>
           {isLoading ? (
-            <EmptyChart message="Cargando ventas semanales..." />
+            <EmptyChart message="Cargando..." />
           ) : weeklySales.length ? (
             <ChartContainer
               className="aspect-auto h-[280px] w-full"
@@ -279,7 +277,7 @@ export function DashboardPage() {
               </BarChart>
             </ChartContainer>
           ) : (
-            <EmptyChart message="Sin datos semanales disponibles." />
+            <EmptyChart message="Sin datos." />
           )}
         </CardContent>
       </Card>

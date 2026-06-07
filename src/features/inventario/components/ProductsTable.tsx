@@ -34,7 +34,7 @@ export function ProductsTable({
   if (!products.length) {
     return (
       <div className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">
-        No hay modelos base para mostrar.
+        Sin modelos.
       </div>
     )
   }

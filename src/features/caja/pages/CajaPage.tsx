@@ -126,7 +126,7 @@ export function CajaPage() {
   return (
     <section className="space-y-4">
       <div>
-        <h1 className="text-xl font-semibold">Caja</h1>
+        <h1 className="page-heading">Caja</h1>
       </div>
       <div className="grid gap-4 lg:grid-cols-[360px_minmax(0,1fr)]">
         <Card>
@@ -145,8 +145,7 @@ export function CajaPage() {
               </div>
             ) : activeCashQuery.isError ? (
               <div className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-                No se pudo confirmar si hay una caja abierta. Reintenta antes de
-                abrir o cerrar caja.
+                No se pudo confirmar el estado de caja.
               </div>
             ) : activeCash ? (
               <form className="space-y-3" onSubmit={handleClose}>
@@ -260,8 +259,7 @@ export function CajaPage() {
             </div>
             {hasActiveCashFilters ? (
               <div className="text-xs text-muted-foreground">
-                Filtrando esta página: {filteredCashRegisters.length}{" "}
-                resultados.
+                {filteredCashRegisters.length} resultados
               </div>
             ) : null}
             {cashQuery.isLoading ? (
@@ -311,7 +309,7 @@ export function CajaPage() {
                           colSpan={4}
                           className="py-8 text-center text-sm text-muted-foreground"
                         >
-                          No hay cajas en esta página con esos filtros.
+                          Sin resultados.
                         </TableCell>
                       </TableRow>
                     ) : null}

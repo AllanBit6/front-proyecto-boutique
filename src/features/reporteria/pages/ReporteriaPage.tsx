@@ -173,7 +173,7 @@ export function ReporteriaPage() {
           </div>
           {hasActiveFilters ? (
             <div className="text-xs text-muted-foreground">
-              Filtrando esta página: {filteredPayments.length} resultados.
+              {filteredPayments.length} resultados
             </div>
           ) : null}
           {paymentsQuery.isLoading ? (
@@ -241,7 +241,7 @@ export function ReporteriaPage() {
                         colSpan={6}
                         className="py-8 text-center text-sm text-muted-foreground"
                       >
-                        No hay cobros en esta página con esos filtros.
+                        Sin resultados.
                       </TableCell>
                     </TableRow>
                   ) : null}

@@ -105,7 +105,7 @@ export function InventoryAdjustmentsPage() {
     if (!variantId || !selectedVariant) {
       setLastResult({
         type: "error",
-        message: "Selecciona una prenda activa antes de aplicar el ajuste.",
+        message: "Selecciona una prenda.",
       })
       toast.error("Selecciona una prenda para ajustar el stock.")
       return
@@ -145,7 +145,7 @@ export function InventoryAdjustmentsPage() {
 
     setLastResult({
       type: "info",
-      message: `Aplicando ajuste. Stock actual: ${previousStock}. Resultado esperado: ${expectedStock}.`,
+      message: `Stock: ${previousStock} -> ${expectedStock}.`,
     })
 
     const promise = createAdjustment.mutateAsync({
@@ -162,8 +162,7 @@ export function InventoryAdjustmentsPage() {
       await promise
       setLastResult({
         type: "success",
-        message:
-          "Ajuste registrado correctamente. El inventario se actualizará en la lista.",
+        message: "Ajuste registrado.",
       })
       setVariantId("")
       setQuantity("")
@@ -377,7 +376,7 @@ export function InventoryAdjustmentsPage() {
             </div>
             {hasActiveMovementFilters ? (
               <div className="text-xs text-muted-foreground">
-                Filtrando esta página: {filteredMovements.length} resultados.
+                {filteredMovements.length} resultados
               </div>
             ) : null}
             {movementsQuery.isLoading ? (
@@ -436,8 +435,7 @@ export function InventoryAdjustmentsPage() {
                           colSpan={6}
                           className="py-8 text-center text-sm text-muted-foreground"
                         >
-                          No hay cambios de stock en esta página con esos
-                          filtros.
+                          Sin resultados.
                         </TableCell>
                       </TableRow>
                     ) : null}

@@ -160,7 +160,7 @@ export function VentasPage() {
           </div>
           {hasActiveFilters ? (
             <div className="text-xs text-muted-foreground">
-              Filtrando esta página: {filteredSales.length} resultados.
+              {filteredSales.length} resultados
             </div>
           ) : null}
           {salesQuery.isLoading ? (
@@ -249,7 +249,7 @@ export function VentasPage() {
                         colSpan={7}
                         className="py-8 text-center text-sm text-muted-foreground"
                       >
-                        No hay ventas en esta página con esos filtros.
+                        Sin resultados.
                       </TableCell>
                     </TableRow>
                   ) : null}
@@ -283,9 +283,7 @@ export function VentasPage() {
             <DialogTitle>Detalle de venta</DialogTitle>
           </DialogHeader>
           {saleDetailQuery.isLoading ? (
-            <div className="text-sm text-muted-foreground">
-              Cargando detalle...
-            </div>
+            <div className="text-sm text-muted-foreground">Cargando...</div>
           ) : saleDetailQuery.data ? (
             <div className="space-y-4">
               <div className="grid gap-3 rounded-md border p-3 text-sm sm:grid-cols-2 lg:grid-cols-4">
@@ -442,7 +440,7 @@ export function VentasPage() {
                 variant="destructive"
                 disabled={!cancelReason.trim() || cancelSale.isPending}
               >
-                {cancelSale.isPending ? "Anulando..." : "Confirmar anulación"}
+                {cancelSale.isPending ? "Anulando..." : "Anular"}
               </Button>
             </div>
           </form>

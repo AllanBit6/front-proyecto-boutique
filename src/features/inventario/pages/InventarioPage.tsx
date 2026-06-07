@@ -9,13 +9,7 @@ import { useMemo, useState } from "react"
 import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import {
   Dialog,
   DialogContent,
@@ -151,10 +145,6 @@ export function InventarioPage() {
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="page-heading">Inventario</h1>
-            <p className="page-subtitle">
-              Revisa lo disponible para vender y actualiza precios o tallas
-              cuando sea necesario.
-            </p>
           </div>
           {canManageInventory ? (
             <Button
@@ -171,9 +161,6 @@ export function InventarioPage() {
           <CardHeader className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
             <div>
               <CardTitle>Prendas disponibles</CardTitle>
-              <CardDescription>
-                Lista simple de productos disponibles en tienda.
-              </CardDescription>
             </div>
             {canManageInventory ? (
               <div className="flex flex-col gap-2 sm:flex-row">
@@ -244,7 +231,7 @@ export function InventarioPage() {
             </div>
             {hasActiveVariantFilters ? (
               <div className="text-xs text-muted-foreground">
-                Filtrando esta página: {filteredVariants.length} resultados.
+                {filteredVariants.length} resultados
               </div>
             ) : null}
             {variantsQuery.isLoading ? (
@@ -289,7 +276,7 @@ export function InventarioPage() {
           <DialogHeader>
             <DialogTitle>Registrar prenda</DialogTitle>
             <DialogDescription>
-              Crea la prenda y su primera talla/color en un solo paso.
+              Incluye su primera talla/color.
             </DialogDescription>
           </DialogHeader>
           <ProductWizardForm
@@ -305,9 +292,7 @@ export function InventarioPage() {
         <DialogContent className="max-h-[92svh] overflow-y-auto sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>Nueva talla o color</DialogTitle>
-            <DialogDescription>
-              Agrega otra talla o color para una prenda que ya existe.
-            </DialogDescription>
+            <DialogDescription>Para una prenda existente.</DialogDescription>
           </DialogHeader>
           <VariantForm
             products={activeProductOptions}
@@ -325,9 +310,7 @@ export function InventarioPage() {
         <DialogContent className="max-h-[88svh] overflow-y-auto sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>Tallas y colores</DialogTitle>
-            <DialogDescription>
-              Agrega opciones para usarlas al registrar prendas.
-            </DialogDescription>
+            <DialogDescription>Opciones para inventario.</DialogDescription>
           </DialogHeader>
           <CatalogManager sizes={sizes} colors={colors} />
         </DialogContent>
@@ -345,7 +328,7 @@ export function InventarioPage() {
           <DialogHeader>
             <DialogTitle>Editar prenda</DialogTitle>
             <DialogDescription>
-              Actualiza talla, color, precios y alerta de stock.
+              Talla, color, precios y stock.
             </DialogDescription>
           </DialogHeader>
           {editVariantQuery.isLoading ? (
@@ -487,8 +470,7 @@ function ConfirmDeactivateDialog({
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription>
-            {description} La prenda quedará oculta para nuevas ventas, pero se
-            conservará su historial.
+            {description} Se conserva el historial.
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>

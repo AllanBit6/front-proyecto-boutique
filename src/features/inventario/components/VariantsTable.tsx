@@ -36,7 +36,7 @@ export function VariantsTable({
   if (!variants.length) {
     return (
       <div className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">
-        No hay prendas para mostrar.
+        Sin prendas.
       </div>
     )
   }

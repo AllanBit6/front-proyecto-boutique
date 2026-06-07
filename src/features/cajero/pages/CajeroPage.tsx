@@ -429,7 +429,7 @@ export function CajeroPage() {
         <div className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>Productos disponibles</CardTitle>
+              <CardTitle>Productos</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               <div className="grid grid-cols-1 gap-3 md:grid-cols-2 2xl:grid-cols-[minmax(220px,300px)_minmax(260px,1fr)_160px_160px]">
@@ -442,7 +442,7 @@ export function CajeroPage() {
                     className="min-w-0"
                     value={barcode}
                     onChange={(event) => setBarcode(event.target.value)}
-                    placeholder="Escanear código"
+                    placeholder="Código"
                     autoComplete="off"
                     disabled={findByBarcode.isPending}
                   />
@@ -461,7 +461,7 @@ export function CajeroPage() {
                     className="min-w-0 pl-9"
                     value={productSearch}
                     onChange={(event) => setProductSearch(event.target.value)}
-                    placeholder="Buscar prenda, SKU, color o código"
+                    placeholder="Buscar producto"
                     disabled={variantsQuery.isLoading}
                   />
                 </div>
@@ -505,8 +505,7 @@ export function CajeroPage() {
                 </Select>
               </div>
               <div className="text-xs text-muted-foreground">
-                Mostrando {filteredVariants.length} de {sellableVariants.length}{" "}
-                productos disponibles.
+                {filteredVariants.length} de {sellableVariants.length}
               </div>
 
               {variantsQuery.isLoading ? (
@@ -515,7 +514,7 @@ export function CajeroPage() {
                 </div>
               ) : variantsQuery.isError ? (
                 <div className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-8 text-center text-sm text-destructive">
-                  No se pudieron cargar los productos para vender.
+                  No se pudieron cargar los productos.
                 </div>
               ) : filteredVariants.length > 0 ? (
                 <div className="max-h-[360px] overflow-auto rounded-md border">
@@ -586,7 +585,7 @@ export function CajeroPage() {
                 </div>
               ) : (
                 <div className="rounded-md border border-dashed py-8 text-center text-sm text-muted-foreground">
-                  No hay productos disponibles con esos filtros.
+                  Sin resultados.
                 </div>
               )}
             </CardContent>
@@ -752,7 +751,7 @@ export function CajeroPage() {
                 </div>
               ) : (
                 <div className="rounded-md border py-8 text-center text-sm text-muted-foreground">
-                  Escanea o selecciona una prenda para iniciar la venta.
+                  Carrito vacío.
                 </div>
               )}
             </CardContent>

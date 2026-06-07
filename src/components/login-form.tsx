@@ -4,13 +4,7 @@ import { LockKeyhole, Store, UserRound } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import {
   Field,
   FieldError,
@@ -73,9 +67,6 @@ export function LoginForm({
           </div>
           <div>
             <CardTitle className="text-xl">Iniciar sesión</CardTitle>
-            <CardDescription className="mt-1 leading-6">
-              Ingresa tus credenciales para continuar.
-            </CardDescription>
           </div>
         </CardHeader>
         <CardContent className="p-6">

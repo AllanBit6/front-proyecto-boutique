@@ -2,16 +2,9 @@ import { useState } from "react"
 import { Navigate, useNavigate } from "react-router-dom"
 
 import { Button } from "@/components/ui/button"
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import {
   Field,
-  FieldDescription,
   FieldError,
   FieldGroup,
   FieldLabel,
@@ -82,10 +75,7 @@ export function ResetPasswordPage() {
     <main className="grid min-h-svh place-items-center bg-muted/30 p-4">
       <Card className="w-full max-w-sm">
         <CardHeader>
-          <CardTitle>Actualiza tu contraseña</CardTitle>
-          <CardDescription>
-            Antes de entrar al POS necesitas definir una contraseña nueva.
-          </CardDescription>
+          <CardTitle>Nueva contraseña</CardTitle>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit}>
@@ -133,9 +123,6 @@ export function ResetPasswordPage() {
                 >
                   {isSubmitting ? "Actualizando..." : "Guardar contraseña"}
                 </Button>
-                <FieldDescription className="text-center">
-                  Luego entrarás al sistema automáticamente.
-                </FieldDescription>
               </Field>
             </FieldGroup>
           </form>

@@ -106,7 +106,7 @@ export function ComprasPage() {
     if (!variantId || !selectedVariant) {
       setLastResult({
         type: "error",
-        message: "Selecciona una prenda activa antes de registrar la compra.",
+        message: "Selecciona una prenda.",
       })
       toast.error("Selecciona una prenda para sumar stock.")
       return
@@ -132,7 +132,7 @@ export function ComprasPage() {
 
     setLastResult({
       type: "info",
-      message: `Registrando ${cantidad} unidades para ${selectedVariant.producto_nombre}.`,
+      message: `Registrando ${cantidad} unidades.`,
     })
 
     const promise = createPurchase.mutateAsync({
@@ -151,8 +151,7 @@ export function ComprasPage() {
       await promise
       setLastResult({
         type: "success",
-        message:
-          "Compra registrada correctamente. El stock se actualizará en la lista.",
+        message: "Compra registrada.",
       })
       setVariantId("")
       setQuantity("")
@@ -187,8 +186,7 @@ export function ComprasPage() {
       await promise
       setLastResult({
         type: "success",
-        message:
-          "Compra anulada correctamente. El stock se actualizará en la lista.",
+        message: "Compra anulada.",
       })
       setPurchaseToCancel(null)
       setCancelReason("")
@@ -353,7 +351,7 @@ export function ComprasPage() {
             </div>
             {hasActivePurchaseFilters ? (
               <div className="text-xs text-muted-foreground">
-                Filtrando esta página: {filteredPurchases.length} resultados.
+                {filteredPurchases.length} resultados
               </div>
             ) : null}
             {purchasesQuery.isLoading ? (
@@ -428,7 +426,7 @@ export function ComprasPage() {
                           colSpan={6}
                           className="py-8 text-center text-sm text-muted-foreground"
                         >
-                          No hay compras en esta página con esos filtros.
+                          Sin resultados.
                         </TableCell>
                       </TableRow>
                     ) : null}
@@ -485,9 +483,7 @@ export function ComprasPage() {
                 variant="destructive"
                 disabled={!cancelReason.trim() || cancelPurchase.isPending}
               >
-                {cancelPurchase.isPending
-                  ? "Anulando..."
-                  : "Confirmar anulación"}
+                {cancelPurchase.isPending ? "Anulando..." : "Anular"}
               </Button>
             </div>
           </form>
