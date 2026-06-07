@@ -1,3 +1,4 @@
+import { useEffect } from "react"
 import { Navigate } from "react-router-dom"
 
 import { LoginForm } from "@/components/login-form"
@@ -18,6 +19,20 @@ function getHomePath(role: Role) {
 
 export function LoginPage() {
   const user = useAuthStore((state) => state.user)
+  const status = useAuthStore((state) => state.status)
+  const initializeSession = useAuthStore((state) => state.initializeSession)
+
+  useEffect(() => {
+    void initializeSession()
+  }, [initializeSession])
+
+  if (status === "idle" || status === "checking") {
+    return (
+      <main className="grid min-h-svh place-items-center bg-background text-sm text-muted-foreground">
+        Validando sesión...
+      </main>
+    )
+  }
 
   if (user) {
     return (

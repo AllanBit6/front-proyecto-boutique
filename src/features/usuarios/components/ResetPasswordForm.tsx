@@ -1,5 +1,7 @@
 import { zodResolver } from "@hookform/resolvers/zod"
+import { useState } from "react"
 import { useForm } from "react-hook-form"
+import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -21,11 +23,9 @@ interface ResetPasswordFormProps {
   onSuccess?: () => void
 }
 
-export function ResetPasswordForm({
-  user,
-  onSuccess,
-}: ResetPasswordFormProps) {
+export function ResetPasswordForm({ user, onSuccess }: ResetPasswordFormProps) {
   const resetPassword = useResetPassword()
+  const [submitError, setSubmitError] = useState("")
   const form = useForm<ResetPasswordFormValues>({
     resolver: zodResolver(resetPasswordSchema),
     defaultValues: {
@@ -34,12 +34,28 @@ export function ResetPasswordForm({
   })
 
   const onSubmit = form.handleSubmit(async (values) => {
-    await resetPassword.mutateAsync({
+    setSubmitError("")
+    const promise = resetPassword.mutateAsync({
       id: user.id,
       input: values,
     })
-    form.reset()
-    onSuccess?.()
+
+    toast.promise(promise, {
+      loading: "Guardando contraseña...",
+      success: "Contraseña actualizada correctamente.",
+      error: (error) =>
+        getErrorMessage(error, "No se pudo actualizar la contraseña."),
+    })
+
+    try {
+      await promise
+      form.reset()
+      onSuccess?.()
+    } catch (error) {
+      setSubmitError(
+        getErrorMessage(error, "No se pudo actualizar la contraseña.")
+      )
+    }
   })
 
   return (
@@ -56,9 +72,18 @@ export function ResetPasswordForm({
           <FieldError errors={[form.formState.errors.password_nuevo]} />
         </Field>
       </FieldGroup>
-      <Button type="submit" disabled={resetPassword.isPending}>
+      {submitError ? <FieldError>{submitError}</FieldError> : null}
+      <Button
+        className="w-full"
+        type="submit"
+        disabled={resetPassword.isPending}
+      >
         {resetPassword.isPending ? "Guardando..." : "Resetear contraseña"}
       </Button>
     </form>
   )
+}
+
+function getErrorMessage(error: unknown, fallback: string) {
+  return error instanceof Error ? error.message : fallback
 }

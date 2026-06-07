@@ -48,6 +48,7 @@ const PRODUCT_COLORS = [
 export function DashboardPage() {
   const dashboardQuery = useDashboard()
   const metrics = dashboardQuery.data
+  const isLoading = dashboardQuery.isLoading
   const weeklySales = metrics?.ventasSemanales ?? []
   const monthlySales = metrics?.ventasMes ?? metrics?.ventasAnio ?? []
   const topProducts = normalizeTopProducts(
@@ -56,24 +57,30 @@ export function DashboardPage() {
   const cards = [
     {
       title: "Caja de hoy",
-      value: formatCurrency(Number(metrics?.ingresosHoy ?? 0)),
+      value: isLoading
+        ? "..."
+        : formatCurrency(Number(metrics?.ingresosHoy ?? 0)),
       icon: TrendingUp,
     },
     {
       title: "Ventas de hoy",
-      value: Number(metrics?.ventasHoy ?? 0),
+      value: isLoading ? "..." : Number(metrics?.ventasHoy ?? 0),
       icon: Receipt,
     },
     {
       title: "Ingresos del mes",
-      value: formatCurrency(Number(metrics?.ingresosMes ?? 0)),
+      value: isLoading
+        ? "..."
+        : formatCurrency(Number(metrics?.ingresosMes ?? 0)),
       icon: CalendarDays,
     },
     {
       title: "Ticket promedio",
-      value: formatCurrency(
-        Number(metrics?.ticketProm ?? metrics?.ticketPromedio ?? 0)
-      ),
+      value: isLoading
+        ? "..."
+        : formatCurrency(
+            Number(metrics?.ticketProm ?? metrics?.ticketPromedio ?? 0)
+          ),
       icon: CreditCard,
     },
   ]
@@ -106,7 +113,11 @@ export function DashboardPage() {
       </div>
       {dashboardQuery.isLoading ? (
         <div className="text-sm text-muted-foreground">
-          Cargando metricas...
+          Cargando métricas...
+        </div>
+      ) : dashboardQuery.isError ? (
+        <div className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+          No se pudieron cargar las métricas del resumen.
         </div>
       ) : null}
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_420px]">
@@ -115,7 +126,9 @@ export function DashboardPage() {
             <CardTitle>Ventas del mes</CardTitle>
           </CardHeader>
           <CardContent>
-            {monthlySales.length ? (
+            {isLoading ? (
+              <EmptyChart message="Cargando ventas mensuales..." />
+            ) : monthlySales.length ? (
               <ChartContainer
                 className="aspect-auto h-[260px] w-full"
                 config={salesChartConfig}
@@ -158,7 +171,9 @@ export function DashboardPage() {
             <CardTitle>Mas vendidos</CardTitle>
           </CardHeader>
           <CardContent>
-            {topProducts.length ? (
+            {isLoading ? (
+              <EmptyChart message="Cargando productos vendidos..." />
+            ) : topProducts.length ? (
               <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_180px] xl:grid-cols-1">
                 <ChartContainer
                   className="aspect-auto h-[220px] w-full"
@@ -236,7 +251,9 @@ export function DashboardPage() {
           <CardTitle>Ventas esta semana</CardTitle>
         </CardHeader>
         <CardContent>
-          {weeklySales.length ? (
+          {isLoading ? (
+            <EmptyChart message="Cargando ventas semanales..." />
+          ) : weeklySales.length ? (
             <ChartContainer
               className="aspect-auto h-[280px] w-full"
               config={salesChartConfig}

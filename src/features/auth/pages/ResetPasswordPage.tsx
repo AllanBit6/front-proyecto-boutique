@@ -18,6 +18,19 @@ import {
 } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 import { useAuthStore } from "@/store"
+import type { Role } from "@/shared/types/domain"
+
+function getHomePath(role: Role) {
+  if (role === "cashier") {
+    return "/cajero"
+  }
+
+  if (role === "warehouse") {
+    return "/inventario"
+  }
+
+  return "/dashboard"
+}
 
 export function ResetPasswordPage() {
   const navigate = useNavigate()
@@ -46,7 +59,7 @@ export function ResetPasswordPage() {
     }
 
     if (newPassword !== confirmPassword) {
-      setError("La confirmacion no coincide con la nueva contraseña.")
+      setError("La confirmación no coincide con la nueva contraseña.")
       return
     }
 
@@ -54,9 +67,12 @@ export function ResetPasswordPage() {
 
     try {
       await changePassword({ currentPassword, newPassword })
-      navigate("/dashboard", { replace: true })
+      const updatedUser = useAuthStore.getState().user
+      navigate(getHomePath(updatedUser?.role ?? user!.role), { replace: true })
     } catch {
-      setError("No se pudo actualizar la contraseña. Revisa la contraseña actual.")
+      setError(
+        "No se pudo actualizar la contraseña. Revisa la contraseña actual."
+      )
     } finally {
       setIsSubmitting(false)
     }
@@ -110,11 +126,15 @@ export function ResetPasswordPage() {
               </Field>
               <Field>
                 {error ? <FieldError>{error}</FieldError> : null}
-                <Button type="submit" disabled={isSubmitting}>
+                <Button
+                  className="w-full"
+                  type="submit"
+                  disabled={isSubmitting}
+                >
                   {isSubmitting ? "Actualizando..." : "Guardar contraseña"}
                 </Button>
                 <FieldDescription className="text-center">
-                  Luego entraras al sistema automaticamente.
+                  Luego entrarás al sistema automáticamente.
                 </FieldDescription>
               </Field>
             </FieldGroup>

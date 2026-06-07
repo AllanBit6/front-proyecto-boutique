@@ -475,5 +475,5 @@ function getErrorMessage(error: unknown) {
     return error.message
   }
 
-  return "No se pudo completar la operacion."
+  return "No se pudo completar la operación."
 }

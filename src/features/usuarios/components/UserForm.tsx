@@ -1,6 +1,7 @@
 import { zodResolver } from "@hookform/resolvers/zod"
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
 import { Controller, useForm, useWatch } from "react-hook-form"
+import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -36,6 +37,7 @@ export function UserForm({ roles, user, onSuccess }: UserFormProps) {
   const isEditing = Boolean(user)
   const createUser = useCreateUser()
   const updateUser = useUpdateUser()
+  const [submitError, setSubmitError] = useState("")
   const form = useForm<UserFormValues>({
     resolver: zodResolver(userFormSchema),
     defaultValues: getDefaultValues(user),
@@ -46,8 +48,12 @@ export function UserForm({ roles, user, onSuccess }: UserFormProps) {
   }, [form, user])
 
   const onSubmit = form.handleSubmit(async (values) => {
+    setSubmitError("")
+
+    let promise: Promise<unknown>
+
     if (user) {
-      await updateUser.mutateAsync({
+      promise = updateUser.mutateAsync({
         id: user.id,
         input: {
           nombre: values.nombre,
@@ -64,7 +70,7 @@ export function UserForm({ roles, user, onSuccess }: UserFormProps) {
         return
       }
 
-      await createUser.mutateAsync({
+      promise = createUser.mutateAsync({
         nombre: values.nombre,
         apellido: values.apellido,
         user_name: values.user_name,
@@ -73,8 +79,22 @@ export function UserForm({ roles, user, onSuccess }: UserFormProps) {
       })
     }
 
-    form.reset(getDefaultValues())
-    onSuccess?.()
+    toast.promise(promise, {
+      loading: user ? "Guardando usuario..." : "Creando usuario...",
+      success: user
+        ? "Usuario actualizado correctamente."
+        : "Usuario creado correctamente.",
+      error: (error) =>
+        getErrorMessage(error, "No se pudo guardar el usuario."),
+    })
+
+    try {
+      await promise
+      form.reset(getDefaultValues())
+      onSuccess?.()
+    } catch (error) {
+      setSubmitError(getErrorMessage(error, "No se pudo guardar el usuario."))
+    }
   })
 
   const isPending = createUser.isPending || updateUser.isPending
@@ -149,7 +169,17 @@ export function UserForm({ roles, user, onSuccess }: UserFormProps) {
           <FieldError errors={[form.formState.errors.rol_id]} />
         </Field>
       </FieldGroup>
-      <Button type="submit" disabled={isPending || !roles.length}>
+      {!roles.length ? (
+        <div className="rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-800 dark:text-amber-200">
+          No hay permisos disponibles para asignar.
+        </div>
+      ) : null}
+      {submitError ? <FieldError>{submitError}</FieldError> : null}
+      <Button
+        className="w-full"
+        type="submit"
+        disabled={isPending || !roles.length}
+      >
         {isPending
           ? "Guardando..."
           : isEditing
@@ -158,6 +188,10 @@ export function UserForm({ roles, user, onSuccess }: UserFormProps) {
       </Button>
     </form>
   )
+}
+
+function getErrorMessage(error: unknown, fallback: string) {
+  return error instanceof Error ? error.message : fallback
 }
 
 function getDefaultValues(user?: User): UserFormValues {

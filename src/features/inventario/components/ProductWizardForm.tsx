@@ -1,5 +1,7 @@
 import { zodResolver } from "@hookform/resolvers/zod"
+import { useState } from "react"
 import { useForm, useWatch } from "react-hook-form"
+import { toast } from "sonner"
 import { z } from "zod"
 
 import { Button } from "@/components/ui/button"
@@ -54,6 +56,7 @@ export function ProductWizardForm({
   const createBrand = useCreateBrand()
   const createProduct = useCreateProduct()
   const createVariant = useCreateVariant()
+  const [submitError, setSubmitError] = useState("")
   const form = useForm<ProductWizardValues>({
     resolver: zodResolver(productWizardSchema),
     defaultValues: {
@@ -76,31 +79,49 @@ export function ProductWizardForm({
   const selectedColor = colors.find((item) => item.id === selectedColorId)
 
   const onSubmit = form.handleSubmit(async (values) => {
-    const brandId = await resolveBrandId(values.marca_nombre, brands, (name) =>
-      createBrand.mutateAsync({ nombre: name })
-    )
-    const product = await createProduct.mutateAsync({
-      nombre: values.nombre.trim(),
-      caracteristica_distintiva:
-        values.caracteristica_distintiva?.trim() || "General",
-      marca_id: brandId,
-    })
-    const size = sizes.find((item) => item.id === values.talla_id)
-    const color = colors.find((item) => item.id === values.color_id)
+    setSubmitError("")
 
-    await createVariant.mutateAsync({
-      producto_id: product.id,
-      talla_id: values.talla_id,
-      color_id: values.color_id,
-      sku: buildSku(values.nombre, size?.nombre ?? "", color?.nombre ?? ""),
-      codigo_barras: buildBarcode(),
-      precio_compra: values.precio_compra ?? 0,
-      precio_venta: values.precio_venta,
-      stock_minimo: values.stock_minimo ?? 1,
+    const promise = (async () => {
+      const brandId = await resolveBrandId(
+        values.marca_nombre,
+        brands,
+        (name) => createBrand.mutateAsync({ nombre: name })
+      )
+      const product = await createProduct.mutateAsync({
+        nombre: values.nombre.trim(),
+        caracteristica_distintiva:
+          values.caracteristica_distintiva?.trim() || "General",
+        marca_id: brandId,
+      })
+      const size = sizes.find((item) => item.id === values.talla_id)
+      const color = colors.find((item) => item.id === values.color_id)
+
+      await createVariant.mutateAsync({
+        producto_id: product.id,
+        talla_id: values.talla_id,
+        color_id: values.color_id,
+        sku: buildSku(values.nombre, size?.nombre ?? "", color?.nombre ?? ""),
+        codigo_barras: buildBarcode(),
+        precio_compra: values.precio_compra ?? 0,
+        precio_venta: values.precio_venta,
+        stock_minimo: values.stock_minimo ?? 1,
+      })
+    })()
+
+    toast.promise(promise, {
+      loading: "Registrando prenda...",
+      success: "Prenda registrada correctamente.",
+      error: (error) =>
+        getErrorMessage(error, "No se pudo registrar la prenda."),
     })
 
-    form.reset()
-    onSuccess?.()
+    try {
+      await promise
+      form.reset()
+      onSuccess?.()
+    } catch (error) {
+      setSubmitError(getErrorMessage(error, "No se pudo registrar la prenda."))
+    }
   })
 
   return (
@@ -243,11 +264,25 @@ export function ProductWizardForm({
           </Field>
         </div>
       </FieldGroup>
-      <Button type="submit" disabled={isPending || !hasCatalogs}>
+      {!hasCatalogs ? (
+        <div className="rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-800 dark:text-amber-200">
+          Agrega al menos una talla y un color antes de registrar prendas.
+        </div>
+      ) : null}
+      {submitError ? <FieldError>{submitError}</FieldError> : null}
+      <Button
+        className="w-full"
+        type="submit"
+        disabled={isPending || !hasCatalogs}
+      >
         {isPending ? "Registrando..." : "Registrar prenda"}
       </Button>
     </form>
   )
+}
+
+function getErrorMessage(error: unknown, fallback: string) {
+  return error instanceof Error ? error.message : fallback
 }
 
 function normalizeName(name: string) {

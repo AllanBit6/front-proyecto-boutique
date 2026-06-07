@@ -132,6 +132,8 @@ export function useCancelSale() {
     mutationFn: cancelSale,
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: adminKeys.sales })
+      void queryClient.invalidateQueries({ queryKey: adminKeys.payments })
+      void queryClient.invalidateQueries({ queryKey: adminKeys.dashboard })
       void queryClient.invalidateQueries({ queryKey: variantsQueryKey })
       void queryClient.invalidateQueries({ queryKey: adminKeys.movements })
     },
