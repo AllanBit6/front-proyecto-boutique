@@ -6,7 +6,7 @@ import {
   ShoppingCart,
   Trash2,
 } from "lucide-react"
-import { Fragment, useMemo, useState } from "react"
+import { Fragment, useEffect, useMemo, useRef, useState } from "react"
 import { toast } from "sonner"
 
 import { formatCurrency } from "@/features/admin/utils/formatters"
@@ -146,6 +146,8 @@ export function CajeroPage() {
   const [amountReceived, setAmountReceived] = useState("")
   const [referenceNumber, setReferenceNumber] = useState("")
   const [error, setError] = useState("")
+  const barcodeInputRef = useRef<HTMLInputElement>(null)
+  const [shouldFocusBarcode, setShouldFocusBarcode] = useState(true)
   const variantsQuery = useAllVariants()
   const findByBarcode = useFindVariantByBarcode()
   const createSale = useCreateSale()
@@ -219,6 +221,24 @@ export function CajeroPage() {
   const change =
     paymentMethod === "EFECTIVO" ? Math.max(0, received - total) : 0
 
+  useEffect(() => {
+    if (findByBarcode.isPending || !shouldFocusBarcode) {
+      return
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      barcodeInputRef.current?.focus()
+      barcodeInputRef.current?.select()
+      setShouldFocusBarcode(false)
+    }, 0)
+
+    return () => window.clearTimeout(timeoutId)
+  }, [findByBarcode.isPending, shouldFocusBarcode])
+
+  function requestBarcodeFocus() {
+    setShouldFocusBarcode(true)
+  }
+
   function addVariant(variant: Variant) {
     setError("")
 
@@ -279,6 +299,7 @@ export function CajeroPage() {
     if (addVariant(variant)) {
       toast.success(`${variantLabel(variant)} agregado al carrito.`)
     }
+    requestBarcodeFocus()
   }
 
   async function handleBarcodeSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -286,6 +307,7 @@ export function CajeroPage() {
     const code = barcode.trim()
 
     if (!code) {
+      requestBarcodeFocus()
       return
     }
 
@@ -303,6 +325,8 @@ export function CajeroPage() {
           : "No se encontró el código."
       setError(message)
       toast.error(message)
+    } finally {
+      requestBarcodeFocus()
     }
   }
 
@@ -372,6 +396,7 @@ export function CajeroPage() {
       setAmountReceived("")
       setReferenceNumber("")
       form?.reset()
+      requestBarcodeFocus()
     } catch (exception) {
       const message = getErrorMessage(
         exception,
@@ -413,10 +438,12 @@ export function CajeroPage() {
                   onSubmit={handleBarcodeSubmit}
                 >
                   <Input
+                    ref={barcodeInputRef}
                     className="min-w-0"
                     value={barcode}
                     onChange={(event) => setBarcode(event.target.value)}
                     placeholder="Escanear código"
+                    autoComplete="off"
                     disabled={findByBarcode.isPending}
                   />
                   <Button
