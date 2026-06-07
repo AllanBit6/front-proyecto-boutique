@@ -72,7 +72,7 @@ export function ResetPasswordPage() {
   }
 
   return (
-    <main className="grid min-h-svh place-items-center bg-muted/30 p-4">
+    <main className="auth-route-enter grid min-h-svh place-items-center bg-muted/30 p-4">
       <Card className="w-full max-w-sm">
         <CardHeader>
           <CardTitle>Nueva contraseña</CardTitle>

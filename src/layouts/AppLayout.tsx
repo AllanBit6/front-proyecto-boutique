@@ -14,7 +14,7 @@ export function AppLayout() {
   return (
     <SidebarProvider>
       <AppSidebar />
-      <SidebarInset>
+      <SidebarInset className="auth-route-enter">
         <header className="sticky top-0 z-10 flex h-14 items-center justify-between border-b bg-card/95 px-4 shadow-sm shadow-slate-950/5 backdrop-blur supports-[backdrop-filter]:bg-card/80">
           <div className="flex min-w-0 items-center gap-3">
             <SidebarTrigger
