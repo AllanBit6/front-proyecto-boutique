@@ -40,12 +40,12 @@ export function UsersTable({
   }
 
   return (
-    <div className="overflow-x-auto rounded-md border">
-      <Table className="min-w-[640px]">
+    <div className="rounded-md border">
+      <Table className="min-w-[420px]">
         <TableHeader>
           <TableRow>
             <TableHead>Nombre</TableHead>
-            <TableHead>Acceso</TableHead>
+            <TableHead className="hidden sm:table-cell">Acceso</TableHead>
             <TableHead>Permiso</TableHead>
             <TableHead className="w-10" />
           </TableRow>
@@ -53,10 +53,17 @@ export function UsersTable({
         <TableBody>
           {users.map((user) => (
             <TableRow key={user.id}>
-              <TableCell className="font-medium">
-                {user.nombre} {user.apellido}
+              <TableCell className="max-w-48 whitespace-normal">
+                <div className="font-medium">
+                  {user.nombre} {user.apellido}
+                </div>
+                <div className="text-xs text-muted-foreground sm:hidden">
+                  {user.user_name}
+                </div>
               </TableCell>
-              <TableCell>{user.user_name}</TableCell>
+              <TableCell className="hidden sm:table-cell">
+                {user.user_name}
+              </TableCell>
               <TableCell>
                 <Badge variant="secondary">
                   {user.rol_nombre || user.rol_id}

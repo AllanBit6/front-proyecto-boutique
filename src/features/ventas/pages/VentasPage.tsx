@@ -167,14 +167,18 @@ export function VentasPage() {
               )}
             </div>
           ) : (
-            <div className="overflow-x-auto rounded-md border">
-              <Table className="min-w-[820px]">
+            <div className="rounded-md border">
+              <Table className="min-w-[560px]">
                 <TableHeader>
                   <TableRow>
                     <TableHead>Fecha</TableHead>
                     <TableHead>Cliente</TableHead>
-                    <TableHead>Vendedor</TableHead>
-                    <TableHead>Prendas</TableHead>
+                    <TableHead className="hidden md:table-cell">
+                      Vendedor
+                    </TableHead>
+                    <TableHead className="hidden sm:table-cell">
+                      Prendas
+                    </TableHead>
                     <TableHead>Total</TableHead>
                     <TableHead>Estado</TableHead>
                     <TableHead />
@@ -184,11 +188,23 @@ export function VentasPage() {
                   {filteredSales.map((item) => (
                     <TableRow key={item.id}>
                       <TableCell>{formatDate(item.fecha)}</TableCell>
-                      <TableCell>
-                        {item.cliente || "Consumidor final"}
+                      <TableCell className="max-w-44 whitespace-normal">
+                        <div className="font-medium">
+                          {item.cliente || "Consumidor final"}
+                        </div>
+                        <div className="text-xs text-muted-foreground md:hidden">
+                          {item.usuario || "Sin vendedor"}
+                        </div>
+                        <div className="text-xs text-muted-foreground sm:hidden">
+                          {item.items} prendas
+                        </div>
                       </TableCell>
-                      <TableCell>{item.usuario || "-"}</TableCell>
-                      <TableCell>{item.items}</TableCell>
+                      <TableCell className="hidden md:table-cell">
+                        {item.usuario || "-"}
+                      </TableCell>
+                      <TableCell className="hidden sm:table-cell">
+                        {item.items}
+                      </TableCell>
                       <TableCell>{formatCurrency(item.total)}</TableCell>
                       <TableCell>
                         <Badge variant={item.activo ? "secondary" : "outline"}>
@@ -196,7 +212,7 @@ export function VentasPage() {
                         </Badge>
                       </TableCell>
                       <TableCell className="text-right">
-                        <div className="flex justify-end gap-1">
+                        <div className="flex flex-col items-end gap-1 sm:flex-row sm:justify-end">
                           <Button
                             variant="ghost"
                             size="sm"

@@ -42,16 +42,16 @@ export function VariantsTable({
   }
 
   return (
-    <div className="overflow-x-auto rounded-md border">
-      <Table className="min-w-[780px]">
+    <div className="rounded-md border">
+      <Table className="min-w-[560px]">
         <TableHeader>
           <TableRow>
-            <TableHead>SKU</TableHead>
+            <TableHead className="hidden md:table-cell">SKU</TableHead>
             <TableHead>Prenda</TableHead>
             <TableHead>Talla / color</TableHead>
             <TableHead className="text-right">Precio</TableHead>
             <TableHead>Stock</TableHead>
-            <TableHead>Estado</TableHead>
+            <TableHead className="hidden sm:table-cell">Estado</TableHead>
             {showActions ? <TableHead className="w-10" /> : null}
           </TableRow>
         </TableHeader>
@@ -64,11 +64,16 @@ export function VariantsTable({
                 key={variant.id}
                 className={!variant.activo ? "opacity-70" : undefined}
               >
-                <TableCell className="font-medium">
+                <TableCell className="hidden font-medium md:table-cell">
                   {variant.sku || "-"}
                 </TableCell>
-                <TableCell>
-                  {variant.producto_nombre || variant.producto_id}
+                <TableCell className="max-w-44 whitespace-normal">
+                  <div className="font-medium">
+                    {variant.producto_nombre || variant.producto_id}
+                  </div>
+                  <div className="text-xs text-muted-foreground md:hidden">
+                    {variant.sku || "Sin SKU"}
+                  </div>
                 </TableCell>
                 <TableCell>
                   {variant.talla_nombre || variant.talla_id} /{" "}
@@ -82,7 +87,7 @@ export function VariantsTable({
                     {variant.stock_actual} disp.
                   </Badge>
                 </TableCell>
-                <TableCell>
+                <TableCell className="hidden sm:table-cell">
                   <Badge variant={variant.activo ? "secondary" : "outline"}>
                     {variant.activo ? "Activo" : "Desactivado"}
                   </Badge>

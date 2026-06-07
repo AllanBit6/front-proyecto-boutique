@@ -83,8 +83,12 @@ export function CajaPage() {
       error: (error) => getErrorMessage(error, "No se pudo abrir la caja."),
     })
 
-    await promise
-    event.currentTarget.reset()
+    try {
+      await promise
+      event.currentTarget.reset()
+    } catch {
+      // toast.promise displays the error.
+    }
   }
 
   async function handleClose(event: React.FormEvent<HTMLFormElement>) {
@@ -102,8 +106,12 @@ export function CajaPage() {
       error: (error) => getErrorMessage(error, "No se pudo cerrar la caja."),
     })
 
-    await promise
-    event.currentTarget.reset()
+    try {
+      await promise
+      event.currentTarget.reset()
+    } catch {
+      // toast.promise displays the error.
+    }
   }
 
   return (
@@ -122,7 +130,16 @@ export function CajaPage() {
             ) : null}
           </CardHeader>
           <CardContent>
-            {activeCash ? (
+            {activeCashQuery.isLoading ? (
+              <div className="rounded-md border border-dashed py-8 text-center text-sm text-muted-foreground">
+                Consultando estado de caja...
+              </div>
+            ) : activeCashQuery.isError ? (
+              <div className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                No se pudo confirmar si hay una caja abierta. Reintenta antes de
+                abrir o cerrar caja.
+              </div>
+            ) : activeCash ? (
               <form className="space-y-3" onSubmit={handleClose}>
                 <div className="rounded-lg border p-3 text-sm">
                   Saldo inicial:{" "}
@@ -244,8 +261,8 @@ export function CajaPage() {
                 )}
               </div>
             ) : (
-              <div className="overflow-x-auto rounded-md border">
-                <Table className="min-w-[620px]">
+              <div className="rounded-md border">
+                <Table className="min-w-[420px]">
                   <TableHeader>
                     <TableRow>
                       <TableHead>Fecha</TableHead>
@@ -258,7 +275,9 @@ export function CajaPage() {
                     {filteredCashRegisters.map((item) => (
                       <TableRow key={item.id}>
                         <TableCell>{formatDate(item.fechaApertura)}</TableCell>
-                        <TableCell>{item.usuario || "-"}</TableCell>
+                        <TableCell className="max-w-36 whitespace-normal">
+                          {item.usuario || "-"}
+                        </TableCell>
                         <TableCell>
                           {formatCurrency(item.saldoFinal ?? item.saldoInicial)}
                         </TableCell>

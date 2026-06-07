@@ -176,15 +176,19 @@ export function ReporteriaPage() {
               )}
             </div>
           ) : (
-            <div className="overflow-x-auto rounded-md border">
-              <Table className="min-w-[760px]">
+            <div className="rounded-md border">
+              <Table className="min-w-[540px]">
                 <TableHeader>
                   <TableRow>
                     <TableHead>Fecha</TableHead>
-                    <TableHead>Forma de pago</TableHead>
+                    <TableHead className="hidden md:table-cell">
+                      Forma de pago
+                    </TableHead>
                     <TableHead>Cliente</TableHead>
                     <TableHead>Monto</TableHead>
-                    <TableHead>Estado</TableHead>
+                    <TableHead className="hidden sm:table-cell">
+                      Estado
+                    </TableHead>
                     <TableHead />
                   </TableRow>
                 </TableHeader>
@@ -192,10 +196,20 @@ export function ReporteriaPage() {
                   {filteredPayments.map((item) => (
                     <TableRow key={item.id}>
                       <TableCell>{formatDate(item.fecha)}</TableCell>
-                      <TableCell>{item.metodo}</TableCell>
-                      <TableCell>{item.cliente || "-"}</TableCell>
+                      <TableCell className="hidden md:table-cell">
+                        {item.metodo}
+                      </TableCell>
+                      <TableCell className="max-w-44 whitespace-normal">
+                        <div>{item.cliente || "Consumidor final"}</div>
+                        <div className="text-xs text-muted-foreground md:hidden">
+                          {item.metodo}
+                        </div>
+                        <div className="mt-1 sm:hidden">
+                          <Badge variant="secondary">{item.estado}</Badge>
+                        </div>
+                      </TableCell>
                       <TableCell>{formatCurrency(item.monto)}</TableCell>
-                      <TableCell>
+                      <TableCell className="hidden sm:table-cell">
                         <Badge variant="secondary">{item.estado}</Badge>
                       </TableCell>
                       <TableCell className="text-right">

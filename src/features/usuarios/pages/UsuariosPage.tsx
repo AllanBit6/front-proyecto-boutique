@@ -59,8 +59,12 @@ export function UsuariosPage() {
           : "No se pudo eliminar el usuario.",
     })
 
-    await promise
-    setDeleteUser(null)
+    try {
+      await promise
+      setDeleteUser(null)
+    } catch {
+      // toast.promise displays the error.
+    }
   }
 
   return (

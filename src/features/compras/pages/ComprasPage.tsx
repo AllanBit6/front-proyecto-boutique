@@ -354,13 +354,17 @@ export function ComprasPage() {
                 {getErrorMessage(purchasesQuery.error)}
               </div>
             ) : (
-              <div className="overflow-x-auto rounded-md border">
-                <Table className="min-w-[760px]">
+              <div className="rounded-md border">
+                <Table className="min-w-[520px]">
                   <TableHeader>
                     <TableRow>
                       <TableHead>Fecha</TableHead>
-                      <TableHead>Registrado por</TableHead>
-                      <TableHead>Prendas</TableHead>
+                      <TableHead className="hidden md:table-cell">
+                        Registrado por
+                      </TableHead>
+                      <TableHead className="hidden sm:table-cell">
+                        Prendas
+                      </TableHead>
                       <TableHead>Total</TableHead>
                       <TableHead>Estado</TableHead>
                       <TableHead />
@@ -369,9 +373,21 @@ export function ComprasPage() {
                   <TableBody>
                     {filteredPurchases.map((item) => (
                       <TableRow key={item.id}>
-                        <TableCell>{formatDate(item.fecha)}</TableCell>
-                        <TableCell>{item.usuario || "-"}</TableCell>
-                        <TableCell>{item.items}</TableCell>
+                        <TableCell className="whitespace-normal">
+                          <div>{formatDate(item.fecha)}</div>
+                          <div className="text-xs text-muted-foreground md:hidden">
+                            {item.usuario || "Sin usuario"}
+                          </div>
+                          <div className="text-xs text-muted-foreground sm:hidden">
+                            {item.items} prendas
+                          </div>
+                        </TableCell>
+                        <TableCell className="hidden md:table-cell">
+                          {item.usuario || "-"}
+                        </TableCell>
+                        <TableCell className="hidden sm:table-cell">
+                          {item.items}
+                        </TableCell>
                         <TableCell>{formatCurrency(item.total)}</TableCell>
                         <TableCell>
                           <Badge

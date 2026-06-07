@@ -132,8 +132,12 @@ export function InventarioPage() {
           : "No se pudo desactivar la prenda.",
     })
 
-    await promise
-    setDeleteVariant(null)
+    try {
+      await promise
+      setDeleteVariant(null)
+    } catch {
+      // toast.promise displays the error.
+    }
   }
 
   return (

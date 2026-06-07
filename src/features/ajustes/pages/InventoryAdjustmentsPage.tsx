@@ -352,18 +352,27 @@ export function InventoryAdjustmentsPage() {
             <div className="grid gap-2 md:grid-cols-[minmax(220px,1fr)_160px_160px]">
               <Input
                 value={movementSearch}
-                onChange={(event) => setMovementSearch(event.target.value)}
+                onChange={(event) => {
+                  setMovementSearch(event.target.value)
+                  setPage(1)
+                }}
                 placeholder="Buscar ID, prenda, motivo u origen"
               />
               <Input
                 type="date"
                 value={movementDateFrom}
-                onChange={(event) => setMovementDateFrom(event.target.value)}
+                onChange={(event) => {
+                  setMovementDateFrom(event.target.value)
+                  setPage(1)
+                }}
               />
               <Input
                 type="date"
                 value={movementDateTo}
-                onChange={(event) => setMovementDateTo(event.target.value)}
+                onChange={(event) => {
+                  setMovementDateTo(event.target.value)
+                  setPage(1)
+                }}
               />
             </div>
             {movementsQuery.isLoading ? (
@@ -375,29 +384,45 @@ export function InventoryAdjustmentsPage() {
                 {getErrorMessage(movementsQuery.error)}
               </div>
             ) : (
-              <div className="overflow-x-auto rounded-md border">
-                <Table className="min-w-[760px]">
+              <div className="rounded-md border">
+                <Table className="min-w-[560px]">
                   <TableHeader>
                     <TableRow>
                       <TableHead>Fecha</TableHead>
                       <TableHead>Prenda</TableHead>
                       <TableHead>Cambio</TableHead>
                       <TableHead>Cantidad</TableHead>
-                      <TableHead>Stock</TableHead>
-                      <TableHead>Motivo</TableHead>
+                      <TableHead className="hidden sm:table-cell">
+                        Stock
+                      </TableHead>
+                      <TableHead className="hidden md:table-cell">
+                        Motivo
+                      </TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {filteredMovements.map((item) => (
                       <TableRow key={item.id}>
                         <TableCell>{formatDate(item.fecha)}</TableCell>
-                        <TableCell>{item.prenda || "-"}</TableCell>
+                        <TableCell className="max-w-44 whitespace-normal">
+                          <div>{item.prenda || "-"}</div>
+                          <div className="text-xs text-muted-foreground md:hidden">
+                            {item.motivo || item.origen}
+                          </div>
+                          <div className="text-xs text-muted-foreground sm:hidden">
+                            Stock: {item.stockResultante}
+                          </div>
+                        </TableCell>
                         <TableCell>
                           <Badge variant="secondary">{item.tipo}</Badge>
                         </TableCell>
                         <TableCell>{item.cantidad}</TableCell>
-                        <TableCell>{item.stockResultante}</TableCell>
-                        <TableCell>{item.motivo || item.origen}</TableCell>
+                        <TableCell className="hidden sm:table-cell">
+                          {item.stockResultante}
+                        </TableCell>
+                        <TableCell className="hidden max-w-48 whitespace-normal md:table-cell">
+                          {item.motivo || item.origen}
+                        </TableCell>
                       </TableRow>
                     ))}
                     {filteredMovements.length === 0 ? (

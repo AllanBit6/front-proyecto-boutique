@@ -40,27 +40,37 @@ export function ProductsTable({
   }
 
   return (
-    <div className="overflow-x-auto rounded-md border">
-      <Table className="min-w-[620px]">
+    <div className="rounded-md border">
+      <Table className="min-w-[420px]">
         <TableHeader>
           <TableRow>
             <TableHead>Modelo</TableHead>
-            <TableHead>Marca</TableHead>
-            <TableHead>Estado</TableHead>
+            <TableHead className="hidden sm:table-cell">Marca</TableHead>
+            <TableHead className="hidden sm:table-cell">Estado</TableHead>
             {showActions ? <TableHead className="w-10" /> : null}
           </TableRow>
         </TableHeader>
         <TableBody>
           {products.map((product) => (
             <TableRow key={product.id}>
-              <TableCell>
+              <TableCell className="max-w-56 whitespace-normal">
                 <div className="font-medium">{product.nombre}</div>
                 <div className="text-xs text-muted-foreground">
                   {product.caracteristica_distintiva}
                 </div>
+                <div className="mt-1 flex flex-wrap items-center gap-2 sm:hidden">
+                  <span className="text-xs text-muted-foreground">
+                    {product.marca_nombre || product.marca_id}
+                  </span>
+                  <Badge variant={product.activo ? "secondary" : "outline"}>
+                    {product.activo ? "Activo" : "Desactivado"}
+                  </Badge>
+                </div>
               </TableCell>
-              <TableCell>{product.marca_nombre || product.marca_id}</TableCell>
-              <TableCell>
+              <TableCell className="hidden sm:table-cell">
+                {product.marca_nombre || product.marca_id}
+              </TableCell>
+              <TableCell className="hidden sm:table-cell">
                 <Badge variant={product.activo ? "secondary" : "outline"}>
                   {product.activo ? "Activo" : "Desactivado"}
                 </Badge>

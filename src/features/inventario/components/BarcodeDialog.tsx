@@ -108,11 +108,15 @@ export function BarcodeDialog({
           : "No se pudo generar el código.",
     })
 
-    const updatedVariant = await promise
-    setGeneratedBarcode({
-      variantId: variant.id,
-      value: updatedVariant.codigo_barras || nextBarcode,
-    })
+    try {
+      const updatedVariant = await promise
+      setGeneratedBarcode({
+        variantId: variant.id,
+        value: updatedVariant.codigo_barras || nextBarcode,
+      })
+    } catch {
+      // toast.promise displays the error.
+    }
   }
 
   return (

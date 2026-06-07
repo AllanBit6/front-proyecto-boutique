@@ -492,10 +492,12 @@ export function CajeroPage() {
                 </div>
               ) : filteredVariants.length > 0 ? (
                 <div className="max-h-[360px] overflow-auto rounded-md border">
-                  <Table className="min-w-180">
+                  <Table className="min-w-[560px]">
                     <TableHeader>
                       <TableRow>
-                        <TableHead>SKU</TableHead>
+                        <TableHead className="hidden md:table-cell">
+                          SKU
+                        </TableHead>
                         <TableHead>Prenda</TableHead>
                         <TableHead>Talla / color</TableHead>
                         <TableHead className="text-right">Precio</TableHead>
@@ -513,15 +515,16 @@ export function CajeroPage() {
 
                         return (
                           <TableRow key={variant.id}>
-                            <TableCell className="font-medium">
+                            <TableCell className="hidden font-medium md:table-cell">
                               {variant.sku || variant.codigo_barras || "-"}
                             </TableCell>
-                            <TableCell>
+                            <TableCell className="max-w-48 whitespace-normal">
                               <div className="font-medium">
                                 {variant.producto_nombre || "-"}
                               </div>
                               <div className="text-xs text-muted-foreground">
                                 {variant.codigo_barras ||
+                                  variant.sku ||
                                   "Sin código de barras"}
                               </div>
                             </TableCell>
@@ -583,14 +586,18 @@ export function CajeroPage() {
             </CardHeader>
             <CardContent className="space-y-4">
               {cart.length > 0 ? (
-                <div className="overflow-x-auto rounded-md border">
-                  <Table className="min-w-180">
+                <div className="rounded-md border">
+                  <Table className="min-w-[560px]">
                     <TableHeader>
                       <TableRow>
                         <TableHead>Prenda</TableHead>
-                        <TableHead>Código</TableHead>
+                        <TableHead className="hidden md:table-cell">
+                          Código
+                        </TableHead>
                         <TableHead>Precio</TableHead>
-                        <TableHead>Stock</TableHead>
+                        <TableHead className="hidden sm:table-cell">
+                          Stock
+                        </TableHead>
                         <TableHead className="text-right">Subtotal</TableHead>
                         <TableHead />
                       </TableRow>
@@ -599,12 +606,20 @@ export function CajeroPage() {
                       {cart.map((item) => (
                         <Fragment key={item.variant.id}>
                           <TableRow className="border-b-0">
-                            <TableCell>
+                            <TableCell className="max-w-48 whitespace-normal">
                               <div className="font-medium">
                                 {variantLabel(item.variant)}
                               </div>
+                              <div className="text-xs text-muted-foreground md:hidden">
+                                {item.variant.sku ||
+                                  item.variant.codigo_barras ||
+                                  "Sin código"}
+                              </div>
+                              <div className="text-xs text-muted-foreground sm:hidden">
+                                Stock: {item.variant.stock_actual}
+                              </div>
                             </TableCell>
-                            <TableCell className="text-muted-foreground">
+                            <TableCell className="hidden text-muted-foreground md:table-cell">
                               {item.variant.sku ||
                                 item.variant.codigo_barras ||
                                 "-"}
@@ -612,7 +627,9 @@ export function CajeroPage() {
                             <TableCell>
                               {formatCurrency(item.variant.precio_venta)}
                             </TableCell>
-                            <TableCell>{item.variant.stock_actual}</TableCell>
+                            <TableCell className="hidden sm:table-cell">
+                              {item.variant.stock_actual}
+                            </TableCell>
                             <TableCell className="text-right font-medium">
                               {formatCurrency(
                                 item.quantity * item.variant.precio_venta
