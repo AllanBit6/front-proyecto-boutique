@@ -24,6 +24,7 @@ import type {
   CatalogOption,
   Product,
 } from "@/features/inventario/types/product"
+import { normalizeTextInput } from "@/shared/utils/security"
 
 interface ProductFormProps {
   brands: CatalogOption[]
@@ -92,7 +93,11 @@ export function ProductForm({ brands, product, onSuccess }: ProductFormProps) {
       <FieldGroup>
         <Field data-invalid={Boolean(form.formState.errors.nombre)}>
           <FieldLabel htmlFor="nombre_producto">Nombre</FieldLabel>
-          <Input id="nombre_producto" {...form.register("nombre")} />
+          <Input
+            id="nombre_producto"
+            maxLength={80}
+            {...form.register("nombre")}
+          />
           <FieldError errors={[form.formState.errors.nombre]} />
         </Field>
         <Field
@@ -105,6 +110,7 @@ export function ProductForm({ brands, product, onSuccess }: ProductFormProps) {
           </FieldLabel>
           <Input
             id="caracteristica_distintiva"
+            maxLength={120}
             {...form.register("caracteristica_distintiva")}
           />
           <FieldError
@@ -117,6 +123,7 @@ export function ProductForm({ brands, product, onSuccess }: ProductFormProps) {
             id="marca_nombre"
             list="marcas-disponibles"
             placeholder="Escribe o selecciona una marca"
+            maxLength={80}
             {...form.register("marca_nombre")}
           />
           <datalist id="marcas-disponibles">
@@ -152,7 +159,7 @@ function getDefaultValues(product?: Product): ProductFormValues {
 }
 
 function normalizeBrandName(name: string) {
-  return name.trim().toLocaleLowerCase()
+  return normalizeTextInput(name, { maxLength: 80, lowercase: true })
 }
 
 async function resolveBrandId(
@@ -169,7 +176,9 @@ async function resolveBrandId(
     return existingBrand.id
   }
 
-  const newBrand = await createBrand(brandName.trim())
+  const newBrand = await createBrand(
+    normalizeTextInput(brandName, { maxLength: 80 })
+  )
 
   return newBrand.id
 }

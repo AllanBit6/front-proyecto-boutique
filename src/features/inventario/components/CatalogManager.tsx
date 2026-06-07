@@ -21,6 +21,7 @@ import {
   useDeleteSize,
 } from "@/features/inventario/hooks/useProducts"
 import type { CatalogOption } from "@/features/inventario/types/product"
+import { normalizeTextInput } from "@/shared/utils/security"
 
 interface CatalogManagerProps {
   sizes: CatalogOption[]
@@ -84,7 +85,7 @@ function CatalogList({
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
 
-    const trimmedName = name.trim()
+    const trimmedName = normalizeTextInput(name, { maxLength: 40 })
     setError("")
 
     if (!trimmedName) {
@@ -149,7 +150,10 @@ function CatalogList({
         <Input
           value={name}
           placeholder={placeholder}
-          onChange={(event) => setName(event.target.value)}
+          maxLength={40}
+          onChange={(event) =>
+            setName(normalizeTextInput(event.target.value, { maxLength: 40 }))
+          }
         />
         <Button
           type="submit"

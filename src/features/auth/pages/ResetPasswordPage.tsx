@@ -46,8 +46,18 @@ export function ResetPasswordPage() {
 
     setError(null)
 
-    if (newPassword.length < 6) {
-      setError("La nueva contraseña debe tener al menos 6 caracteres.")
+    if (newPassword.length < 8) {
+      setError("La nueva contraseña debe tener al menos 8 caracteres.")
+      return
+    }
+
+    if (newPassword.length > 128) {
+      setError("La nueva contraseña no puede superar 128 caracteres.")
+      return
+    }
+
+    if (!/[A-Za-z]/.test(newPassword) || !/[0-9]/.test(newPassword)) {
+      setError("La nueva contraseña debe incluir letras y números.")
       return
     }
 
@@ -89,6 +99,7 @@ export function ResetPasswordPage() {
                   name="current_password"
                   type="password"
                   autoComplete="current-password"
+                  maxLength={128}
                   required
                 />
               </Field>
@@ -99,6 +110,7 @@ export function ResetPasswordPage() {
                   name="new_password"
                   type="password"
                   autoComplete="new-password"
+                  maxLength={128}
                   required
                 />
               </Field>
@@ -111,6 +123,7 @@ export function ResetPasswordPage() {
                   name="confirm_password"
                   type="password"
                   autoComplete="new-password"
+                  maxLength={128}
                   required
                 />
               </Field>

@@ -26,16 +26,42 @@ import {
 } from "@/features/inventario/hooks/useProducts"
 import type { CatalogOption } from "@/features/inventario/types/product"
 import { buildBarcode, buildSku } from "@/features/inventario/utils/codes"
+import { normalizeTextInput } from "@/shared/utils/security"
 
+const labelField = z
+  .string()
+  .transform((value) => normalizeTextInput(value, { maxLength: 80 }))
+  .pipe(
+    z
+      .string()
+      .min(2, "Ingresa al menos 2 caracteres")
+      .max(80, "Máximo 80 caracteres")
+  )
+const optionalDetailField = z
+  .string()
+  .transform((value) => normalizeTextInput(value, { maxLength: 120 }))
+  .pipe(z.string().max(120, "Máximo 120 caracteres"))
+  .optional()
+const moneyField = z
+  .number()
+  .finite("Ingresa un precio válido")
+  .min(0, "Ingresa un precio válido")
+  .max(999999.99, "El monto es demasiado alto")
+const stockField = z
+  .number()
+  .finite("Ingresa un stock válido")
+  .int("Ingresa un número entero")
+  .min(0, "Ingresa un stock válido")
+  .max(999999, "El stock es demasiado alto")
 const productWizardSchema = z.object({
-  nombre: z.string().min(2, "Ingresa al menos 2 caracteres"),
-  marca_nombre: z.string().min(2, "Ingresa o selecciona una marca"),
-  caracteristica_distintiva: z.string().optional(),
+  nombre: labelField,
+  marca_nombre: labelField,
+  caracteristica_distintiva: optionalDetailField,
   talla_id: z.string().min(1, "Selecciona una talla"),
   color_id: z.string().min(1, "Selecciona un color"),
-  precio_venta: z.number().min(0.01, "Ingresa un precio de venta"),
-  precio_compra: z.number().min(0, "Ingresa un precio válido").optional(),
-  stock_minimo: z.number().int().min(0, "Ingresa un stock válido").optional(),
+  precio_venta: moneyField.min(0.01, "Ingresa un precio de venta"),
+  precio_compra: moneyField.optional(),
+  stock_minimo: stockField.optional(),
 })
 
 type ProductWizardValues = z.infer<typeof productWizardSchema>
@@ -88,9 +114,9 @@ export function ProductWizardForm({
         (name) => createBrand.mutateAsync({ nombre: name })
       )
       const product = await createProduct.mutateAsync({
-        nombre: values.nombre.trim(),
+        nombre: values.nombre,
         caracteristica_distintiva:
-          values.caracteristica_distintiva?.trim() || "General",
+          values.caracteristica_distintiva || "General",
         marca_id: brandId,
       })
       const size = sizes.find((item) => item.id === values.talla_id)
@@ -132,6 +158,7 @@ export function ProductWizardForm({
           <Input
             id="wizard_nombre"
             placeholder="Vestido floral, blusa satinada..."
+            maxLength={80}
             {...form.register("nombre")}
           />
           <FieldError errors={[form.formState.errors.nombre]} />
@@ -142,6 +169,7 @@ export function ProductWizardForm({
             id="wizard_marca"
             list="wizard-marcas"
             placeholder="Escribe o selecciona una marca"
+            maxLength={80}
             {...form.register("marca_nombre")}
           />
           <datalist id="wizard-marcas">
@@ -160,6 +188,7 @@ export function ProductWizardForm({
           <Input
             id="wizard_caracteristica"
             placeholder="General"
+            maxLength={120}
             {...form.register("caracteristica_distintiva")}
           />
           <FieldDescription>Opcional.</FieldDescription>
@@ -230,6 +259,7 @@ export function ProductWizardForm({
               id="wizard_precio_venta"
               type="number"
               min="0"
+              max="999999.99"
               step="0.01"
               {...form.register("precio_venta", { valueAsNumber: true })}
             />
@@ -241,6 +271,7 @@ export function ProductWizardForm({
               id="wizard_precio_compra"
               type="number"
               min="0"
+              max="999999.99"
               step="0.01"
               {...form.register("precio_compra", { valueAsNumber: true })}
             />
@@ -256,6 +287,7 @@ export function ProductWizardForm({
               id="wizard_stock_minimo"
               type="number"
               min="0"
+              max="999999"
               step="1"
               {...form.register("stock_minimo", { valueAsNumber: true })}
             />
@@ -286,7 +318,7 @@ function getErrorMessage(error: unknown, fallback: string) {
 }
 
 function normalizeName(name: string) {
-  return name.trim().toLocaleLowerCase()
+  return normalizeTextInput(name, { maxLength: 80, lowercase: true })
 }
 
 async function resolveBrandId(
@@ -303,7 +335,9 @@ async function resolveBrandId(
     return existingBrand.id
   }
 
-  const newBrand = await createBrand(brandName.trim())
+  const newBrand = await createBrand(
+    normalizeTextInput(brandName, { maxLength: 80 })
+  )
 
   return newBrand.id
 }

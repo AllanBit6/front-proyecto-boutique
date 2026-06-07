@@ -222,6 +222,7 @@ export function VariantForm({
               id="precio_compra"
               type="number"
               min="0"
+              max="999999.99"
               step="0.01"
               {...form.register("precio_compra", { valueAsNumber: true })}
             />
@@ -233,6 +234,7 @@ export function VariantForm({
               id="precio_venta"
               type="number"
               min="0"
+              max="999999.99"
               step="0.01"
               {...form.register("precio_venta", { valueAsNumber: true })}
             />
@@ -245,6 +247,7 @@ export function VariantForm({
             id="stock_minimo"
             type="number"
             min="0"
+            max="999999"
             step="1"
             {...form.register("stock_minimo", { valueAsNumber: true })}
           />

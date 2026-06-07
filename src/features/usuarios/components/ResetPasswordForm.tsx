@@ -67,6 +67,7 @@ export function ResetPasswordForm({ user, onSuccess }: ResetPasswordFormProps) {
             id="password_nuevo"
             type="password"
             autoComplete="new-password"
+            maxLength={128}
             {...form.register("password_nuevo")}
           />
           <FieldError errors={[form.formState.errors.password_nuevo]} />

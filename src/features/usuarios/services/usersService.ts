@@ -6,6 +6,7 @@ import type {
   User,
   UsersPageData,
 } from "@/features/usuarios/types/user"
+import { readSafeApiError } from "@/shared/utils/apiErrors"
 
 interface ApiRole {
   id?: string
@@ -50,7 +51,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   })
 
   if (!response.ok) {
-    const message = await response.text()
+    const message = await readSafeApiError(response)
     throw new Error(message || "No se pudo completar la solicitud.")
   }
 

@@ -36,6 +36,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { normalizeTextInput, positiveInteger } from "@/shared/utils/security"
 
 const PAGE_SIZE = 10
 
@@ -103,8 +104,8 @@ export function InventoryAdjustmentsPage() {
   )
 
   async function submitAdjustment(form?: HTMLFormElement | null) {
-    const cantidad = Number(quantity)
-    const motivo = reason.trim()
+    const cantidad = positiveInteger(quantity)
+    const motivo = normalizeTextInput(reason, { maxLength: 160 })
 
     if (!variantId || !selectedVariant) {
       setLastResult({
@@ -121,6 +122,15 @@ export function InventoryAdjustmentsPage() {
         message: "La cantidad debe ser mayor a cero.",
       })
       toast.error("Ingresa una cantidad mayor a cero.")
+      return
+    }
+
+    if (cantidad > 999999) {
+      setLastResult({
+        type: "error",
+        message: "La cantidad es demasiado alta.",
+      })
+      toast.error("Revisa la cantidad.")
       return
     }
 
@@ -279,6 +289,7 @@ export function InventoryAdjustmentsPage() {
                     name="cantidad"
                     type="number"
                     min="1"
+                    max="999999"
                     value={quantity}
                     onChange={(event) => setQuantity(event.target.value)}
                   />
@@ -290,7 +301,14 @@ export function InventoryAdjustmentsPage() {
                     name="motivo"
                     placeholder="Conteo fisico, merma, correccion..."
                     value={reason}
-                    onChange={(event) => setReason(event.target.value)}
+                    onChange={(event) =>
+                      setReason(
+                        normalizeTextInput(event.target.value, {
+                          maxLength: 160,
+                        })
+                      )
+                    }
+                    maxLength={160}
                   />
                 </Field>
               </FieldGroup>

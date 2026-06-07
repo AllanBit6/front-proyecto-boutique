@@ -1,3 +1,5 @@
+import { readSafeApiError } from "@/shared/utils/apiErrors"
+
 const API_URL = import.meta.env.VITE_API_URL ?? ""
 
 export interface PaginatedData<T> {
@@ -111,7 +113,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   })
 
   if (!response.ok) {
-    const message = await readErrorMessage(response)
+    const message = await readSafeApiError(response)
 
     throw new Error(message || "No se pudo completar la solicitud.")
   }
@@ -121,31 +123,6 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   }
 
   return response.json() as Promise<T>
-}
-
-async function readErrorMessage(response: Response) {
-  const text = await response.text()
-
-  if (!text) {
-    return ""
-  }
-
-  try {
-    const data = JSON.parse(text) as Record<string, unknown>
-    const message = data.message ?? data.error ?? data.detail
-
-    if (Array.isArray(message)) {
-      return message.join(", ")
-    }
-
-    if (message) {
-      return String(message)
-    }
-  } catch {
-    return text
-  }
-
-  return text
 }
 
 function readArray<T>(

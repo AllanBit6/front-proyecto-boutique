@@ -14,6 +14,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { useAuthStore } from "@/store"
 import type { Role } from "@/shared/types/domain"
+import { normalizeUsername } from "@/shared/utils/security"
 
 function getHomePath(role: Role) {
   if (role === "cashier") {
@@ -40,7 +41,7 @@ export function LoginForm({
     event.preventDefault()
 
     const formData = new FormData(event.currentTarget)
-    const userName = String(formData.get("user_name") ?? "")
+    const userName = normalizeUsername(formData.get("user_name"))
     const password = String(formData.get("password") ?? "")
 
     setError(null)
@@ -81,6 +82,8 @@ export function LoginForm({
                     name="user_name"
                     className="h-10 pl-9"
                     autoComplete="username"
+                    maxLength={40}
+                    pattern="[a-z0-9._-]+"
                     placeholder="Usuario"
                     required
                   />
@@ -97,6 +100,7 @@ export function LoginForm({
                     type="password"
                     placeholder="Contraseña"
                     autoComplete="current-password"
+                    maxLength={128}
                     required
                   />
                 </div>

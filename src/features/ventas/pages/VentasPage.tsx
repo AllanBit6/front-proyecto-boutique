@@ -42,6 +42,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { normalizeTextInput } from "@/shared/utils/security"
 
 const PAGE_SIZE = 10
 
@@ -80,7 +81,7 @@ export function VentasPage() {
 
   async function handleCancelSale(event?: React.FormEvent<HTMLFormElement>) {
     event?.preventDefault()
-    const motivo = cancelReason.trim()
+    const motivo = normalizeTextInput(cancelReason, { maxLength: 160 })
 
     if (!saleToCancel || !motivo) {
       toast.error("Ingresa el motivo de anulación.")
@@ -431,8 +432,13 @@ export function VentasPage() {
           <form className="space-y-3" onSubmit={handleCancelSale}>
             <Textarea
               value={cancelReason}
-              onChange={(event) => setCancelReason(event.target.value)}
+              onChange={(event) =>
+                setCancelReason(
+                  normalizeTextInput(event.target.value, { maxLength: 160 })
+                )
+              }
               placeholder="Motivo de anulación"
+              maxLength={160}
               rows={4}
             />
             <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">

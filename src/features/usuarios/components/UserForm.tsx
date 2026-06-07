@@ -63,9 +63,9 @@ export function UserForm({ roles, user, onSuccess }: UserFormProps) {
         },
       })
     } else {
-      if (!values.password || values.password.length < 6) {
+      if (!values.password || values.password.length < 8) {
         form.setError("password", {
-          message: "Ingresa al menos 6 caracteres",
+          message: "Ingresa al menos 8 caracteres",
         })
         return
       }
@@ -106,12 +106,12 @@ export function UserForm({ roles, user, onSuccess }: UserFormProps) {
       <FieldGroup>
         <Field data-invalid={Boolean(form.formState.errors.nombre)}>
           <FieldLabel htmlFor="nombre">Nombre</FieldLabel>
-          <Input id="nombre" {...form.register("nombre")} />
+          <Input id="nombre" maxLength={60} {...form.register("nombre")} />
           <FieldError errors={[form.formState.errors.nombre]} />
         </Field>
         <Field data-invalid={Boolean(form.formState.errors.apellido)}>
           <FieldLabel htmlFor="apellido">Apellido</FieldLabel>
-          <Input id="apellido" {...form.register("apellido")} />
+          <Input id="apellido" maxLength={60} {...form.register("apellido")} />
           <FieldError errors={[form.formState.errors.apellido]} />
         </Field>
         <Field data-invalid={Boolean(form.formState.errors.user_name)}>
@@ -119,6 +119,8 @@ export function UserForm({ roles, user, onSuccess }: UserFormProps) {
           <Input
             id="user_name"
             autoComplete="username"
+            maxLength={40}
+            pattern="[a-z0-9._-]+"
             {...form.register("user_name")}
           />
           <FieldError errors={[form.formState.errors.user_name]} />
@@ -130,6 +132,7 @@ export function UserForm({ roles, user, onSuccess }: UserFormProps) {
               id="password"
               type="password"
               autoComplete="new-password"
+              maxLength={128}
               {...form.register("password")}
             />
             <FieldError errors={[form.formState.errors.password]} />

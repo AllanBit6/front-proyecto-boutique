@@ -36,6 +36,11 @@ import {
 } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
 import {
+  moneyValue,
+  normalizeTextInput,
+  positiveInteger,
+} from "@/shared/utils/security"
+import {
   Table,
   TableBody,
   TableCell,
@@ -104,8 +109,8 @@ export function ComprasPage() {
   async function handleCreate(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
     const form = event.currentTarget
-    const cantidad = Number(quantity)
-    const precioUnitario = Number(unitCost)
+    const cantidad = positiveInteger(quantity)
+    const precioUnitario = moneyValue(unitCost)
 
     if (!variantId || !selectedVariant) {
       setLastResult({
@@ -125,7 +130,16 @@ export function ComprasPage() {
       return
     }
 
-    if (Number.isNaN(precioUnitario) || precioUnitario < 0) {
+    if (cantidad > 999999) {
+      setLastResult({
+        type: "error",
+        message: "La cantidad es demasiado alta.",
+      })
+      toast.error("Revisa la cantidad.")
+      return
+    }
+
+    if (precioUnitario < 0 || precioUnitario > 999999.99) {
       setLastResult({
         type: "error",
         message: "El costo por unidad debe ser cero o mayor.",
@@ -171,7 +185,7 @@ export function ComprasPage() {
 
   async function handleCancel(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    const motivo = cancelReason.trim()
+    const motivo = normalizeTextInput(cancelReason, { maxLength: 160 })
 
     if (!purchaseToCancel || !motivo) {
       toast.error("Ingresa el motivo de anulación.")
@@ -259,6 +273,7 @@ export function ComprasPage() {
                     name="cantidad"
                     type="number"
                     min="1"
+                    max="999999"
                     value={quantity}
                     onChange={(event) => setQuantity(event.target.value)}
                   />
@@ -272,6 +287,7 @@ export function ComprasPage() {
                     name="precio_unitario"
                     type="number"
                     min="0"
+                    max="999999.99"
                     step="0.01"
                     value={unitCost}
                     onChange={(event) => setUnitCost(event.target.value)}
@@ -469,8 +485,13 @@ export function ComprasPage() {
           <form className="space-y-3" onSubmit={handleCancel}>
             <Textarea
               value={cancelReason}
-              onChange={(event) => setCancelReason(event.target.value)}
+              onChange={(event) =>
+                setCancelReason(
+                  normalizeTextInput(event.target.value, { maxLength: 160 })
+                )
+              }
               placeholder="Motivo de anulación"
+              maxLength={160}
               rows={4}
             />
             <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">

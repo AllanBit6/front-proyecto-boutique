@@ -43,6 +43,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { moneyValue, normalizeTextInput } from "@/shared/utils/security"
 
 const PAGE_SIZE = 10
 
@@ -88,8 +89,10 @@ export function CajaPage() {
     event.preventDefault()
     const form = new FormData(event.currentTarget)
     const promise = openCash.mutateAsync({
-      saldo_inicial: Number(form.get("saldo_inicial") ?? 0),
-      observaciones: String(form.get("observaciones") ?? ""),
+      saldo_inicial: moneyValue(form.get("saldo_inicial")),
+      observaciones: normalizeTextInput(form.get("observaciones"), {
+        maxLength: 160,
+      }),
     })
     toast.promise(promise, {
       loading: "Abriendo caja...",
@@ -111,8 +114,10 @@ export function CajaPage() {
     const form = new FormData(event.currentTarget)
     const promise = closeCash.mutateAsync({
       id: activeCash.id,
-      saldo_final: Number(form.get("saldo_final") ?? 0),
-      observaciones: String(form.get("observaciones") ?? ""),
+      saldo_final: moneyValue(form.get("saldo_final")),
+      observaciones: normalizeTextInput(form.get("observaciones"), {
+        maxLength: 160,
+      }),
     })
     toast.promise(promise, {
       loading: "Cerrando caja...",
@@ -165,6 +170,8 @@ export function CajaPage() {
                         name="saldo_final"
                         type="number"
                         step="0.01"
+                        min="0"
+                        max="999999.99"
                         required
                       />
                     </Field>
@@ -172,7 +179,11 @@ export function CajaPage() {
                       <FieldLabel htmlFor="observaciones_cierre">
                         Observaciones
                       </FieldLabel>
-                      <Input id="observaciones_cierre" name="observaciones" />
+                      <Input
+                        id="observaciones_cierre"
+                        name="observaciones"
+                        maxLength={160}
+                      />
                     </Field>
                   </FieldGroup>
                   <Button disabled={closeCash.isPending}>
@@ -193,6 +204,8 @@ export function CajaPage() {
                         name="saldo_inicial"
                         type="number"
                         step="0.01"
+                        min="0"
+                        max="999999.99"
                         required
                       />
                     </Field>
@@ -200,7 +213,11 @@ export function CajaPage() {
                       <FieldLabel htmlFor="observaciones_apertura">
                         Observaciones
                       </FieldLabel>
-                      <Input id="observaciones_apertura" name="observaciones" />
+                      <Input
+                        id="observaciones_apertura"
+                        name="observaciones"
+                        maxLength={160}
+                      />
                     </Field>
                   </FieldGroup>
                   <Button disabled={openCash.isPending}>

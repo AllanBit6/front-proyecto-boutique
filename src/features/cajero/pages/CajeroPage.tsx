@@ -17,6 +17,11 @@ import {
   useFindVariantByBarcode,
 } from "@/features/cajero/hooks/usePos"
 import type { PaymentMethod } from "@/features/cajero/services/posService"
+import {
+  moneyValue,
+  normalizeCodeInput,
+  normalizeTextInput,
+} from "@/shared/utils/security"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -221,7 +226,7 @@ export function CajeroPage() {
       ),
     [cart]
   )
-  const received = Number(amountReceived || 0)
+  const received = moneyValue(amountReceived)
   const change =
     paymentMethod === "EFECTIVO" ? Math.max(0, received - total) : 0
 
@@ -280,6 +285,10 @@ export function CajeroPage() {
 
   function updateQuantity(variantId: string, quantity: number) {
     setError("")
+    const nextQuantity = Math.max(
+      1,
+      Math.trunc(Number.isFinite(quantity) ? quantity : 1)
+    )
     setCart((current) =>
       current
         .map((item) => {
@@ -289,10 +298,7 @@ export function CajeroPage() {
 
           return {
             ...item,
-            quantity: Math.min(
-              Math.max(1, quantity),
-              item.variant.stock_actual
-            ),
+            quantity: Math.min(nextQuantity, item.variant.stock_actual),
           }
         })
         .filter((item) => item.quantity > 0)
@@ -308,7 +314,7 @@ export function CajeroPage() {
 
   async function handleBarcodeSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    const code = barcode.trim()
+    const code = normalizeCodeInput(barcode)
 
     if (!code) {
       requestBarcodeFocus()
@@ -362,11 +368,15 @@ export function CajeroPage() {
 
     try {
       const formData = form ? new FormData(form) : new FormData()
+      const customerName =
+        normalizeTextInput(formData.get("nombre_cliente"), {
+          maxLength: 80,
+        }) || "Cliente final"
+      const customerNit = normalizeCodeInput(formData.get("nit"), 20) || "CF"
+      const reference = normalizeCodeInput(referenceNumber, 60)
       const payload = {
-        nombre_cliente: String(
-          formData.get("nombre_cliente") || "Cliente final"
-        ),
-        nit: String(formData.get("nit") || "CF"),
+        nombre_cliente: customerName,
+        nit: customerNit,
         detalles: cart.map((item) => ({
           variante_id: item.variant.id,
           cantidad: item.quantity,
@@ -378,9 +388,7 @@ export function CajeroPage() {
             monto: total,
             monto_recibido: paymentMethod === "EFECTIVO" ? received : undefined,
             numero_referencia:
-              paymentMethod === "EFECTIVO"
-                ? undefined
-                : referenceNumber || undefined,
+              paymentMethod === "EFECTIVO" ? undefined : reference || undefined,
           },
         ],
       }
@@ -445,9 +453,12 @@ export function CajeroPage() {
                     ref={barcodeInputRef}
                     className="min-w-0"
                     value={barcode}
-                    onChange={(event) => setBarcode(event.target.value)}
+                    onChange={(event) =>
+                      setBarcode(normalizeCodeInput(event.target.value))
+                    }
                     placeholder="Código"
                     autoComplete="off"
+                    maxLength={64}
                     disabled={findByBarcode.isPending}
                   />
                   <Button
@@ -464,8 +475,15 @@ export function CajeroPage() {
                   <Input
                     className="min-w-0 pl-9"
                     value={productSearch}
-                    onChange={(event) => setProductSearch(event.target.value)}
+                    onChange={(event) =>
+                      setProductSearch(
+                        normalizeTextInput(event.target.value, {
+                          maxLength: 80,
+                        })
+                      )
+                    }
                     placeholder="Buscar producto"
+                    maxLength={80}
                     disabled={variantsQuery.isLoading}
                   />
                 </div>
@@ -783,11 +801,12 @@ export function CajeroPage() {
                     id="nombre_cliente"
                     name="nombre_cliente"
                     defaultValue="Cliente final"
+                    maxLength={80}
                   />
                 </Field>
                 <Field>
                   <FieldLabel htmlFor="nit">NIT</FieldLabel>
-                  <Input id="nit" name="nit" defaultValue="CF" />
+                  <Input id="nit" name="nit" defaultValue="CF" maxLength={20} />
                 </Field>
                 <Field>
                   <FieldLabel>Forma de pago</FieldLabel>
@@ -819,6 +838,7 @@ export function CajeroPage() {
                         id="monto_recibido"
                         type="number"
                         min={total}
+                        max="999999.99"
                         step="0.01"
                         value={amountReceived}
                         onChange={(event) =>
@@ -840,8 +860,11 @@ export function CajeroPage() {
                       id="numero_referencia"
                       value={referenceNumber}
                       onChange={(event) =>
-                        setReferenceNumber(event.target.value)
+                        setReferenceNumber(
+                          normalizeCodeInput(event.target.value, 60)
+                        )
                       }
+                      maxLength={60}
                     />
                   </Field>
                 )}
