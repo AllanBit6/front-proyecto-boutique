@@ -20,6 +20,11 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import {
+  FormSkeleton,
+  LoadTransition,
+  TableSkeleton,
+} from "@/components/ui/loading-skeletons"
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -235,21 +240,21 @@ export function InventarioPage() {
               </div>
             ) : null}
             {variantsQuery.isLoading ? (
-              <div className="text-sm text-muted-foreground">
-                Cargando prendas...
-              </div>
+              <TableSkeleton columns={7} />
             ) : variantsQuery.isError ? (
               <div className="text-sm text-destructive">
                 No se pudieron cargar las prendas.
               </div>
             ) : (
-              <VariantsTable
-                variants={filteredVariants}
-                onEdit={(variant) => setEditingVariantId(variant.id)}
-                onDelete={setDeleteVariant}
-                onBarcode={setBarcodeVariant}
-                showActions={canManageInventory}
-              />
+              <LoadTransition>
+                <VariantsTable
+                  variants={filteredVariants}
+                  onEdit={(variant) => setEditingVariantId(variant.id)}
+                  onDelete={setDeleteVariant}
+                  onBarcode={setBarcodeVariant}
+                  showActions={canManageInventory}
+                />
+              </LoadTransition>
             )}
             {variantsData ? (
               <PaginationControls
@@ -332,20 +337,20 @@ export function InventarioPage() {
             </DialogDescription>
           </DialogHeader>
           {editVariantQuery.isLoading ? (
-            <div className="text-sm text-muted-foreground">
-              Cargando presentación...
-            </div>
+            <FormSkeleton fields={5} />
           ) : editVariantQuery.data ? (
-            <VariantForm
-              products={getEditableProductOptions(
-                productOptions,
-                editVariantQuery.data
-              )}
-              sizes={sizes}
-              colors={colors}
-              variant={editVariantQuery.data}
-              onSuccess={() => setEditingVariantId(null)}
-            />
+            <LoadTransition>
+              <VariantForm
+                products={getEditableProductOptions(
+                  productOptions,
+                  editVariantQuery.data
+                )}
+                sizes={sizes}
+                colors={colors}
+                variant={editVariantQuery.data}
+                onSuccess={() => setEditingVariantId(null)}
+              />
+            </LoadTransition>
           ) : (
             <div className="text-sm text-destructive">
               No se pudo cargar la presentación.

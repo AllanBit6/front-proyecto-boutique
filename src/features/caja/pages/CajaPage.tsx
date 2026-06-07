@@ -25,6 +25,11 @@ import { Field, FieldGroup, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import {
+  FormSkeleton,
+  LoadTransition,
+  TableSkeleton,
+} from "@/components/ui/loading-skeletons"
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -140,67 +145,69 @@ export function CajaPage() {
           </CardHeader>
           <CardContent>
             {activeCashQuery.isLoading ? (
-              <div className="rounded-md border border-dashed py-8 text-center text-sm text-muted-foreground">
-                Consultando estado de caja...
-              </div>
+              <FormSkeleton fields={2} />
             ) : activeCashQuery.isError ? (
               <div className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
                 No se pudo confirmar el estado de caja.
               </div>
             ) : activeCash ? (
-              <form className="space-y-3" onSubmit={handleClose}>
-                <div className="rounded-lg border p-3 text-sm">
-                  Saldo inicial:{" "}
-                  <strong>{formatCurrency(activeCash.saldoInicial)}</strong>
-                </div>
-                <FieldGroup className="gap-3">
-                  <Field>
-                    <FieldLabel htmlFor="saldo_final">Saldo final</FieldLabel>
-                    <Input
-                      id="saldo_final"
-                      name="saldo_final"
-                      type="number"
-                      step="0.01"
-                      required
-                    />
-                  </Field>
-                  <Field>
-                    <FieldLabel htmlFor="observaciones_cierre">
-                      Observaciones
-                    </FieldLabel>
-                    <Input id="observaciones_cierre" name="observaciones" />
-                  </Field>
-                </FieldGroup>
-                <Button disabled={closeCash.isPending}>
-                  {closeCash.isPending ? "Cerrando..." : "Cerrar caja"}
-                </Button>
-              </form>
+              <LoadTransition>
+                <form className="space-y-3" onSubmit={handleClose}>
+                  <div className="rounded-lg border p-3 text-sm">
+                    Saldo inicial:{" "}
+                    <strong>{formatCurrency(activeCash.saldoInicial)}</strong>
+                  </div>
+                  <FieldGroup className="gap-3">
+                    <Field>
+                      <FieldLabel htmlFor="saldo_final">Saldo final</FieldLabel>
+                      <Input
+                        id="saldo_final"
+                        name="saldo_final"
+                        type="number"
+                        step="0.01"
+                        required
+                      />
+                    </Field>
+                    <Field>
+                      <FieldLabel htmlFor="observaciones_cierre">
+                        Observaciones
+                      </FieldLabel>
+                      <Input id="observaciones_cierre" name="observaciones" />
+                    </Field>
+                  </FieldGroup>
+                  <Button disabled={closeCash.isPending}>
+                    {closeCash.isPending ? "Cerrando..." : "Cerrar caja"}
+                  </Button>
+                </form>
+              </LoadTransition>
             ) : (
-              <form className="space-y-3" onSubmit={handleOpen}>
-                <FieldGroup className="gap-3">
-                  <Field>
-                    <FieldLabel htmlFor="saldo_inicial">
-                      Saldo inicial
-                    </FieldLabel>
-                    <Input
-                      id="saldo_inicial"
-                      name="saldo_inicial"
-                      type="number"
-                      step="0.01"
-                      required
-                    />
-                  </Field>
-                  <Field>
-                    <FieldLabel htmlFor="observaciones_apertura">
-                      Observaciones
-                    </FieldLabel>
-                    <Input id="observaciones_apertura" name="observaciones" />
-                  </Field>
-                </FieldGroup>
-                <Button disabled={openCash.isPending}>
-                  {openCash.isPending ? "Abriendo..." : "Abrir caja"}
-                </Button>
-              </form>
+              <LoadTransition>
+                <form className="space-y-3" onSubmit={handleOpen}>
+                  <FieldGroup className="gap-3">
+                    <Field>
+                      <FieldLabel htmlFor="saldo_inicial">
+                        Saldo inicial
+                      </FieldLabel>
+                      <Input
+                        id="saldo_inicial"
+                        name="saldo_inicial"
+                        type="number"
+                        step="0.01"
+                        required
+                      />
+                    </Field>
+                    <Field>
+                      <FieldLabel htmlFor="observaciones_apertura">
+                        Observaciones
+                      </FieldLabel>
+                      <Input id="observaciones_apertura" name="observaciones" />
+                    </Field>
+                  </FieldGroup>
+                  <Button disabled={openCash.isPending}>
+                    {openCash.isPending ? "Abriendo..." : "Abrir caja"}
+                  </Button>
+                </form>
+              </LoadTransition>
             )}
           </CardContent>
         </Card>
@@ -263,9 +270,7 @@ export function CajaPage() {
               </div>
             ) : null}
             {cashQuery.isLoading ? (
-              <div className="text-sm text-muted-foreground">
-                Cargando cajas...
-              </div>
+              <TableSkeleton columns={4} />
             ) : cashQuery.isError ? (
               <div className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
                 {getErrorMessage(
@@ -274,48 +279,54 @@ export function CajaPage() {
                 )}
               </div>
             ) : (
-              <div className="rounded-md border">
-                <Table className="min-w-[420px]">
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Fecha</TableHead>
-                      <TableHead>Usuario</TableHead>
-                      <TableHead>Saldo</TableHead>
-                      <TableHead>Estado</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredCashRegisters.map((item) => (
-                      <TableRow key={item.id}>
-                        <TableCell>{formatDate(item.fechaApertura)}</TableCell>
-                        <TableCell className="max-w-36 whitespace-normal">
-                          {item.usuario || "-"}
-                        </TableCell>
-                        <TableCell>
-                          {formatCurrency(item.saldoFinal ?? item.saldoInicial)}
-                        </TableCell>
-                        <TableCell>
-                          <Badge
-                            variant={item.activo ? "secondary" : "outline"}
-                          >
-                            {item.activo ? "Abierta" : "Cerrada"}
-                          </Badge>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                    {!filteredCashRegisters.length ? (
+              <LoadTransition>
+                <div className="rounded-md border">
+                  <Table className="min-w-[420px]">
+                    <TableHeader>
                       <TableRow>
-                        <TableCell
-                          colSpan={4}
-                          className="py-8 text-center text-sm text-muted-foreground"
-                        >
-                          Sin resultados.
-                        </TableCell>
+                        <TableHead>Fecha</TableHead>
+                        <TableHead>Usuario</TableHead>
+                        <TableHead>Saldo</TableHead>
+                        <TableHead>Estado</TableHead>
                       </TableRow>
-                    ) : null}
-                  </TableBody>
-                </Table>
-              </div>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredCashRegisters.map((item) => (
+                        <TableRow key={item.id}>
+                          <TableCell>
+                            {formatDate(item.fechaApertura)}
+                          </TableCell>
+                          <TableCell className="max-w-36 whitespace-normal">
+                            {item.usuario || "-"}
+                          </TableCell>
+                          <TableCell>
+                            {formatCurrency(
+                              item.saldoFinal ?? item.saldoInicial
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            <Badge
+                              variant={item.activo ? "secondary" : "outline"}
+                            >
+                              {item.activo ? "Abierta" : "Cerrada"}
+                            </Badge>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                      {!filteredCashRegisters.length ? (
+                        <TableRow>
+                          <TableCell
+                            colSpan={4}
+                            className="py-8 text-center text-sm text-muted-foreground"
+                          >
+                            Sin resultados.
+                          </TableCell>
+                        </TableRow>
+                      ) : null}
+                    </TableBody>
+                  </Table>
+                </div>
+              </LoadTransition>
             )}
             {cashQuery.data ? (
               <AdminPager

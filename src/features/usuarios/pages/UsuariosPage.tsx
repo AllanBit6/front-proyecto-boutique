@@ -12,6 +12,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import {
+  FormSkeleton,
+  LoadTransition,
+  TableSkeleton,
+} from "@/components/ui/loading-skeletons"
 import { ResetPasswordForm } from "@/features/usuarios/components/ResetPasswordForm"
 import { UserForm } from "@/features/usuarios/components/UserForm"
 import { UsersTable } from "@/features/usuarios/components/UsersTable"
@@ -81,20 +86,20 @@ export function UsuariosPage() {
             </CardHeader>
             <CardContent className="space-y-4">
               {usersQuery.isLoading ? (
-                <div className="text-sm text-muted-foreground">
-                  Cargando usuarios...
-                </div>
+                <TableSkeleton columns={4} />
               ) : usersQuery.isError ? (
                 <div className="text-sm text-destructive">
                   No se pudieron cargar los usuarios.
                 </div>
               ) : (
-                <UsersTable
-                  users={usersData?.users ?? []}
-                  onEdit={(user) => setEditingUserId(user.id)}
-                  onResetPassword={setResetUser}
-                  onDelete={setDeleteUser}
-                />
+                <LoadTransition>
+                  <UsersTable
+                    users={usersData?.users ?? []}
+                    onEdit={(user) => setEditingUserId(user.id)}
+                    onResetPassword={setResetUser}
+                    onDelete={setDeleteUser}
+                  />
+                </LoadTransition>
               )}
               {usersData ? (
                 <div className="flex flex-col gap-3 border-t pt-4 sm:flex-row sm:items-center sm:justify-between">
@@ -134,11 +139,11 @@ export function UsuariosPage() {
             </CardHeader>
             <CardContent>
               {rolesQuery.isLoading ? (
-                <div className="text-sm text-muted-foreground">
-                  Cargando roles...
-                </div>
+                <FormSkeleton fields={5} />
               ) : (
-                <UserForm roles={roles} />
+                <LoadTransition>
+                  <UserForm roles={roles} />
+                </LoadTransition>
               )}
             </CardContent>
           </Card>
@@ -159,15 +164,15 @@ export function UsuariosPage() {
             <DialogDescription>Datos y rol.</DialogDescription>
           </DialogHeader>
           {editUserQuery.isLoading ? (
-            <div className="text-sm text-muted-foreground">
-              Cargando usuario...
-            </div>
+            <FormSkeleton fields={5} />
           ) : editUserQuery.data ? (
-            <UserForm
-              roles={roles}
-              user={editUserQuery.data}
-              onSuccess={() => setEditingUserId(null)}
-            />
+            <LoadTransition>
+              <UserForm
+                roles={roles}
+                user={editUserQuery.data}
+                onSuccess={() => setEditingUserId(null)}
+              />
+            </LoadTransition>
           ) : (
             <div className="text-sm text-destructive">
               No se pudo cargar el usuario.

@@ -23,6 +23,10 @@ import {
 } from "@/components/ui/dialog"
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
+import {
+  LoadTransition,
+  TableSkeleton,
+} from "@/components/ui/loading-skeletons"
 import { Textarea } from "@/components/ui/textarea"
 import {
   Select,
@@ -355,84 +359,86 @@ export function ComprasPage() {
               </div>
             ) : null}
             {purchasesQuery.isLoading ? (
-              <div className="text-sm text-muted-foreground">
-                Cargando compras...
-              </div>
+              <TableSkeleton columns={6} />
             ) : purchasesQuery.isError ? (
               <div className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
                 {getErrorMessage(purchasesQuery.error)}
               </div>
             ) : (
-              <div className="rounded-md border">
-                <Table className="min-w-[520px]">
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Fecha</TableHead>
-                      <TableHead className="hidden md:table-cell">
-                        Registrado por
-                      </TableHead>
-                      <TableHead className="hidden sm:table-cell">
-                        Prendas
-                      </TableHead>
-                      <TableHead>Total</TableHead>
-                      <TableHead>Estado</TableHead>
-                      <TableHead />
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredPurchases.map((item) => (
-                      <TableRow key={item.id}>
-                        <TableCell className="whitespace-normal">
-                          <div>{formatDate(item.fecha)}</div>
-                          <div className="text-xs text-muted-foreground md:hidden">
-                            {item.usuario || "Sin usuario"}
-                          </div>
-                          <div className="text-xs text-muted-foreground sm:hidden">
-                            {item.items} prendas
-                          </div>
-                        </TableCell>
-                        <TableCell className="hidden md:table-cell">
-                          {item.usuario || "-"}
-                        </TableCell>
-                        <TableCell className="hidden sm:table-cell">
-                          {item.items}
-                        </TableCell>
-                        <TableCell>{formatCurrency(item.total)}</TableCell>
-                        <TableCell>
-                          <Badge
-                            variant={item.activo ? "secondary" : "outline"}
-                          >
-                            {item.activo ? "Vigente" : "Anulada"}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            disabled={!item.activo || cancelPurchase.isPending}
-                            onClick={() => {
-                              setPurchaseToCancel(item.id)
-                              setCancelReason("")
-                            }}
-                          >
-                            Anular
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                    {!filteredPurchases.length ? (
+              <LoadTransition>
+                <div className="rounded-md border">
+                  <Table className="min-w-[520px]">
+                    <TableHeader>
                       <TableRow>
-                        <TableCell
-                          colSpan={6}
-                          className="py-8 text-center text-sm text-muted-foreground"
-                        >
-                          Sin resultados.
-                        </TableCell>
+                        <TableHead>Fecha</TableHead>
+                        <TableHead className="hidden md:table-cell">
+                          Registrado por
+                        </TableHead>
+                        <TableHead className="hidden sm:table-cell">
+                          Prendas
+                        </TableHead>
+                        <TableHead>Total</TableHead>
+                        <TableHead>Estado</TableHead>
+                        <TableHead />
                       </TableRow>
-                    ) : null}
-                  </TableBody>
-                </Table>
-              </div>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredPurchases.map((item) => (
+                        <TableRow key={item.id}>
+                          <TableCell className="whitespace-normal">
+                            <div>{formatDate(item.fecha)}</div>
+                            <div className="text-xs text-muted-foreground md:hidden">
+                              {item.usuario || "Sin usuario"}
+                            </div>
+                            <div className="text-xs text-muted-foreground sm:hidden">
+                              {item.items} prendas
+                            </div>
+                          </TableCell>
+                          <TableCell className="hidden md:table-cell">
+                            {item.usuario || "-"}
+                          </TableCell>
+                          <TableCell className="hidden sm:table-cell">
+                            {item.items}
+                          </TableCell>
+                          <TableCell>{formatCurrency(item.total)}</TableCell>
+                          <TableCell>
+                            <Badge
+                              variant={item.activo ? "secondary" : "outline"}
+                            >
+                              {item.activo ? "Vigente" : "Anulada"}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              disabled={
+                                !item.activo || cancelPurchase.isPending
+                              }
+                              onClick={() => {
+                                setPurchaseToCancel(item.id)
+                                setCancelReason("")
+                              }}
+                            >
+                              Anular
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                      {!filteredPurchases.length ? (
+                        <TableRow>
+                          <TableCell
+                            colSpan={6}
+                            className="py-8 text-center text-sm text-muted-foreground"
+                          >
+                            Sin resultados.
+                          </TableCell>
+                        </TableRow>
+                      ) : null}
+                    </TableBody>
+                  </Table>
+                </div>
+              </LoadTransition>
             )}
             {purchasesQuery.data ? (
               <AdminPager

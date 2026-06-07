@@ -19,6 +19,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 import {
+  LoadTransition,
+  TableSkeleton,
+} from "@/components/ui/loading-skeletons"
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -380,68 +384,68 @@ export function InventoryAdjustmentsPage() {
               </div>
             ) : null}
             {movementsQuery.isLoading ? (
-              <div className="text-sm text-muted-foreground">
-                Cargando movimientos...
-              </div>
+              <TableSkeleton columns={6} />
             ) : movementsQuery.isError ? (
               <div className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
                 {getErrorMessage(movementsQuery.error)}
               </div>
             ) : (
-              <div className="rounded-md border">
-                <Table className="min-w-[560px]">
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Fecha</TableHead>
-                      <TableHead>Prenda</TableHead>
-                      <TableHead>Cambio</TableHead>
-                      <TableHead>Cantidad</TableHead>
-                      <TableHead className="hidden sm:table-cell">
-                        Stock
-                      </TableHead>
-                      <TableHead className="hidden md:table-cell">
-                        Motivo
-                      </TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredMovements.map((item) => (
-                      <TableRow key={item.id}>
-                        <TableCell>{formatDate(item.fecha)}</TableCell>
-                        <TableCell className="max-w-44 whitespace-normal">
-                          <div>{item.prenda || "-"}</div>
-                          <div className="text-xs text-muted-foreground md:hidden">
-                            {item.motivo || item.origen}
-                          </div>
-                          <div className="text-xs text-muted-foreground sm:hidden">
-                            Stock: {item.stockResultante}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="secondary">{item.tipo}</Badge>
-                        </TableCell>
-                        <TableCell>{item.cantidad}</TableCell>
-                        <TableCell className="hidden sm:table-cell">
-                          {item.stockResultante}
-                        </TableCell>
-                        <TableCell className="hidden max-w-48 whitespace-normal md:table-cell">
-                          {item.motivo || item.origen}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                    {filteredMovements.length === 0 ? (
+              <LoadTransition>
+                <div className="rounded-md border">
+                  <Table className="min-w-[560px]">
+                    <TableHeader>
                       <TableRow>
-                        <TableCell
-                          colSpan={6}
-                          className="py-8 text-center text-sm text-muted-foreground"
-                        >
-                          Sin resultados.
-                        </TableCell>
+                        <TableHead>Fecha</TableHead>
+                        <TableHead>Prenda</TableHead>
+                        <TableHead>Cambio</TableHead>
+                        <TableHead>Cantidad</TableHead>
+                        <TableHead className="hidden sm:table-cell">
+                          Stock
+                        </TableHead>
+                        <TableHead className="hidden md:table-cell">
+                          Motivo
+                        </TableHead>
                       </TableRow>
-                    ) : null}
-                  </TableBody>
-                </Table>
-              </div>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredMovements.map((item) => (
+                        <TableRow key={item.id}>
+                          <TableCell>{formatDate(item.fecha)}</TableCell>
+                          <TableCell className="max-w-44 whitespace-normal">
+                            <div>{item.prenda || "-"}</div>
+                            <div className="text-xs text-muted-foreground md:hidden">
+                              {item.motivo || item.origen}
+                            </div>
+                            <div className="text-xs text-muted-foreground sm:hidden">
+                              Stock: {item.stockResultante}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="secondary">{item.tipo}</Badge>
+                          </TableCell>
+                          <TableCell>{item.cantidad}</TableCell>
+                          <TableCell className="hidden sm:table-cell">
+                            {item.stockResultante}
+                          </TableCell>
+                          <TableCell className="hidden max-w-48 whitespace-normal md:table-cell">
+                            {item.motivo || item.origen}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                      {filteredMovements.length === 0 ? (
+                        <TableRow>
+                          <TableCell
+                            colSpan={6}
+                            className="py-8 text-center text-sm text-muted-foreground"
+                          >
+                            Sin resultados.
+                          </TableCell>
+                        </TableRow>
+                      ) : null}
+                    </TableBody>
+                  </Table>
+                </div>
+              </LoadTransition>
             )}
             {movementsQuery.data ? (
               <AdminPager

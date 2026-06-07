@@ -12,6 +12,10 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
+  LoadTransition,
+  TableSkeleton,
+} from "@/components/ui/loading-skeletons"
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -177,9 +181,7 @@ export function ReporteriaPage() {
             </div>
           ) : null}
           {paymentsQuery.isLoading ? (
-            <div className="text-sm text-muted-foreground">
-              Cargando pagos...
-            </div>
+            <TableSkeleton columns={6} />
           ) : paymentsQuery.isError ? (
             <div className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
               {getErrorMessage(
@@ -188,66 +190,68 @@ export function ReporteriaPage() {
               )}
             </div>
           ) : (
-            <div className="rounded-md border">
-              <Table className="min-w-[540px]">
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Fecha</TableHead>
-                    <TableHead className="hidden md:table-cell">
-                      Forma de pago
-                    </TableHead>
-                    <TableHead>Cliente</TableHead>
-                    <TableHead>Monto</TableHead>
-                    <TableHead className="hidden sm:table-cell">
-                      Estado
-                    </TableHead>
-                    <TableHead />
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredPayments.map((item) => (
-                    <TableRow key={item.id}>
-                      <TableCell>{formatDate(item.fecha)}</TableCell>
-                      <TableCell className="hidden md:table-cell">
-                        {item.metodo}
-                      </TableCell>
-                      <TableCell className="max-w-44 whitespace-normal">
-                        <div>{item.cliente || "Consumidor final"}</div>
-                        <div className="text-xs text-muted-foreground md:hidden">
-                          {item.metodo}
-                        </div>
-                        <div className="mt-1 sm:hidden">
-                          <Badge variant="secondary">{item.estado}</Badge>
-                        </div>
-                      </TableCell>
-                      <TableCell>{formatCurrency(item.monto)}</TableCell>
-                      <TableCell className="hidden sm:table-cell">
-                        <Badge variant="secondary">{item.estado}</Badge>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setSelectedPayment(item)}
-                        >
-                          Detalle
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                  {!filteredPayments.length ? (
+            <LoadTransition>
+              <div className="rounded-md border">
+                <Table className="min-w-[540px]">
+                  <TableHeader>
                     <TableRow>
-                      <TableCell
-                        colSpan={6}
-                        className="py-8 text-center text-sm text-muted-foreground"
-                      >
-                        Sin resultados.
-                      </TableCell>
+                      <TableHead>Fecha</TableHead>
+                      <TableHead className="hidden md:table-cell">
+                        Forma de pago
+                      </TableHead>
+                      <TableHead>Cliente</TableHead>
+                      <TableHead>Monto</TableHead>
+                      <TableHead className="hidden sm:table-cell">
+                        Estado
+                      </TableHead>
+                      <TableHead />
                     </TableRow>
-                  ) : null}
-                </TableBody>
-              </Table>
-            </div>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredPayments.map((item) => (
+                      <TableRow key={item.id}>
+                        <TableCell>{formatDate(item.fecha)}</TableCell>
+                        <TableCell className="hidden md:table-cell">
+                          {item.metodo}
+                        </TableCell>
+                        <TableCell className="max-w-44 whitespace-normal">
+                          <div>{item.cliente || "Consumidor final"}</div>
+                          <div className="text-xs text-muted-foreground md:hidden">
+                            {item.metodo}
+                          </div>
+                          <div className="mt-1 sm:hidden">
+                            <Badge variant="secondary">{item.estado}</Badge>
+                          </div>
+                        </TableCell>
+                        <TableCell>{formatCurrency(item.monto)}</TableCell>
+                        <TableCell className="hidden sm:table-cell">
+                          <Badge variant="secondary">{item.estado}</Badge>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setSelectedPayment(item)}
+                          >
+                            Detalle
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                    {!filteredPayments.length ? (
+                      <TableRow>
+                        <TableCell
+                          colSpan={6}
+                          className="py-8 text-center text-sm text-muted-foreground"
+                        >
+                          Sin resultados.
+                        </TableCell>
+                      </TableRow>
+                    ) : null}
+                  </TableBody>
+                </Table>
+              </div>
+            </LoadTransition>
           )}
           {paymentsQuery.data ? (
             <AdminPager

@@ -23,6 +23,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 import {
+  LoadTransition,
+  TableSkeleton,
+} from "@/components/ui/loading-skeletons"
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -509,80 +513,82 @@ export function CajeroPage() {
               </div>
 
               {variantsQuery.isLoading ? (
-                <div className="rounded-md border py-8 text-center text-sm text-muted-foreground">
-                  Cargando productos...
-                </div>
+                <TableSkeleton columns={6} rows={5} />
               ) : variantsQuery.isError ? (
                 <div className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-8 text-center text-sm text-destructive">
                   No se pudieron cargar los productos.
                 </div>
               ) : filteredVariants.length > 0 ? (
-                <div className="max-h-[360px] overflow-auto rounded-md border">
-                  <Table className="min-w-[560px]">
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="hidden md:table-cell">
-                          SKU
-                        </TableHead>
-                        <TableHead>Prenda</TableHead>
-                        <TableHead>Talla / color</TableHead>
-                        <TableHead className="text-right">Precio</TableHead>
-                        <TableHead>Stock</TableHead>
-                        <TableHead className="w-28" />
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {filteredVariants.map((variant) => {
-                        const cartQuantity =
-                          cart.find((item) => item.variant.id === variant.id)
-                            ?.quantity ?? 0
-                        const available = variant.stock_actual - cartQuantity
-                        const canAdd = available > 0
+                <LoadTransition>
+                  <div className="max-h-[360px] overflow-auto rounded-md border">
+                    <Table className="min-w-[560px]">
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="hidden md:table-cell">
+                            SKU
+                          </TableHead>
+                          <TableHead>Prenda</TableHead>
+                          <TableHead>Talla / color</TableHead>
+                          <TableHead className="text-right">Precio</TableHead>
+                          <TableHead>Stock</TableHead>
+                          <TableHead className="w-28" />
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {filteredVariants.map((variant) => {
+                          const cartQuantity =
+                            cart.find((item) => item.variant.id === variant.id)
+                              ?.quantity ?? 0
+                          const available = variant.stock_actual - cartQuantity
+                          const canAdd = available > 0
 
-                        return (
-                          <TableRow key={variant.id}>
-                            <TableCell className="hidden font-medium md:table-cell">
-                              {variant.sku || variant.codigo_barras || "-"}
-                            </TableCell>
-                            <TableCell className="max-w-48 whitespace-normal">
-                              <div className="font-medium">
-                                {variant.producto_nombre || "-"}
-                              </div>
-                              <div className="text-xs text-muted-foreground">
-                                {variant.codigo_barras ||
-                                  variant.sku ||
-                                  "Sin código de barras"}
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              {variant.talla_nombre || "-"} /{" "}
-                              {variant.color_nombre || "-"}
-                            </TableCell>
-                            <TableCell className="text-right">
-                              {formatCurrency(variant.precio_venta)}
-                            </TableCell>
-                            <TableCell>
-                              <Badge variant={canAdd ? "secondary" : "outline"}>
-                                {available} disp.
-                              </Badge>
-                            </TableCell>
-                            <TableCell className="text-right">
-                              <Button
-                                type="button"
-                                size="sm"
-                                disabled={!canAdd}
-                                onClick={() => handleProductSelect(variant)}
-                              >
-                                <Plus />
-                                Agregar
-                              </Button>
-                            </TableCell>
-                          </TableRow>
-                        )
-                      })}
-                    </TableBody>
-                  </Table>
-                </div>
+                          return (
+                            <TableRow key={variant.id}>
+                              <TableCell className="hidden font-medium md:table-cell">
+                                {variant.sku || variant.codigo_barras || "-"}
+                              </TableCell>
+                              <TableCell className="max-w-48 whitespace-normal">
+                                <div className="font-medium">
+                                  {variant.producto_nombre || "-"}
+                                </div>
+                                <div className="text-xs text-muted-foreground">
+                                  {variant.codigo_barras ||
+                                    variant.sku ||
+                                    "Sin código de barras"}
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                {variant.talla_nombre || "-"} /{" "}
+                                {variant.color_nombre || "-"}
+                              </TableCell>
+                              <TableCell className="text-right">
+                                {formatCurrency(variant.precio_venta)}
+                              </TableCell>
+                              <TableCell>
+                                <Badge
+                                  variant={canAdd ? "secondary" : "outline"}
+                                >
+                                  {available} disp.
+                                </Badge>
+                              </TableCell>
+                              <TableCell className="text-right">
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  disabled={!canAdd}
+                                  onClick={() => handleProductSelect(variant)}
+                                >
+                                  <Plus />
+                                  Agregar
+                                </Button>
+                              </TableCell>
+                            </TableRow>
+                          )
+                        })}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </LoadTransition>
               ) : (
                 <div className="rounded-md border border-dashed py-8 text-center text-sm text-muted-foreground">
                   Sin resultados.

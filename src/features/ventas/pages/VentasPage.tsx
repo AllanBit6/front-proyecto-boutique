@@ -14,6 +14,11 @@ import {
 } from "@/features/admin/hooks/useAdmin"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import {
+  DetailSkeleton,
+  LoadTransition,
+  TableSkeleton,
+} from "@/components/ui/loading-skeletons"
 import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -164,9 +169,7 @@ export function VentasPage() {
             </div>
           ) : null}
           {salesQuery.isLoading ? (
-            <div className="text-sm text-muted-foreground">
-              Cargando ventas...
-            </div>
+            <TableSkeleton columns={7} />
           ) : salesQuery.isError ? (
             <div className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
               {getErrorMessage(
@@ -175,87 +178,91 @@ export function VentasPage() {
               )}
             </div>
           ) : (
-            <div className="rounded-md border">
-              <Table className="min-w-[560px]">
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Fecha</TableHead>
-                    <TableHead>Cliente</TableHead>
-                    <TableHead className="hidden md:table-cell">
-                      Vendedor
-                    </TableHead>
-                    <TableHead className="hidden sm:table-cell">
-                      Prendas
-                    </TableHead>
-                    <TableHead>Total</TableHead>
-                    <TableHead>Estado</TableHead>
-                    <TableHead />
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredSales.map((item) => (
-                    <TableRow key={item.id}>
-                      <TableCell>{formatDate(item.fecha)}</TableCell>
-                      <TableCell className="max-w-44 whitespace-normal">
-                        <div className="font-medium">
-                          {item.cliente || "Consumidor final"}
-                        </div>
-                        <div className="text-xs text-muted-foreground md:hidden">
-                          {item.usuario || "Sin vendedor"}
-                        </div>
-                        <div className="text-xs text-muted-foreground sm:hidden">
-                          {item.items} prendas
-                        </div>
-                      </TableCell>
-                      <TableCell className="hidden md:table-cell">
-                        {item.usuario || "-"}
-                      </TableCell>
-                      <TableCell className="hidden sm:table-cell">
-                        {item.items}
-                      </TableCell>
-                      <TableCell>{formatCurrency(item.total)}</TableCell>
-                      <TableCell>
-                        <Badge variant={item.activo ? "secondary" : "outline"}>
-                          {item.activo ? "Vigente" : "Anulada"}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex flex-col items-end gap-1 sm:flex-row sm:justify-end">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => setSelectedSaleId(item.id)}
-                          >
-                            Detalle
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            disabled={!item.activo || cancelSale.isPending}
-                            onClick={() => {
-                              setSaleToCancel(item.id)
-                              setCancelReason("")
-                            }}
-                          >
-                            Anular
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                  {!filteredSales.length ? (
+            <LoadTransition>
+              <div className="rounded-md border">
+                <Table className="min-w-[560px]">
+                  <TableHeader>
                     <TableRow>
-                      <TableCell
-                        colSpan={7}
-                        className="py-8 text-center text-sm text-muted-foreground"
-                      >
-                        Sin resultados.
-                      </TableCell>
+                      <TableHead>Fecha</TableHead>
+                      <TableHead>Cliente</TableHead>
+                      <TableHead className="hidden md:table-cell">
+                        Vendedor
+                      </TableHead>
+                      <TableHead className="hidden sm:table-cell">
+                        Prendas
+                      </TableHead>
+                      <TableHead>Total</TableHead>
+                      <TableHead>Estado</TableHead>
+                      <TableHead />
                     </TableRow>
-                  ) : null}
-                </TableBody>
-              </Table>
-            </div>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredSales.map((item) => (
+                      <TableRow key={item.id}>
+                        <TableCell>{formatDate(item.fecha)}</TableCell>
+                        <TableCell className="max-w-44 whitespace-normal">
+                          <div className="font-medium">
+                            {item.cliente || "Consumidor final"}
+                          </div>
+                          <div className="text-xs text-muted-foreground md:hidden">
+                            {item.usuario || "Sin vendedor"}
+                          </div>
+                          <div className="text-xs text-muted-foreground sm:hidden">
+                            {item.items} prendas
+                          </div>
+                        </TableCell>
+                        <TableCell className="hidden md:table-cell">
+                          {item.usuario || "-"}
+                        </TableCell>
+                        <TableCell className="hidden sm:table-cell">
+                          {item.items}
+                        </TableCell>
+                        <TableCell>{formatCurrency(item.total)}</TableCell>
+                        <TableCell>
+                          <Badge
+                            variant={item.activo ? "secondary" : "outline"}
+                          >
+                            {item.activo ? "Vigente" : "Anulada"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex flex-col items-end gap-1 sm:flex-row sm:justify-end">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => setSelectedSaleId(item.id)}
+                            >
+                              Detalle
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              disabled={!item.activo || cancelSale.isPending}
+                              onClick={() => {
+                                setSaleToCancel(item.id)
+                                setCancelReason("")
+                              }}
+                            >
+                              Anular
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                    {!filteredSales.length ? (
+                      <TableRow>
+                        <TableCell
+                          colSpan={7}
+                          className="py-8 text-center text-sm text-muted-foreground"
+                        >
+                          Sin resultados.
+                        </TableCell>
+                      </TableRow>
+                    ) : null}
+                  </TableBody>
+                </Table>
+              </div>
+            </LoadTransition>
           )}
           {salesQuery.data ? (
             <AdminPager
@@ -283,119 +290,123 @@ export function VentasPage() {
             <DialogTitle>Detalle de venta</DialogTitle>
           </DialogHeader>
           {saleDetailQuery.isLoading ? (
-            <div className="text-sm text-muted-foreground">Cargando...</div>
+            <DetailSkeleton items={4} />
           ) : saleDetailQuery.data ? (
-            <div className="space-y-4">
-              <div className="grid gap-3 rounded-md border p-3 text-sm sm:grid-cols-2 lg:grid-cols-4">
-                <DetailItem
-                  label="Fecha"
-                  value={formatDate(saleDetailQuery.data.fecha)}
-                />
-                <DetailItem
-                  label="Cliente"
-                  value={saleDetailQuery.data.cliente || "Consumidor final"}
-                />
-                <DetailItem
-                  label="NIT"
-                  value={saleDetailQuery.data.nit || "CF"}
-                />
-                <DetailItem
-                  label="Vendedor"
-                  value={saleDetailQuery.data.usuario || "-"}
-                />
-              </div>
+            <LoadTransition>
+              <div className="space-y-4">
+                <div className="grid gap-3 rounded-md border p-3 text-sm sm:grid-cols-2 lg:grid-cols-4">
+                  <DetailItem
+                    label="Fecha"
+                    value={formatDate(saleDetailQuery.data.fecha)}
+                  />
+                  <DetailItem
+                    label="Cliente"
+                    value={saleDetailQuery.data.cliente || "Consumidor final"}
+                  />
+                  <DetailItem
+                    label="NIT"
+                    value={saleDetailQuery.data.nit || "CF"}
+                  />
+                  <DetailItem
+                    label="Vendedor"
+                    value={saleDetailQuery.data.usuario || "-"}
+                  />
+                </div>
 
-              <div className="space-y-2">
-                <h3 className="text-sm font-medium">Productos</h3>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Prenda</TableHead>
-                      <TableHead>Cantidad</TableHead>
-                      <TableHead>Precio</TableHead>
-                      <TableHead className="text-right">Subtotal</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {saleDetailQuery.data.detalles.length > 0 ? (
-                      saleDetailQuery.data.detalles.map((item) => (
-                        <TableRow key={item.id}>
-                          <TableCell>
-                            <div className="font-medium">
-                              {item.prenda || "-"}
-                            </div>
-                            <div className="text-xs text-muted-foreground">
-                              {item.sku || item.codigoBarras || "Sin código"}
-                            </div>
-                          </TableCell>
-                          <TableCell>{item.cantidad}</TableCell>
-                          <TableCell>
-                            {formatCurrency(item.precioUnitario)}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            {formatCurrency(item.subtotal)}
+                <div className="space-y-2">
+                  <h3 className="text-sm font-medium">Productos</h3>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Prenda</TableHead>
+                        <TableHead>Cantidad</TableHead>
+                        <TableHead>Precio</TableHead>
+                        <TableHead className="text-right">Subtotal</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {saleDetailQuery.data.detalles.length > 0 ? (
+                        saleDetailQuery.data.detalles.map((item) => (
+                          <TableRow key={item.id}>
+                            <TableCell>
+                              <div className="font-medium">
+                                {item.prenda || "-"}
+                              </div>
+                              <div className="text-xs text-muted-foreground">
+                                {item.sku || item.codigoBarras || "Sin código"}
+                              </div>
+                            </TableCell>
+                            <TableCell>{item.cantidad}</TableCell>
+                            <TableCell>
+                              {formatCurrency(item.precioUnitario)}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              {formatCurrency(item.subtotal)}
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      ) : (
+                        <TableRow>
+                          <TableCell
+                            colSpan={4}
+                            className="text-center text-muted-foreground"
+                          >
+                            Sin productos en el detalle.
                           </TableCell>
                         </TableRow>
-                      ))
-                    ) : (
-                      <TableRow>
-                        <TableCell
-                          colSpan={4}
-                          className="text-center text-muted-foreground"
-                        >
-                          Sin productos en el detalle.
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
 
-              <div className="space-y-2">
-                <h3 className="text-sm font-medium">Cobros</h3>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Metodo</TableHead>
-                      <TableHead>Referencia</TableHead>
-                      <TableHead>Recibido</TableHead>
-                      <TableHead className="text-right">Monto</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {saleDetailQuery.data.pagos.length > 0 ? (
-                      saleDetailQuery.data.pagos.map((item) => (
-                        <TableRow key={item.id}>
-                          <TableCell>{item.metodo}</TableCell>
-                          <TableCell>{item.numeroReferencia || "-"}</TableCell>
-                          <TableCell>
-                            {item.montoRecibido === undefined
-                              ? "-"
-                              : formatCurrency(item.montoRecibido)}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            {formatCurrency(item.monto)}
+                <div className="space-y-2">
+                  <h3 className="text-sm font-medium">Cobros</h3>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Metodo</TableHead>
+                        <TableHead>Referencia</TableHead>
+                        <TableHead>Recibido</TableHead>
+                        <TableHead className="text-right">Monto</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {saleDetailQuery.data.pagos.length > 0 ? (
+                        saleDetailQuery.data.pagos.map((item) => (
+                          <TableRow key={item.id}>
+                            <TableCell>{item.metodo}</TableCell>
+                            <TableCell>
+                              {item.numeroReferencia || "-"}
+                            </TableCell>
+                            <TableCell>
+                              {item.montoRecibido === undefined
+                                ? "-"
+                                : formatCurrency(item.montoRecibido)}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              {formatCurrency(item.monto)}
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      ) : (
+                        <TableRow>
+                          <TableCell
+                            colSpan={4}
+                            className="text-center text-muted-foreground"
+                          >
+                            Sin cobros en el detalle.
                           </TableCell>
                         </TableRow>
-                      ))
-                    ) : (
-                      <TableRow>
-                        <TableCell
-                          colSpan={4}
-                          className="text-center text-muted-foreground"
-                        >
-                          Sin cobros en el detalle.
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
 
-              <div className="flex justify-end rounded-md bg-muted px-3 py-2 text-sm font-medium">
-                Total: {formatCurrency(saleDetailQuery.data.total)}
+                <div className="flex justify-end rounded-md bg-muted px-3 py-2 text-sm font-medium">
+                  Total: {formatCurrency(saleDetailQuery.data.total)}
+                </div>
               </div>
-            </div>
+            </LoadTransition>
           ) : (
             <div className="text-sm text-muted-foreground">
               No se pudo cargar el detalle.
