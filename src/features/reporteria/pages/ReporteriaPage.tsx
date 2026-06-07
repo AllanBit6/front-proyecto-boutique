@@ -11,6 +11,12 @@ import { usePayments } from "@/features/admin/hooks/useAdmin"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+} from "@/components/ui/select"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import {
   Dialog,
@@ -93,93 +99,129 @@ export function ReporteriaPage() {
           <div className="grid gap-2 md:grid-cols-[minmax(220px,1fr)_150px_150px_170px_150px]">
             <Input
               value={search}
-              onChange={(event) => setSearch(event.target.value)}
+              onChange={(event) => {
+                setSearch(event.target.value)
+                setPaymentPage(1)
+              }}
               placeholder="Buscar ID, venta, cliente o referencia"
             />
             <Input
               type="date"
               value={dateFrom}
-              onChange={(event) => setDateFrom(event.target.value)}
+              onChange={(event) => {
+                setDateFrom(event.target.value)
+                setPaymentPage(1)
+              }}
             />
             <Input
               type="date"
               value={dateTo}
-              onChange={(event) => setDateTo(event.target.value)}
+              onChange={(event) => {
+                setDateTo(event.target.value)
+                setPaymentPage(1)
+              }}
             />
-            <select
-              className="h-8 rounded-lg border border-input bg-transparent px-2.5 text-sm"
+            <Select
               value={methodFilter}
-              onChange={(event) => setMethodFilter(event.target.value)}
+              onValueChange={(value) => {
+                setMethodFilter(value ?? "all")
+                setPaymentPage(1)
+              }}
             >
-              <option value="all">Todo metodo</option>
-              {paymentMethods.map((method) => (
-                <option key={method} value={method}>
-                  {method}
-                </option>
-              ))}
-            </select>
-            <select
-              className="h-8 rounded-lg border border-input bg-transparent px-2.5 text-sm"
+              <SelectTrigger className="w-full">
+                <span>
+                  {methodFilter === "all" ? "Todo método" : methodFilter}
+                </span>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todo método</SelectItem>
+                {paymentMethods.map((method) => (
+                  <SelectItem key={method} value={method}>
+                    {method}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select
               value={statusFilter}
-              onChange={(event) => setStatusFilter(event.target.value)}
+              onValueChange={(value) => {
+                setStatusFilter(value ?? "all")
+                setPaymentPage(1)
+              }}
             >
-              <option value="all">Todo estado</option>
-              {paymentStatuses.map((status) => (
-                <option key={status} value={status}>
-                  {status}
-                </option>
-              ))}
-            </select>
+              <SelectTrigger className="w-full">
+                <span>
+                  {statusFilter === "all" ? "Todo estado" : statusFilter}
+                </span>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todo estado</SelectItem>
+                {paymentStatuses.map((status) => (
+                  <SelectItem key={status} value={status}>
+                    {status}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           {paymentsQuery.isLoading ? (
             <div className="text-sm text-muted-foreground">
               Cargando pagos...
             </div>
+          ) : paymentsQuery.isError ? (
+            <div className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+              {getErrorMessage(
+                paymentsQuery.error,
+                "No se pudieron cargar los cobros."
+              )}
+            </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Fecha</TableHead>
-                  <TableHead>Forma de pago</TableHead>
-                  <TableHead>Cliente</TableHead>
-                  <TableHead>Monto</TableHead>
-                  <TableHead>Estado</TableHead>
-                  <TableHead />
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredPayments.map((item) => (
-                  <TableRow key={item.id}>
-                    <TableCell>{formatDate(item.fecha)}</TableCell>
-                    <TableCell>{item.metodo}</TableCell>
-                    <TableCell>{item.cliente || "-"}</TableCell>
-                    <TableCell>{formatCurrency(item.monto)}</TableCell>
-                    <TableCell>
-                      <Badge variant="secondary">{item.estado}</Badge>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setSelectedPayment(item)}
-                      >
-                        Detalle
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-                {!filteredPayments.length ? (
+            <div className="overflow-x-auto rounded-md border">
+              <Table className="min-w-[760px]">
+                <TableHeader>
                   <TableRow>
-                    <TableCell
-                      colSpan={6}
-                      className="py-8 text-center text-sm text-muted-foreground"
-                    >
-                      No hay cobros con esos filtros.
-                    </TableCell>
+                    <TableHead>Fecha</TableHead>
+                    <TableHead>Forma de pago</TableHead>
+                    <TableHead>Cliente</TableHead>
+                    <TableHead>Monto</TableHead>
+                    <TableHead>Estado</TableHead>
+                    <TableHead />
                   </TableRow>
-                ) : null}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {filteredPayments.map((item) => (
+                    <TableRow key={item.id}>
+                      <TableCell>{formatDate(item.fecha)}</TableCell>
+                      <TableCell>{item.metodo}</TableCell>
+                      <TableCell>{item.cliente || "-"}</TableCell>
+                      <TableCell>{formatCurrency(item.monto)}</TableCell>
+                      <TableCell>
+                        <Badge variant="secondary">{item.estado}</Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setSelectedPayment(item)}
+                        >
+                          Detalle
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                  {!filteredPayments.length ? (
+                    <TableRow>
+                      <TableCell
+                        colSpan={6}
+                        className="py-8 text-center text-sm text-muted-foreground"
+                      >
+                        No hay cobros con esos filtros.
+                      </TableCell>
+                    </TableRow>
+                  ) : null}
+                </TableBody>
+              </Table>
+            </div>
           )}
           {paymentsQuery.data ? (
             <AdminPager
@@ -266,7 +308,7 @@ export function ReporteriaPage() {
                 </div>
               ) : (
                 <DetailBox
-                  label="Numero de referencia"
+                  label="Número de referencia"
                   value={selectedPayment.numeroReferencia || "-"}
                 />
               )}
@@ -276,6 +318,10 @@ export function ReporteriaPage() {
       </Dialog>
     </section>
   )
+}
+
+function getErrorMessage(error: unknown, fallback: string) {
+  return error instanceof Error ? error.message : fallback
 }
 
 function DetailItem({ label, value }: { label: string; value: string }) {

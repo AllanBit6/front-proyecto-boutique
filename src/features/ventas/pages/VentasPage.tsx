@@ -18,6 +18,12 @@ import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+} from "@/components/ui/select"
+import {
   Dialog,
   DialogContent,
   DialogHeader,
@@ -69,7 +75,7 @@ export function VentasPage() {
     const motivo = cancelReason.trim()
 
     if (!saleToCancel || !motivo) {
-      toast.error("Ingresa el motivo de anulacion.")
+      toast.error("Ingresa el motivo de anulación.")
       return
     }
 
@@ -104,95 +110,128 @@ export function VentasPage() {
           <div className="grid gap-2 md:grid-cols-[minmax(220px,1fr)_160px_160px_150px]">
             <Input
               value={search}
-              onChange={(event) => setSearch(event.target.value)}
+              onChange={(event) => {
+                setSearch(event.target.value)
+                setPage(1)
+              }}
               placeholder="Buscar ID, cliente, NIT o vendedor"
             />
             <Input
               type="date"
               value={dateFrom}
-              onChange={(event) => setDateFrom(event.target.value)}
+              onChange={(event) => {
+                setDateFrom(event.target.value)
+                setPage(1)
+              }}
             />
             <Input
               type="date"
               value={dateTo}
-              onChange={(event) => setDateTo(event.target.value)}
+              onChange={(event) => {
+                setDateTo(event.target.value)
+                setPage(1)
+              }}
             />
-            <select
-              className="h-8 rounded-lg border border-input bg-transparent px-2.5 text-sm"
+            <Select
               value={statusFilter}
-              onChange={(event) => setStatusFilter(event.target.value)}
+              onValueChange={(value) => {
+                setStatusFilter(value ?? "all")
+                setPage(1)
+              }}
             >
-              <option value="all">Todo estado</option>
-              <option value="active">Vigentes</option>
-              <option value="cancelled">Anuladas</option>
-            </select>
+              <SelectTrigger className="w-full">
+                <span>
+                  {statusFilter === "active"
+                    ? "Vigentes"
+                    : statusFilter === "cancelled"
+                      ? "Anuladas"
+                      : "Todo estado"}
+                </span>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todo estado</SelectItem>
+                <SelectItem value="active">Vigentes</SelectItem>
+                <SelectItem value="cancelled">Anuladas</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
           {salesQuery.isLoading ? (
             <div className="text-sm text-muted-foreground">
               Cargando ventas...
             </div>
+          ) : salesQuery.isError ? (
+            <div className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+              {getErrorMessage(
+                salesQuery.error,
+                "No se pudieron cargar las ventas."
+              )}
+            </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Fecha</TableHead>
-                  <TableHead>Cliente</TableHead>
-                  <TableHead>Vendedor</TableHead>
-                  <TableHead>Prendas</TableHead>
-                  <TableHead>Total</TableHead>
-                  <TableHead>Estado</TableHead>
-                  <TableHead />
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredSales.map((item) => (
-                  <TableRow key={item.id}>
-                    <TableCell>{formatDate(item.fecha)}</TableCell>
-                    <TableCell>{item.cliente || "Consumidor final"}</TableCell>
-                    <TableCell>{item.usuario || "-"}</TableCell>
-                    <TableCell>{item.items}</TableCell>
-                    <TableCell>{formatCurrency(item.total)}</TableCell>
-                    <TableCell>
-                      <Badge variant={item.activo ? "secondary" : "outline"}>
-                        {item.activo ? "Vigente" : "Anulada"}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-1">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setSelectedSaleId(item.id)}
-                        >
-                          Detalle
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          disabled={!item.activo || cancelSale.isPending}
-                          onClick={() => {
-                            setSaleToCancel(item.id)
-                            setCancelReason("")
-                          }}
-                        >
-                          Anular
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-                {!filteredSales.length ? (
+            <div className="overflow-x-auto rounded-md border">
+              <Table className="min-w-[820px]">
+                <TableHeader>
                   <TableRow>
-                    <TableCell
-                      colSpan={7}
-                      className="py-8 text-center text-sm text-muted-foreground"
-                    >
-                      No hay ventas con esos filtros.
-                    </TableCell>
+                    <TableHead>Fecha</TableHead>
+                    <TableHead>Cliente</TableHead>
+                    <TableHead>Vendedor</TableHead>
+                    <TableHead>Prendas</TableHead>
+                    <TableHead>Total</TableHead>
+                    <TableHead>Estado</TableHead>
+                    <TableHead />
                   </TableRow>
-                ) : null}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {filteredSales.map((item) => (
+                    <TableRow key={item.id}>
+                      <TableCell>{formatDate(item.fecha)}</TableCell>
+                      <TableCell>
+                        {item.cliente || "Consumidor final"}
+                      </TableCell>
+                      <TableCell>{item.usuario || "-"}</TableCell>
+                      <TableCell>{item.items}</TableCell>
+                      <TableCell>{formatCurrency(item.total)}</TableCell>
+                      <TableCell>
+                        <Badge variant={item.activo ? "secondary" : "outline"}>
+                          {item.activo ? "Vigente" : "Anulada"}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setSelectedSaleId(item.id)}
+                          >
+                            Detalle
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            disabled={!item.activo || cancelSale.isPending}
+                            onClick={() => {
+                              setSaleToCancel(item.id)
+                              setCancelReason("")
+                            }}
+                          >
+                            Anular
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                  {!filteredSales.length ? (
+                    <TableRow>
+                      <TableCell
+                        colSpan={7}
+                        className="py-8 text-center text-sm text-muted-foreground"
+                      >
+                        No hay ventas con esos filtros.
+                      </TableCell>
+                    </TableRow>
+                  ) : null}
+                </TableBody>
+              </Table>
+            </div>
           )}
           {salesQuery.data ? (
             <AdminPager
@@ -264,7 +303,7 @@ export function VentasPage() {
                               {item.prenda || "-"}
                             </div>
                             <div className="text-xs text-muted-foreground">
-                              {item.sku || item.codigoBarras || "Sin codigo"}
+                              {item.sku || item.codigoBarras || "Sin código"}
                             </div>
                           </TableCell>
                           <TableCell>{item.cantidad}</TableCell>
@@ -360,7 +399,7 @@ export function VentasPage() {
             <Textarea
               value={cancelReason}
               onChange={(event) => setCancelReason(event.target.value)}
-              placeholder="Motivo de anulacion"
+              placeholder="Motivo de anulación"
               rows={4}
             />
             <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
@@ -379,7 +418,7 @@ export function VentasPage() {
                 variant="destructive"
                 disabled={!cancelReason.trim() || cancelSale.isPending}
               >
-                {cancelSale.isPending ? "Anulando..." : "Confirmar anulacion"}
+                {cancelSale.isPending ? "Anulando..." : "Confirmar anulación"}
               </Button>
             </div>
           </form>
@@ -396,4 +435,8 @@ function DetailItem({ label, value }: { label: string; value: string }) {
       <div className="font-medium">{value}</div>
     </div>
   )
+}
+
+function getErrorMessage(error: unknown, fallback: string) {
+  return error instanceof Error ? error.message : fallback
 }

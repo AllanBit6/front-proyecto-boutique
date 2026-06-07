@@ -160,7 +160,7 @@ export function InventoryAdjustmentsPage() {
       setLastResult({
         type: "success",
         message:
-          "Ajuste registrado correctamente. El inventario se actualizara en la lista.",
+          "Ajuste registrado correctamente. El inventario se actualizará en la lista.",
       })
       setVariantId("")
       setQuantity("")
@@ -238,6 +238,11 @@ export function InventoryAdjustmentsPage() {
                   {!variantsQuery.isLoading && !activeVariants.length ? (
                     <div className="text-xs text-destructive">
                       No hay prendas activas disponibles para ajustar.
+                    </div>
+                  ) : null}
+                  {variantsQuery.isError ? (
+                    <div className="text-xs text-destructive">
+                      {getErrorMessage(variantsQuery.error)}
                     </div>
                   ) : null}
                 </Field>
@@ -370,42 +375,44 @@ export function InventoryAdjustmentsPage() {
                 {getErrorMessage(movementsQuery.error)}
               </div>
             ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Fecha</TableHead>
-                    <TableHead>Prenda</TableHead>
-                    <TableHead>Cambio</TableHead>
-                    <TableHead>Cantidad</TableHead>
-                    <TableHead>Stock</TableHead>
-                    <TableHead>Motivo</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredMovements.map((item) => (
-                    <TableRow key={item.id}>
-                      <TableCell>{formatDate(item.fecha)}</TableCell>
-                      <TableCell>{item.prenda || "-"}</TableCell>
-                      <TableCell>
-                        <Badge variant="secondary">{item.tipo}</Badge>
-                      </TableCell>
-                      <TableCell>{item.cantidad}</TableCell>
-                      <TableCell>{item.stockResultante}</TableCell>
-                      <TableCell>{item.motivo || item.origen}</TableCell>
-                    </TableRow>
-                  ))}
-                  {filteredMovements.length === 0 ? (
+              <div className="overflow-x-auto rounded-md border">
+                <Table className="min-w-[760px]">
+                  <TableHeader>
                     <TableRow>
-                      <TableCell
-                        colSpan={6}
-                        className="py-8 text-center text-sm text-muted-foreground"
-                      >
-                        No hay cambios de stock con esos filtros.
-                      </TableCell>
+                      <TableHead>Fecha</TableHead>
+                      <TableHead>Prenda</TableHead>
+                      <TableHead>Cambio</TableHead>
+                      <TableHead>Cantidad</TableHead>
+                      <TableHead>Stock</TableHead>
+                      <TableHead>Motivo</TableHead>
                     </TableRow>
-                  ) : null}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredMovements.map((item) => (
+                      <TableRow key={item.id}>
+                        <TableCell>{formatDate(item.fecha)}</TableCell>
+                        <TableCell>{item.prenda || "-"}</TableCell>
+                        <TableCell>
+                          <Badge variant="secondary">{item.tipo}</Badge>
+                        </TableCell>
+                        <TableCell>{item.cantidad}</TableCell>
+                        <TableCell>{item.stockResultante}</TableCell>
+                        <TableCell>{item.motivo || item.origen}</TableCell>
+                      </TableRow>
+                    ))}
+                    {filteredMovements.length === 0 ? (
+                      <TableRow>
+                        <TableCell
+                          colSpan={6}
+                          className="py-8 text-center text-sm text-muted-foreground"
+                        >
+                          No hay cambios de stock con esos filtros.
+                        </TableCell>
+                      </TableRow>
+                    ) : null}
+                  </TableBody>
+                </Table>
+              </div>
             )}
             {movementsQuery.data ? (
               <AdminPager

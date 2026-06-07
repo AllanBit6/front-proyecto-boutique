@@ -40,62 +40,64 @@ export function UsersTable({
   }
 
   return (
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead>Nombre</TableHead>
-          <TableHead>Acceso</TableHead>
-          <TableHead>Permiso</TableHead>
-          <TableHead className="w-10" />
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {users.map((user) => (
-          <TableRow key={user.id}>
-            <TableCell className="font-medium">
-              {user.nombre} {user.apellido}
-            </TableCell>
-            <TableCell>{user.user_name}</TableCell>
-            <TableCell>
-              <Badge variant="secondary">
-                {user.rol_nombre || user.rol_id}
-              </Badge>
-            </TableCell>
-            <TableCell>
-              <DropdownMenu>
-                <DropdownMenuTrigger
-                  render={
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      aria-label="Acciones de usuario"
-                    />
-                  }
-                >
-                  <MoreHorizontal />
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-44">
-                  <DropdownMenuItem onClick={() => onEdit(user)}>
-                    <Edit />
-                    Editar
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => onResetPassword(user)}>
-                    <KeyRound />
-                    Cambiar contraseña
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    variant="destructive"
-                    onClick={() => onDelete(user)}
-                  >
-                    <Trash2 />
-                    Eliminar
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </TableCell>
+    <div className="overflow-x-auto rounded-md border">
+      <Table className="min-w-[640px]">
+        <TableHeader>
+          <TableRow>
+            <TableHead>Nombre</TableHead>
+            <TableHead>Acceso</TableHead>
+            <TableHead>Permiso</TableHead>
+            <TableHead className="w-10" />
           </TableRow>
-        ))}
-      </TableBody>
-    </Table>
+        </TableHeader>
+        <TableBody>
+          {users.map((user) => (
+            <TableRow key={user.id}>
+              <TableCell className="font-medium">
+                {user.nombre} {user.apellido}
+              </TableCell>
+              <TableCell>{user.user_name}</TableCell>
+              <TableCell>
+                <Badge variant="secondary">
+                  {user.rol_nombre || user.rol_id}
+                </Badge>
+              </TableCell>
+              <TableCell>
+                <DropdownMenu>
+                  <DropdownMenuTrigger
+                    render={
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        aria-label="Acciones de usuario"
+                      />
+                    }
+                  >
+                    <MoreHorizontal />
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-44">
+                    <DropdownMenuItem onClick={() => onEdit(user)}>
+                      <Edit />
+                      Editar
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => onResetPassword(user)}>
+                      <KeyRound />
+                      Cambiar contraseña
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      variant="destructive"
+                      onClick={() => onDelete(user)}
+                    >
+                      <Trash2 />
+                      Eliminar
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </div>
   )
 }

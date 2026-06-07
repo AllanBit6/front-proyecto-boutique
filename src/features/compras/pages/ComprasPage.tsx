@@ -15,8 +15,15 @@ import {
 import { useVariants } from "@/features/inventario/hooks/useProducts"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
 import {
   Select,
   SelectContent,
@@ -44,6 +51,8 @@ export function ComprasPage() {
   const [purchaseStatus, setPurchaseStatus] = useState("all")
   const [quantity, setQuantity] = useState("")
   const [unitCost, setUnitCost] = useState("")
+  const [purchaseToCancel, setPurchaseToCancel] = useState<string | null>(null)
+  const [cancelReason, setCancelReason] = useState("")
   const [lastResult, setLastResult] = useState<{
     type: "success" | "error" | "info"
     message: string
@@ -136,7 +145,8 @@ export function ComprasPage() {
       await promise
       setLastResult({
         type: "success",
-        message: "Compra registrada correctamente. El stock se actualizara en la lista.",
+        message:
+          "Compra registrada correctamente. El stock se actualizará en la lista.",
       })
       setVariantId("")
       setQuantity("")
@@ -150,10 +160,16 @@ export function ComprasPage() {
     }
   }
 
-  async function handleCancel(id: string) {
-    const motivo = window.prompt("Motivo de anulacion")
-    if (!motivo) return
-    const promise = cancelPurchase.mutateAsync({ id, motivo })
+  async function handleCancel(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    const motivo = cancelReason.trim()
+
+    if (!purchaseToCancel || !motivo) {
+      toast.error("Ingresa el motivo de anulación.")
+      return
+    }
+
+    const promise = cancelPurchase.mutateAsync({ id: purchaseToCancel, motivo })
 
     toast.promise(promise, {
       loading: "Anulando compra...",
@@ -165,8 +181,11 @@ export function ComprasPage() {
       await promise
       setLastResult({
         type: "success",
-        message: "Compra anulada correctamente. El stock se actualizara en la lista.",
+        message:
+          "Compra anulada correctamente. El stock se actualizará en la lista.",
       })
+      setPurchaseToCancel(null)
+      setCancelReason("")
     } catch (error) {
       setLastResult({
         type: "error",
@@ -186,11 +205,7 @@ export function ComprasPage() {
             <CardTitle>Producto recibido</CardTitle>
           </CardHeader>
           <CardContent>
-            <form
-              className="space-y-3"
-              noValidate
-              onSubmit={handleCreate}
-            >
+            <form className="space-y-3" noValidate onSubmit={handleCreate}>
               <FieldGroup className="gap-3">
                 <Field>
                   <FieldLabel>Prenda</FieldLabel>
@@ -285,28 +300,50 @@ export function ComprasPage() {
             <div className="grid gap-2 md:grid-cols-[minmax(220px,1fr)_160px_160px_150px]">
               <Input
                 value={purchaseSearch}
-                onChange={(event) => setPurchaseSearch(event.target.value)}
+                onChange={(event) => {
+                  setPurchaseSearch(event.target.value)
+                  setPage(1)
+                }}
                 placeholder="Buscar ID, usuario o total"
               />
               <Input
                 type="date"
                 value={purchaseDateFrom}
-                onChange={(event) => setPurchaseDateFrom(event.target.value)}
+                onChange={(event) => {
+                  setPurchaseDateFrom(event.target.value)
+                  setPage(1)
+                }}
               />
               <Input
                 type="date"
                 value={purchaseDateTo}
-                onChange={(event) => setPurchaseDateTo(event.target.value)}
+                onChange={(event) => {
+                  setPurchaseDateTo(event.target.value)
+                  setPage(1)
+                }}
               />
-              <select
-                className="h-8 rounded-lg border border-input bg-transparent px-2.5 text-sm"
+              <Select
                 value={purchaseStatus}
-                onChange={(event) => setPurchaseStatus(event.target.value)}
+                onValueChange={(value) => {
+                  setPurchaseStatus(value ?? "all")
+                  setPage(1)
+                }}
               >
-                <option value="all">Todo estado</option>
-                <option value="active">Vigentes</option>
-                <option value="cancelled">Anuladas</option>
-              </select>
+                <SelectTrigger className="w-full">
+                  <span>
+                    {purchaseStatus === "active"
+                      ? "Vigentes"
+                      : purchaseStatus === "cancelled"
+                        ? "Anuladas"
+                        : "Todo estado"}
+                  </span>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todo estado</SelectItem>
+                  <SelectItem value="active">Vigentes</SelectItem>
+                  <SelectItem value="cancelled">Anuladas</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             {purchasesQuery.isLoading ? (
               <div className="text-sm text-muted-foreground">
@@ -317,53 +354,60 @@ export function ComprasPage() {
                 {getErrorMessage(purchasesQuery.error)}
               </div>
             ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Fecha</TableHead>
-                    <TableHead>Registrado por</TableHead>
-                    <TableHead>Prendas</TableHead>
-                    <TableHead>Total</TableHead>
-                    <TableHead>Estado</TableHead>
-                    <TableHead />
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredPurchases.map((item) => (
-                    <TableRow key={item.id}>
-                      <TableCell>{formatDate(item.fecha)}</TableCell>
-                      <TableCell>{item.usuario || "-"}</TableCell>
-                      <TableCell>{item.items}</TableCell>
-                      <TableCell>{formatCurrency(item.total)}</TableCell>
-                      <TableCell>
-                        <Badge variant={item.activo ? "secondary" : "outline"}>
-                          {item.activo ? "Vigente" : "Anulada"}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          disabled={!item.activo || cancelPurchase.isPending}
-                          onClick={() => void handleCancel(item.id)}
-                        >
-                          Anular
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                  {!filteredPurchases.length ? (
+              <div className="overflow-x-auto rounded-md border">
+                <Table className="min-w-[760px]">
+                  <TableHeader>
                     <TableRow>
-                      <TableCell
-                        colSpan={6}
-                        className="py-8 text-center text-sm text-muted-foreground"
-                      >
-                        No hay compras con esos filtros.
-                      </TableCell>
+                      <TableHead>Fecha</TableHead>
+                      <TableHead>Registrado por</TableHead>
+                      <TableHead>Prendas</TableHead>
+                      <TableHead>Total</TableHead>
+                      <TableHead>Estado</TableHead>
+                      <TableHead />
                     </TableRow>
-                  ) : null}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredPurchases.map((item) => (
+                      <TableRow key={item.id}>
+                        <TableCell>{formatDate(item.fecha)}</TableCell>
+                        <TableCell>{item.usuario || "-"}</TableCell>
+                        <TableCell>{item.items}</TableCell>
+                        <TableCell>{formatCurrency(item.total)}</TableCell>
+                        <TableCell>
+                          <Badge
+                            variant={item.activo ? "secondary" : "outline"}
+                          >
+                            {item.activo ? "Vigente" : "Anulada"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            disabled={!item.activo || cancelPurchase.isPending}
+                            onClick={() => {
+                              setPurchaseToCancel(item.id)
+                              setCancelReason("")
+                            }}
+                          >
+                            Anular
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                    {!filteredPurchases.length ? (
+                      <TableRow>
+                        <TableCell
+                          colSpan={6}
+                          className="py-8 text-center text-sm text-muted-foreground"
+                        >
+                          No hay compras con esos filtros.
+                        </TableCell>
+                      </TableRow>
+                    ) : null}
+                  </TableBody>
+                </Table>
+              </div>
             )}
             {purchasesQuery.data ? (
               <AdminPager
@@ -378,6 +422,50 @@ export function ComprasPage() {
           </CardContent>
         </Card>
       </div>
+      <Dialog
+        open={Boolean(purchaseToCancel)}
+        onOpenChange={(open) => {
+          if (!open) {
+            setPurchaseToCancel(null)
+            setCancelReason("")
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Anular compra</DialogTitle>
+          </DialogHeader>
+          <form className="space-y-3" onSubmit={handleCancel}>
+            <Textarea
+              value={cancelReason}
+              onChange={(event) => setCancelReason(event.target.value)}
+              placeholder="Motivo de anulación"
+              rows={4}
+            />
+            <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setPurchaseToCancel(null)
+                  setCancelReason("")
+                }}
+              >
+                Cancelar
+              </Button>
+              <Button
+                type="submit"
+                variant="destructive"
+                disabled={!cancelReason.trim() || cancelPurchase.isPending}
+              >
+                {cancelPurchase.isPending
+                  ? "Anulando..."
+                  : "Confirmar anulación"}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
     </section>
   )
 }

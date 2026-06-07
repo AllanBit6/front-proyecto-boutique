@@ -27,7 +27,7 @@ export function RoleSwitcher() {
       <Button
         variant="ghost"
         size="icon"
-        aria-label="Cerrar sesion"
+        aria-label="Cerrar sesión"
         onClick={() => void logout()}
       >
         <LogOut />

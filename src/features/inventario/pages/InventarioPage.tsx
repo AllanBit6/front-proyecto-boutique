@@ -187,14 +187,18 @@ export function InventarioPage() {
             <div className="grid gap-2 md:grid-cols-[minmax(220px,1fr)_180px_160px]">
               <SearchInput
                 value={variantSearch}
-                onChange={setVariantSearch}
+                onChange={(value) => {
+                  setVariantSearch(value)
+                  setVariantsPage(1)
+                }}
                 placeholder="Buscar SKU, prenda, talla o color"
               />
               <Select
                 value={variantProductFilter}
-                onValueChange={(value) =>
+                onValueChange={(value) => {
                   setVariantProductFilter(value ?? "all")
-                }
+                  setVariantsPage(1)
+                }}
               >
                 <SelectTrigger>
                   <span>
@@ -214,7 +218,10 @@ export function InventarioPage() {
               </Select>
               <Select
                 value={variantStockFilter}
-                onValueChange={(value) => setVariantStockFilter(value ?? "all")}
+                onValueChange={(value) => {
+                  setVariantStockFilter(value ?? "all")
+                  setVariantsPage(1)
+                }}
               >
                 <SelectTrigger>
                   <span>{selectedStockFilter}</span>
@@ -329,7 +336,7 @@ export function InventarioPage() {
           </DialogHeader>
           {editVariantQuery.isLoading ? (
             <div className="text-sm text-muted-foreground">
-              Cargando presentacion...
+              Cargando presentación...
             </div>
           ) : editVariantQuery.data ? (
             <VariantForm
@@ -344,7 +351,7 @@ export function InventarioPage() {
             />
           ) : (
             <div className="text-sm text-destructive">
-              No se pudo cargar la presentacion.
+              No se pudo cargar la presentación.
             </div>
           )}
         </DialogContent>
@@ -363,7 +370,7 @@ export function InventarioPage() {
       <ConfirmDeactivateDialog
         open={Boolean(deleteVariant)}
         title="Desactivar prenda"
-        description={`Esta accion desactivara ${deleteVariant?.sku ?? ""}.`}
+        description={`Esta acción desactivará ${deleteVariant?.sku ?? ""}.`}
         isPending={deleteVariantMutation.isPending}
         onOpenChange={(open) => {
           if (!open) {
@@ -418,7 +425,8 @@ function PaginationControls({
   return (
     <div className="flex flex-col gap-3 border-t pt-4 sm:flex-row sm:items-center sm:justify-between">
       <div className="text-sm text-muted-foreground">
-        {visible} visibles de {total} registros - Pagina {page} de {totalPages}
+        {visible} visibles de {total} registros - Página {page} de{" "}
+        {Math.max(totalPages, 1)}
       </div>
       <div className="flex items-center gap-2">
         <Button
@@ -465,8 +473,8 @@ function ConfirmDeactivateDialog({
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription>
-            {description} La prenda quedara oculta para nuevas ventas, pero se
-            conservara su historial.
+            {description} La prenda quedará oculta para nuevas ventas, pero se
+            conservará su historial.
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>

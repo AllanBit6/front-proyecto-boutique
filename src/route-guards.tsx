@@ -29,7 +29,7 @@ export function ProtectedRoute() {
   if (status === "idle" || status === "checking") {
     return (
       <main className="grid min-h-svh place-items-center bg-background text-sm text-muted-foreground">
-        Validando sesion...
+        Validando sesión...
       </main>
     )
   }

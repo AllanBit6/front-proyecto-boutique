@@ -1,5 +1,6 @@
 import { ChevronLeft, ChevronRight } from "lucide-react"
 import { useState } from "react"
+import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -47,7 +48,18 @@ export function UsuariosPage() {
       return
     }
 
-    await deleteUserMutation.mutateAsync(deleteUser.id)
+    const promise = deleteUserMutation.mutateAsync(deleteUser.id)
+
+    toast.promise(promise, {
+      loading: "Eliminando usuario...",
+      success: "Usuario eliminado correctamente.",
+      error: (error) =>
+        error instanceof Error
+          ? error.message
+          : "No se pudo eliminar el usuario.",
+    })
+
+    await promise
     setDeleteUser(null)
   }
 
@@ -86,9 +98,9 @@ export function UsuariosPage() {
               />
             )}
             {usersData ? (
-              <div className="flex items-center justify-between gap-3 border-t pt-4">
+              <div className="flex flex-col gap-3 border-t pt-4 sm:flex-row sm:items-center sm:justify-between">
                 <div className="text-sm text-muted-foreground">
-                  Pagina {usersData.page} de {usersData.totalPages}
+                  Página {usersData.page} de {Math.max(usersData.totalPages, 1)}
                 </div>
                 <div className="flex items-center gap-2">
                   <Button
@@ -204,7 +216,7 @@ export function UsuariosPage() {
           <DialogHeader>
             <DialogTitle>Eliminar usuario</DialogTitle>
             <DialogDescription>
-              Esta accion eliminara a {deleteUser?.user_name}. No se puede
+              Esta acción eliminará a {deleteUser?.user_name}. No se puede
               deshacer desde esta pantalla.
             </DialogDescription>
           </DialogHeader>

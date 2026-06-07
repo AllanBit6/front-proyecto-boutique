@@ -72,7 +72,7 @@ export function LoginForm({
             <Store className="size-5" />
           </div>
           <div>
-            <CardTitle className="text-xl">Iniciar sesion</CardTitle>
+            <CardTitle className="text-xl">Iniciar sesión</CardTitle>
             <CardDescription className="mt-1 leading-6">
               Ingresa tus credenciales para continuar.
             </CardDescription>

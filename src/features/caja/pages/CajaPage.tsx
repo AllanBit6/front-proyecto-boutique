@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react"
+import { toast } from "sonner"
 
 import { AdminPager } from "@/features/admin/components/AdminTable"
 import { formatCurrency, formatDate } from "@/features/admin/utils/formatters"
@@ -23,6 +24,12 @@ import {
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+} from "@/components/ui/select"
 import {
   Table,
   TableBody,
@@ -66,10 +73,17 @@ export function CajaPage() {
   async function handleOpen(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
     const form = new FormData(event.currentTarget)
-    await openCash.mutateAsync({
+    const promise = openCash.mutateAsync({
       saldo_inicial: Number(form.get("saldo_inicial") ?? 0),
       observaciones: String(form.get("observaciones") ?? ""),
     })
+    toast.promise(promise, {
+      loading: "Abriendo caja...",
+      success: "Caja abierta correctamente.",
+      error: (error) => getErrorMessage(error, "No se pudo abrir la caja."),
+    })
+
+    await promise
     event.currentTarget.reset()
   }
 
@@ -77,11 +91,18 @@ export function CajaPage() {
     event.preventDefault()
     if (!activeCash) return
     const form = new FormData(event.currentTarget)
-    await closeCash.mutateAsync({
+    const promise = closeCash.mutateAsync({
       id: activeCash.id,
       saldo_final: Number(form.get("saldo_final") ?? 0),
       observaciones: String(form.get("observaciones") ?? ""),
     })
+    toast.promise(promise, {
+      loading: "Cerrando caja...",
+      success: "Caja cerrada correctamente.",
+      error: (error) => getErrorMessage(error, "No se pudo cerrar la caja."),
+    })
+
+    await promise
     event.currentTarget.reset()
   }
 
@@ -166,70 +187,103 @@ export function CajaPage() {
             <div className="grid gap-2 md:grid-cols-[minmax(220px,1fr)_160px_160px_150px]">
               <Input
                 value={cashSearch}
-                onChange={(event) => setCashSearch(event.target.value)}
+                onChange={(event) => {
+                  setCashSearch(event.target.value)
+                  setPage(1)
+                }}
                 placeholder="Buscar ID, usuario u observaciones"
               />
               <Input
                 type="date"
                 value={cashDateFrom}
-                onChange={(event) => setCashDateFrom(event.target.value)}
+                onChange={(event) => {
+                  setCashDateFrom(event.target.value)
+                  setPage(1)
+                }}
               />
               <Input
                 type="date"
                 value={cashDateTo}
-                onChange={(event) => setCashDateTo(event.target.value)}
+                onChange={(event) => {
+                  setCashDateTo(event.target.value)
+                  setPage(1)
+                }}
               />
-              <select
-                className="h-8 rounded-lg border border-input bg-transparent px-2.5 text-sm"
+              <Select
                 value={cashStatus}
-                onChange={(event) => setCashStatus(event.target.value)}
+                onValueChange={(value) => {
+                  setCashStatus(value ?? "all")
+                  setPage(1)
+                }}
               >
-                <option value="all">Todo estado</option>
-                <option value="active">Abiertas</option>
-                <option value="closed">Cerradas</option>
-              </select>
+                <SelectTrigger className="w-full">
+                  <span>
+                    {cashStatus === "active"
+                      ? "Abiertas"
+                      : cashStatus === "closed"
+                        ? "Cerradas"
+                        : "Todo estado"}
+                  </span>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todo estado</SelectItem>
+                  <SelectItem value="active">Abiertas</SelectItem>
+                  <SelectItem value="closed">Cerradas</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             {cashQuery.isLoading ? (
               <div className="text-sm text-muted-foreground">
                 Cargando cajas...
               </div>
+            ) : cashQuery.isError ? (
+              <div className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                {getErrorMessage(
+                  cashQuery.error,
+                  "No se pudo cargar el historial de caja."
+                )}
+              </div>
             ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Fecha</TableHead>
-                    <TableHead>Usuario</TableHead>
-                    <TableHead>Saldo</TableHead>
-                    <TableHead>Estado</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredCashRegisters.map((item) => (
-                    <TableRow key={item.id}>
-                      <TableCell>{formatDate(item.fechaApertura)}</TableCell>
-                      <TableCell>{item.usuario || "-"}</TableCell>
-                      <TableCell>
-                        {formatCurrency(item.saldoFinal ?? item.saldoInicial)}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={item.activo ? "secondary" : "outline"}>
-                          {item.activo ? "Abierta" : "Cerrada"}
-                        </Badge>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                  {!filteredCashRegisters.length ? (
+              <div className="overflow-x-auto rounded-md border">
+                <Table className="min-w-[620px]">
+                  <TableHeader>
                     <TableRow>
-                      <TableCell
-                        colSpan={4}
-                        className="py-8 text-center text-sm text-muted-foreground"
-                      >
-                        No hay cajas con esos filtros.
-                      </TableCell>
+                      <TableHead>Fecha</TableHead>
+                      <TableHead>Usuario</TableHead>
+                      <TableHead>Saldo</TableHead>
+                      <TableHead>Estado</TableHead>
                     </TableRow>
-                  ) : null}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredCashRegisters.map((item) => (
+                      <TableRow key={item.id}>
+                        <TableCell>{formatDate(item.fechaApertura)}</TableCell>
+                        <TableCell>{item.usuario || "-"}</TableCell>
+                        <TableCell>
+                          {formatCurrency(item.saldoFinal ?? item.saldoInicial)}
+                        </TableCell>
+                        <TableCell>
+                          <Badge
+                            variant={item.activo ? "secondary" : "outline"}
+                          >
+                            {item.activo ? "Abierta" : "Cerrada"}
+                          </Badge>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                    {!filteredCashRegisters.length ? (
+                      <TableRow>
+                        <TableCell
+                          colSpan={4}
+                          className="py-8 text-center text-sm text-muted-foreground"
+                        >
+                          No hay cajas con esos filtros.
+                        </TableCell>
+                      </TableRow>
+                    ) : null}
+                  </TableBody>
+                </Table>
+              </div>
             )}
             {cashQuery.data ? (
               <AdminPager
@@ -246,4 +300,8 @@ export function CajaPage() {
       </div>
     </section>
   )
+}
+
+function getErrorMessage(error: unknown, fallback: string) {
+  return error instanceof Error ? error.message : fallback
 }

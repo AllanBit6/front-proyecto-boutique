@@ -42,86 +42,90 @@ export function VariantsTable({
   }
 
   return (
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead>SKU</TableHead>
-          <TableHead>Prenda</TableHead>
-          <TableHead>Talla / color</TableHead>
-          <TableHead className="text-right">Precio</TableHead>
-          <TableHead>Stock</TableHead>
-          <TableHead>Estado</TableHead>
-          {showActions ? <TableHead className="w-10" /> : null}
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {variants.map((variant) => {
-          const lowStock = variant.stock_actual <= variant.stock_minimo
+    <div className="overflow-x-auto rounded-md border">
+      <Table className="min-w-[780px]">
+        <TableHeader>
+          <TableRow>
+            <TableHead>SKU</TableHead>
+            <TableHead>Prenda</TableHead>
+            <TableHead>Talla / color</TableHead>
+            <TableHead className="text-right">Precio</TableHead>
+            <TableHead>Stock</TableHead>
+            <TableHead>Estado</TableHead>
+            {showActions ? <TableHead className="w-10" /> : null}
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {variants.map((variant) => {
+            const lowStock = variant.stock_actual <= variant.stock_minimo
 
-          return (
-            <TableRow
-              key={variant.id}
-              className={!variant.activo ? "opacity-70" : undefined}
-            >
-              <TableCell className="font-medium">{variant.sku || "-"}</TableCell>
-              <TableCell>
-                {variant.producto_nombre || variant.producto_id}
-              </TableCell>
-              <TableCell>
-                {variant.talla_nombre || variant.talla_id} /{" "}
-                {variant.color_nombre || variant.color_id}
-              </TableCell>
-              <TableCell className="text-right">
-                Q {variant.precio_venta.toFixed(2)}
-              </TableCell>
-              <TableCell>
-                <Badge variant={lowStock ? "destructive" : "secondary"}>
-                  {variant.stock_actual} disp.
-                </Badge>
-              </TableCell>
-              <TableCell>
-                <Badge variant={variant.activo ? "secondary" : "outline"}>
-                  {variant.activo ? "Activo" : "Desactivado"}
-                </Badge>
-              </TableCell>
-              {showActions ? (
-                <TableCell>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger
-                      render={
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          aria-label="Acciones de variante"
-                        />
-                      }
-                    >
-                      <MoreHorizontal />
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-36">
-                      <DropdownMenuItem onClick={() => onBarcode(variant)}>
-                        <Barcode />
-                        Ver codigo
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => onEdit(variant)}>
-                        <Edit />
-                        Editar
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        variant="destructive"
-                        onClick={() => onDelete(variant)}
-                      >
-                        <Trash2 />
-                        Desactivar
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+            return (
+              <TableRow
+                key={variant.id}
+                className={!variant.activo ? "opacity-70" : undefined}
+              >
+                <TableCell className="font-medium">
+                  {variant.sku || "-"}
                 </TableCell>
-              ) : null}
-            </TableRow>
-          )
-        })}
-      </TableBody>
-    </Table>
+                <TableCell>
+                  {variant.producto_nombre || variant.producto_id}
+                </TableCell>
+                <TableCell>
+                  {variant.talla_nombre || variant.talla_id} /{" "}
+                  {variant.color_nombre || variant.color_id}
+                </TableCell>
+                <TableCell className="text-right">
+                  Q {variant.precio_venta.toFixed(2)}
+                </TableCell>
+                <TableCell>
+                  <Badge variant={lowStock ? "destructive" : "secondary"}>
+                    {variant.stock_actual} disp.
+                  </Badge>
+                </TableCell>
+                <TableCell>
+                  <Badge variant={variant.activo ? "secondary" : "outline"}>
+                    {variant.activo ? "Activo" : "Desactivado"}
+                  </Badge>
+                </TableCell>
+                {showActions ? (
+                  <TableCell>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger
+                        render={
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            aria-label="Acciones de variante"
+                          />
+                        }
+                      >
+                        <MoreHorizontal />
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-36">
+                        <DropdownMenuItem onClick={() => onBarcode(variant)}>
+                          <Barcode />
+                          Ver código
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => onEdit(variant)}>
+                          <Edit />
+                          Editar
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          variant="destructive"
+                          onClick={() => onDelete(variant)}
+                        >
+                          <Trash2 />
+                          Desactivar
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </TableCell>
+                ) : null}
+              </TableRow>
+            )
+          })}
+        </TableBody>
+      </Table>
+    </div>
   )
 }

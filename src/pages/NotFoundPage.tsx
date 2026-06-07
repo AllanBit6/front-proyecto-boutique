@@ -18,7 +18,7 @@ export function NotFoundPage() {
     <main className="grid min-h-svh place-items-center bg-muted/30 p-4">
       <Card className="w-full max-w-sm">
         <CardHeader>
-          <CardTitle>Pagina no encontrada</CardTitle>
+          <CardTitle>Página no encontrada</CardTitle>
           <CardDescription>
             La ruta que intentas abrir no existe o fue movida.
           </CardDescription>

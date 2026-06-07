@@ -100,12 +100,12 @@ export function BarcodeDialog({
     })
 
     toast.promise(promise, {
-      loading: "Generando codigo de barras...",
+      loading: "Generando código de barras...",
       success: "Codigo de barras listo.",
       error: (error) =>
         error instanceof Error
           ? error.message
-          : "No se pudo generar el codigo.",
+          : "No se pudo generar el código.",
     })
 
     const updatedVariant = await promise
@@ -135,12 +135,12 @@ export function BarcodeDialog({
           </div>
         ) : barcode ? (
           <div className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">
-            Este codigo no se puede imprimir como EAN-13. Genera uno nuevo para
+            Este código no se puede imprimir como EAN-13. Genera uno nuevo para
             esta prenda.
           </div>
         ) : (
           <div className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">
-            Esta prenda aun no tiene codigo de barras.
+            Esta prenda aún no tiene código de barras.
           </div>
         )}
         <DialogFooter>
@@ -160,8 +160,8 @@ export function BarcodeDialog({
               {updateVariant.isPending
                 ? "Creando..."
                 : barcode
-                  ? "Generar nuevo codigo"
-                  : "Crear codigo"}
+                  ? "Generar nuevo código"
+                  : "Crear código"}
             </Button>
           )}
         </DialogFooter>
@@ -254,9 +254,7 @@ function createEan13Svg(value: string, sku: string) {
       }
 
       const isGuard =
-        index < 3 ||
-        (index >= 45 && index < 50) ||
-        index >= bits.length - 3
+        index < 3 || (index >= 45 && index < 50) || index >= bits.length - 3
       const height = isGuard ? guardHeight : barHeight
       const x = quiet + index * moduleWidth
 

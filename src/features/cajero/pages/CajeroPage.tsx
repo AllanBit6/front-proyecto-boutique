@@ -300,7 +300,7 @@ export function CajeroPage() {
       const message =
         exception instanceof Error
           ? exception.message
-          : "No se encontro el codigo."
+          : "No se encontró el código."
       setError(message)
       toast.error(message)
     }
@@ -416,13 +416,13 @@ export function CajeroPage() {
                     className="min-w-0"
                     value={barcode}
                     onChange={(event) => setBarcode(event.target.value)}
-                    placeholder="Escanear codigo"
+                    placeholder="Escanear código"
                     disabled={findByBarcode.isPending}
                   />
                   <Button
                     type="submit"
                     size="icon"
-                    aria-label="Buscar codigo"
+                    aria-label="Buscar código"
                     disabled={findByBarcode.isPending}
                   >
                     <ScanBarcode />
@@ -434,7 +434,7 @@ export function CajeroPage() {
                     className="min-w-0 pl-9"
                     value={productSearch}
                     onChange={(event) => setProductSearch(event.target.value)}
-                    placeholder="Buscar prenda, SKU, color o codigo"
+                    placeholder="Buscar prenda, SKU, color o código"
                     disabled={variantsQuery.isLoading}
                   />
                 </div>
@@ -491,7 +491,7 @@ export function CajeroPage() {
                   No se pudieron cargar los productos para vender.
                 </div>
               ) : filteredVariants.length > 0 ? (
-                <div className="max-h-90flow-auto rounded-md border">
+                <div className="max-h-[360px] overflow-auto rounded-md border">
                   <Table className="min-w-180">
                     <TableHeader>
                       <TableRow>
@@ -522,7 +522,7 @@ export function CajeroPage() {
                               </div>
                               <div className="text-xs text-muted-foreground">
                                 {variant.codigo_barras ||
-                                  "Sin codigo de barras"}
+                                  "Sin código de barras"}
                               </div>
                             </TableCell>
                             <TableCell>
@@ -582,129 +582,135 @@ export function CajeroPage() {
               </Button>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="overflow-x-auto rounded-md border">
-                <Table className="min-w-180">
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Prenda</TableHead>
-                      <TableHead>Codigo</TableHead>
-                      <TableHead>Precio</TableHead>
-                      <TableHead>Stock</TableHead>
-                      <TableHead className="text-right">Subtotal</TableHead>
-                      <TableHead />
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {cart.map((item) => (
-                      <Fragment key={item.variant.id}>
-                        <TableRow className="border-b-0">
-                          <TableCell>
-                            <div className="font-medium">
-                              {variantLabel(item.variant)}
-                            </div>
-                          </TableCell>
-                          <TableCell className="text-muted-foreground">
-                            {item.variant.sku ||
-                              item.variant.codigo_barras ||
-                              "-"}
-                          </TableCell>
-                          <TableCell>
-                            {formatCurrency(item.variant.precio_venta)}
-                          </TableCell>
-                          <TableCell>{item.variant.stock_actual}</TableCell>
-                          <TableCell className="text-right font-medium">
-                            {formatCurrency(
-                              item.quantity * item.variant.precio_venta
-                            )}
-                          </TableCell>
-                          <TableCell />
-                        </TableRow>
-                        <TableRow className="bg-muted/30">
-                          <TableCell colSpan={6} className="py-2">
-                            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                              <div className="flex items-center gap-2">
-                                <span className="text-xs font-medium text-muted-foreground">
-                                  Cantidad
-                                </span>
-                                <div className="flex items-center gap-1">
+              {cart.length > 0 ? (
+                <div className="overflow-x-auto rounded-md border">
+                  <Table className="min-w-180">
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Prenda</TableHead>
+                        <TableHead>Código</TableHead>
+                        <TableHead>Precio</TableHead>
+                        <TableHead>Stock</TableHead>
+                        <TableHead className="text-right">Subtotal</TableHead>
+                        <TableHead />
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {cart.map((item) => (
+                        <Fragment key={item.variant.id}>
+                          <TableRow className="border-b-0">
+                            <TableCell>
+                              <div className="font-medium">
+                                {variantLabel(item.variant)}
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-muted-foreground">
+                              {item.variant.sku ||
+                                item.variant.codigo_barras ||
+                                "-"}
+                            </TableCell>
+                            <TableCell>
+                              {formatCurrency(item.variant.precio_venta)}
+                            </TableCell>
+                            <TableCell>{item.variant.stock_actual}</TableCell>
+                            <TableCell className="text-right font-medium">
+                              {formatCurrency(
+                                item.quantity * item.variant.precio_venta
+                              )}
+                            </TableCell>
+                            <TableCell />
+                          </TableRow>
+                          <TableRow className="bg-muted/30">
+                            <TableCell colSpan={6} className="py-2">
+                              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                                <div className="flex items-center gap-2">
+                                  <span className="text-xs font-medium text-muted-foreground">
+                                    Cantidad
+                                  </span>
+                                  <div className="flex items-center gap-1">
+                                    <Button
+                                      type="button"
+                                      variant="outline"
+                                      size="icon"
+                                      aria-label="Reducir"
+                                      disabled={item.quantity <= 1}
+                                      onClick={() =>
+                                        updateQuantity(
+                                          item.variant.id,
+                                          item.quantity - 1
+                                        )
+                                      }
+                                    >
+                                      <Minus />
+                                    </Button>
+                                    <Input
+                                      className="h-8 w-16 text-center"
+                                      type="number"
+                                      min="1"
+                                      max={item.variant.stock_actual}
+                                      value={item.quantity}
+                                      onChange={(event) =>
+                                        updateQuantity(
+                                          item.variant.id,
+                                          Number(event.target.value || 1)
+                                        )
+                                      }
+                                    />
+                                    <Button
+                                      type="button"
+                                      variant="outline"
+                                      size="icon"
+                                      aria-label="Aumentar"
+                                      disabled={
+                                        item.quantity >=
+                                        item.variant.stock_actual
+                                      }
+                                      onClick={() =>
+                                        updateQuantity(
+                                          item.variant.id,
+                                          item.quantity + 1
+                                        )
+                                      }
+                                    >
+                                      <Plus />
+                                    </Button>
+                                  </div>
+                                </div>
+                                <div className="flex items-center justify-between gap-3 sm:justify-end">
+                                  <span className="text-xs text-muted-foreground">
+                                    Disponible: {item.variant.stock_actual}
+                                  </span>
                                   <Button
                                     type="button"
-                                    variant="outline"
-                                    size="icon"
-                                    aria-label="Reducir"
+                                    variant="ghost"
+                                    size="sm"
                                     onClick={() =>
-                                      updateQuantity(
-                                        item.variant.id,
-                                        item.quantity - 1
+                                      setCart((current) =>
+                                        current.filter(
+                                          (cartItem) =>
+                                            cartItem.variant.id !==
+                                            item.variant.id
+                                        )
                                       )
                                     }
                                   >
-                                    <Minus />
-                                  </Button>
-                                  <Input
-                                    className="h-8 w-16 text-center"
-                                    type="number"
-                                    min="1"
-                                    max={item.variant.stock_actual}
-                                    value={item.quantity}
-                                    onChange={(event) =>
-                                      updateQuantity(
-                                        item.variant.id,
-                                        Number(event.target.value || 1)
-                                      )
-                                    }
-                                  />
-                                  <Button
-                                    type="button"
-                                    variant="outline"
-                                    size="icon"
-                                    aria-label="Aumentar"
-                                    onClick={() =>
-                                      updateQuantity(
-                                        item.variant.id,
-                                        item.quantity + 1
-                                      )
-                                    }
-                                  >
-                                    <Plus />
+                                    <Trash2 />
+                                    Quitar
                                   </Button>
                                 </div>
                               </div>
-                              <div className="flex items-center justify-between gap-3 sm:justify-end">
-                                <span className="text-xs text-muted-foreground">
-                                  Disponible: {item.variant.stock_actual}
-                                </span>
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() =>
-                                    setCart((current) =>
-                                      current.filter(
-                                        (cartItem) =>
-                                          cartItem.variant.id !==
-                                          item.variant.id
-                                      )
-                                    )
-                                  }
-                                >
-                                  <Trash2 />
-                                  Quitar
-                                </Button>
-                              </div>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      </Fragment>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-              {cart.length === 0 ? (
+                            </TableCell>
+                          </TableRow>
+                        </Fragment>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              ) : (
                 <div className="rounded-md border py-8 text-center text-sm text-muted-foreground">
                   Escanea o selecciona una prenda para iniciar la venta.
                 </div>
-              ) : null}
+              )}
             </CardContent>
           </Card>
         </div>

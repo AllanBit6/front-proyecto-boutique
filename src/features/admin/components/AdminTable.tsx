@@ -20,7 +20,7 @@ export function AdminPager({
   return (
     <div className="flex flex-col gap-2 border-t pt-3 sm:flex-row sm:items-center sm:justify-between">
       <div className="text-sm text-muted-foreground">
-        {total} registros - Pagina {page} de {totalPages}
+        {total} registros - Página {page} de {Math.max(totalPages, 1)}
       </div>
       <div className="flex gap-2">
         <Button
@@ -34,7 +34,7 @@ export function AdminPager({
         <Button
           variant="outline"
           size="sm"
-          disabled={disabled || page >= totalPages}
+          disabled={disabled || page >= Math.max(totalPages, 1)}
           onClick={onNext}
         >
           Siguiente
