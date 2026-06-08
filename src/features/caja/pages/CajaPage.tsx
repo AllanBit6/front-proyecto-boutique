@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react"
+import { useMemo, useRef, useState } from "react"
 import {
   ArrowDownCircle,
   ArrowUpCircle,
@@ -86,11 +86,13 @@ export function CajaPage() {
   const detailPanelRef = useRef<HTMLDivElement>(null)
   const activeCashQuery = useActiveCashRegister()
   const cashQuery = useCashRegisters({ page, limit: PAGE_SIZE })
-  const selectedCashQuery = useCashRegisterDetail(selectedCashId)
   const openCash = useOpenCashRegister()
   const closeCash = useCloseCashRegister()
   const activeCash = activeCashQuery.data
-  const currentPageCash = cashQuery.data?.data ?? []
+  const currentPageCash = useMemo(
+    () => cashQuery.data?.data ?? [],
+    [cashQuery.data?.data]
+  )
   const ownActiveCash = useMemo(() => {
     const ownFromPage = currentPageCash.find(
       (item) => item.activo && item.usuarioId === user?.id
@@ -105,7 +107,10 @@ export function CajaPage() {
     }
 
     return null
-  }, [activeCash, currentPageCash, role, user?.id])
+  }, [activeCash, currentPageCash, user?.id])
+  const effectiveSelectedCashId =
+    selectedCashId ?? ownActiveCash?.id ?? currentPageCash[0]?.id
+  const selectedCashQuery = useCashRegisterDetail(effectiveSelectedCashId)
   const filteredCashRegisters = useMemo(
     () =>
       currentPageCash.filter(
@@ -139,14 +144,6 @@ export function CajaPage() {
   const canCloseSelected =
     selectedCash?.activo &&
     (role === "admin" || selectedCash.usuarioId === user?.id)
-
-  useEffect(() => {
-    if (selectedCashId || currentPageCash.length === 0) {
-      return
-    }
-
-    setSelectedCashId(ownActiveCash?.id ?? currentPageCash[0]?.id)
-  }, [currentPageCash, ownActiveCash?.id, selectedCashId])
 
   async function handleOpen(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -231,7 +228,7 @@ export function CajaPage() {
   function viewCashDetail(id: string) {
     setSelectedCashId(id)
 
-    if (selectedCashId === id) {
+    if (effectiveSelectedCashId === id) {
       void selectedCashQuery.refetch()
     }
 
@@ -359,7 +356,9 @@ export function CajaPage() {
                         <TableRow
                           key={item.id}
                           data-state={
-                            selectedCashId === item.id ? "selected" : undefined
+                            effectiveSelectedCashId === item.id
+                              ? "selected"
+                              : undefined
                           }
                         >
                           <TableCell>
