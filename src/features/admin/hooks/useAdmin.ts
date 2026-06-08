@@ -7,6 +7,7 @@ import {
   createInventoryAdjustment,
   createPurchase,
   fetchActiveCashRegister,
+  fetchCashRegisterDetail,
   fetchCashRegisters,
   fetchDashboard,
   fetchInventoryMovements,
@@ -22,6 +23,7 @@ export const adminKeys = {
   dashboard: ["admin-dashboard"],
   cash: ["admin-cash"],
   activeCash: ["admin-active-cash"],
+  cashDetail: ["admin-cash-detail"],
   purchases: ["admin-purchases"],
   sales: ["admin-sales"],
   saleDetail: ["admin-sale-detail"],
@@ -47,6 +49,14 @@ export function useActiveCashRegister() {
   })
 }
 
+export function useCashRegisterDetail(id?: string) {
+  return useQuery({
+    queryKey: [...adminKeys.cashDetail, id],
+    queryFn: () => fetchCashRegisterDetail(id ?? ""),
+    enabled: Boolean(id),
+  })
+}
+
 export function useOpenCashRegister() {
   const queryClient = useQueryClient()
 
@@ -55,6 +65,7 @@ export function useOpenCashRegister() {
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: adminKeys.cash })
       void queryClient.invalidateQueries({ queryKey: adminKeys.activeCash })
+      void queryClient.invalidateQueries({ queryKey: adminKeys.cashDetail })
     },
   })
 }
@@ -67,6 +78,7 @@ export function useCloseCashRegister() {
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: adminKeys.cash })
       void queryClient.invalidateQueries({ queryKey: adminKeys.activeCash })
+      void queryClient.invalidateQueries({ queryKey: adminKeys.cashDetail })
     },
   })
 }
@@ -133,6 +145,9 @@ export function useCancelSale() {
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: adminKeys.sales })
       void queryClient.invalidateQueries({ queryKey: adminKeys.payments })
+      void queryClient.invalidateQueries({ queryKey: adminKeys.cash })
+      void queryClient.invalidateQueries({ queryKey: adminKeys.activeCash })
+      void queryClient.invalidateQueries({ queryKey: adminKeys.cashDetail })
       void queryClient.invalidateQueries({ queryKey: adminKeys.dashboard })
       void queryClient.invalidateQueries({ queryKey: variantsQueryKey })
       void queryClient.invalidateQueries({ queryKey: adminKeys.movements })

@@ -9,6 +9,10 @@ import {
 import { Fragment, useEffect, useMemo, useRef, useState } from "react"
 import { toast } from "sonner"
 
+import {
+  useActiveCashRegister,
+  useCashRegisters,
+} from "@/features/admin/hooks/useAdmin"
 import { formatCurrency } from "@/features/admin/utils/formatters"
 import { useAllVariants } from "@/features/inventario/hooks/useProducts"
 import type { Variant } from "@/features/inventario/types/product"
@@ -22,6 +26,7 @@ import {
   normalizeCodeInput,
   normalizeTextInput,
 } from "@/shared/utils/security"
+import { useAuthStore } from "@/store"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -146,6 +151,8 @@ function playSaleSuccess() {
 }
 
 export function CajeroPage() {
+  const user = useAuthStore((state) => state.user)
+  const role = useAuthStore((state) => state.role)
   const [barcode, setBarcode] = useState("")
   const [productSearch, setProductSearch] = useState("")
   const [sizeFilter, setSizeFilter] = useState("all")
@@ -158,8 +165,34 @@ export function CajeroPage() {
   const barcodeInputRef = useRef<HTMLInputElement>(null)
   const [shouldFocusBarcode, setShouldFocusBarcode] = useState(true)
   const variantsQuery = useAllVariants()
+  const activeCashQuery = useActiveCashRegister()
+  const cashRegistersQuery = useCashRegisters({ page: 1, limit: 100 })
   const findByBarcode = useFindVariantByBarcode()
   const createSale = useCreateSale()
+  const ownActiveCash = useMemo(() => {
+    const fromList = cashRegistersQuery.data?.data.find(
+      (item) => item.activo && item.usuarioId === user?.id
+    )
+
+    if (fromList) {
+      return fromList
+    }
+
+    const activeCash = activeCashQuery.data
+
+    if (
+      activeCash?.activo &&
+      (activeCash.usuarioId === user?.id ||
+        (!activeCash.usuarioId && role === "cashier"))
+    ) {
+      return activeCash
+    }
+
+    return null
+  }, [activeCashQuery.data, cashRegistersQuery.data?.data, role, user?.id])
+  const isCheckingCash =
+    activeCashQuery.isLoading || cashRegistersQuery.isLoading
+  const canSell = Boolean(ownActiveCash)
   const sellableVariants = useMemo(
     () =>
       (variantsQuery.data ?? []).filter(
@@ -343,6 +376,18 @@ export function CajeroPage() {
   async function submitCheckout(form?: HTMLFormElement | null) {
     setError("")
 
+    if (isCheckingCash) {
+      setError("Espera mientras se valida la caja activa.")
+      toast.error("Espera mientras se valida la caja activa.")
+      return
+    }
+
+    if (!canSell) {
+      setError("Debes abrir caja antes de registrar una venta.")
+      toast.error("Debes abrir caja antes de registrar una venta.")
+      return
+    }
+
     if (cart.length === 0) {
       setError("Agrega al menos una prenda al carrito.")
       toast.error("Agrega al menos una prenda al carrito.")
@@ -434,6 +479,12 @@ export function CajeroPage() {
       {error ? (
         <div className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
           {error}
+        </div>
+      ) : null}
+
+      {!isCheckingCash && !canSell ? (
+        <div className="rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-200">
+          Caja cerrada. Abre caja antes de finalizar ventas.
         </div>
       ) : null}
 
@@ -872,9 +923,18 @@ export function CajeroPage() {
               <Button
                 type="submit"
                 className="h-10 w-full"
-                disabled={cart.length === 0 || createSale.isPending}
+                disabled={
+                  cart.length === 0 ||
+                  createSale.isPending ||
+                  isCheckingCash ||
+                  !canSell
+                }
               >
-                {createSale.isPending ? "Registrando..." : "Finalizar venta"}
+                {createSale.isPending
+                  ? "Registrando..."
+                  : isCheckingCash
+                    ? "Validando caja..."
+                    : "Finalizar venta"}
               </Button>
             </form>
           </CardContent>
