@@ -426,14 +426,14 @@ export async function fetchCashRegisterDetail(
 export async function openCashRegister(input: {
   saldo_inicial: number
   observaciones?: string
-}): Promise<CashRegister> {
+}): Promise<CashRegisterDetail> {
   const response = await request<unknown>("/caja/apertura", {
     method: "POST",
     body: JSON.stringify(input),
   })
   const item = readRecord<Record<string, unknown>>(response, ["data", "caja"])
 
-  return normalizeCashRegister(item)
+  return normalizeCashRegisterDetail(item)
 }
 
 export async function closeCashRegister(input: {

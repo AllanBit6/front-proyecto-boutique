@@ -8,7 +8,7 @@ export const dashboardRoutes: FeatureRoute[] = [
     path: "dashboard",
     title: "Resumen",
     element: <DashboardPage />,
-    allowedRoles: ["admin", "cashier"],
+    allowedRoles: ["admin"],
     icon: LayoutDashboard,
     showInSidebar: true,
   },

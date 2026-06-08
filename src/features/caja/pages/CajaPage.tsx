@@ -100,10 +100,7 @@ export function CajaPage() {
       return ownFromPage
     }
 
-    if (
-      activeCash?.activo &&
-      (activeCash.usuarioId === user?.id || role === "cashier")
-    ) {
+    if (activeCash?.activo && activeCash.usuarioId === user?.id) {
       return activeCash
     }
 
@@ -175,7 +172,7 @@ export function CajaPage() {
       setIsOpenDialogOpen(false)
 
       if (opened.id) {
-        setSelectedCashId(opened.id)
+        viewCashDetail(opened.id)
       }
     } catch {
       // toast.promise displays the error.
@@ -461,8 +458,16 @@ export function CajaPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            {selectedCashQuery.isLoading ? (
+            {selectedCashQuery.isLoading && !selectedCash ? (
               <FormSkeleton fields={5} />
+            ) : selectedCash ? (
+              <CashDetailPanel
+                cash={selectedCash}
+                totals={selectedTotals}
+                canClose={Boolean(canCloseSelected)}
+                onClose={() => requestClose(selectedCash)}
+                isRefreshing={selectedCashQuery.isFetching}
+              />
             ) : selectedCashQuery.isError ? (
               <div className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
                 {getErrorMessage(
@@ -470,13 +475,6 @@ export function CajaPage() {
                   "No se pudo cargar el detalle de caja."
                 )}
               </div>
-            ) : selectedCash ? (
-              <CashDetailPanel
-                cash={selectedCash}
-                totals={selectedTotals}
-                canClose={Boolean(canCloseSelected)}
-                onClose={() => requestClose(selectedCash)}
-              />
             ) : (
               <div className="rounded-md border border-dashed py-10 text-center text-sm text-muted-foreground">
                 No hay una caja seleccionada.
@@ -631,11 +629,13 @@ function CashDetailPanel({
   totals,
   canClose,
   onClose,
+  isRefreshing,
 }: {
   cash: CashRegisterDetail
   totals: CashTotals
   canClose: boolean
   onClose: () => void
+  isRefreshing?: boolean
 }) {
   const finalBalance = cash.saldoFinal ?? totals.expected
   const difference =
@@ -652,6 +652,9 @@ function CashDetailPanel({
             <LockKeyhole />
             Cerrar
           </Button>
+        ) : null}
+        {isRefreshing ? (
+          <span className="text-xs text-muted-foreground">Actualizando...</span>
         ) : null}
       </div>
 

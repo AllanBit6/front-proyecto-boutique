@@ -152,7 +152,6 @@ function playSaleSuccess() {
 
 export function CajeroPage() {
   const user = useAuthStore((state) => state.user)
-  const role = useAuthStore((state) => state.role)
   const [barcode, setBarcode] = useState("")
   const [productSearch, setProductSearch] = useState("")
   const [sizeFilter, setSizeFilter] = useState("all")
@@ -180,16 +179,12 @@ export function CajeroPage() {
 
     const activeCash = activeCashQuery.data
 
-    if (
-      activeCash?.activo &&
-      (activeCash.usuarioId === user?.id ||
-        (!activeCash.usuarioId && role === "cashier"))
-    ) {
+    if (activeCash?.activo && activeCash.usuarioId === user?.id) {
       return activeCash
     }
 
     return null
-  }, [activeCashQuery.data, cashRegistersQuery.data?.data, role, user?.id])
+  }, [activeCashQuery.data, cashRegistersQuery.data?.data, user?.id])
   const isCheckingCash =
     activeCashQuery.isLoading || cashRegistersQuery.isLoading
   const canSell = Boolean(ownActiveCash)

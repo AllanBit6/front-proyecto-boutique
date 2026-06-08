@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import {
   cancelPurchase,
   cancelSale,
+  type CashRegister,
   closeCashRegister,
   createInventoryAdjustment,
   createPurchase,
@@ -16,6 +17,7 @@ import {
   fetchSaleDetail,
   fetchSales,
   openCashRegister,
+  type PaginatedData,
 } from "@/features/admin/services/adminService"
 import { variantsQueryKey } from "@/features/inventario/hooks/useProducts"
 
@@ -39,6 +41,8 @@ export function useCashRegisters(params: { page: number; limit: number }) {
   return useQuery({
     queryKey: [...adminKeys.cash, params],
     queryFn: () => fetchCashRegisters(params),
+    staleTime: 0,
+    refetchOnMount: "always",
   })
 }
 
@@ -46,6 +50,8 @@ export function useActiveCashRegister() {
   return useQuery({
     queryKey: adminKeys.activeCash,
     queryFn: fetchActiveCashRegister,
+    staleTime: 0,
+    refetchOnMount: "always",
   })
 }
 
@@ -54,7 +60,33 @@ export function useCashRegisterDetail(id?: string) {
     queryKey: [...adminKeys.cashDetail, id],
     queryFn: () => fetchCashRegisterDetail(id ?? ""),
     enabled: Boolean(id),
+    staleTime: 0,
+    refetchOnMount: "always",
   })
+}
+
+function upsertCashRegister(
+  current: PaginatedData<CashRegister> | undefined,
+  cash: CashRegister
+) {
+  if (!current) {
+    return current
+  }
+
+  const exists = current.data.some((item) => item.id === cash.id)
+  const data = exists
+    ? current.data.map((item) => (item.id === cash.id ? cash : item))
+    : [cash, ...current.data].slice(0, current.limit)
+
+  return {
+    ...current,
+    data,
+    total: exists ? current.total : current.total + 1,
+    totalPages: Math.max(
+      current.totalPages,
+      Math.ceil((exists ? current.total : current.total + 1) / current.limit)
+    ),
+  }
 }
 
 export function useOpenCashRegister() {
@@ -62,10 +94,15 @@ export function useOpenCashRegister() {
 
   return useMutation({
     mutationFn: openCashRegister,
-    onSuccess: () => {
+    onSuccess: (cash) => {
+      queryClient.setQueryData([...adminKeys.cashDetail, cash.id], cash)
+      queryClient.setQueryData(adminKeys.activeCash, cash)
+      queryClient.setQueriesData<PaginatedData<CashRegister>>(
+        { queryKey: adminKeys.cash },
+        (current) => upsertCashRegister(current, cash)
+      )
       void queryClient.invalidateQueries({ queryKey: adminKeys.cash })
       void queryClient.invalidateQueries({ queryKey: adminKeys.activeCash })
-      void queryClient.invalidateQueries({ queryKey: adminKeys.cashDetail })
     },
   })
 }
@@ -75,7 +112,12 @@ export function useCloseCashRegister() {
 
   return useMutation({
     mutationFn: closeCashRegister,
-    onSuccess: () => {
+    onSuccess: (cash) => {
+      queryClient.setQueryData([...adminKeys.cashDetail, cash.id], cash)
+      queryClient.setQueriesData<PaginatedData<CashRegister>>(
+        { queryKey: adminKeys.cash },
+        (current) => upsertCashRegister(current, cash)
+      )
       void queryClient.invalidateQueries({ queryKey: adminKeys.cash })
       void queryClient.invalidateQueries({ queryKey: adminKeys.activeCash })
       void queryClient.invalidateQueries({ queryKey: adminKeys.cashDetail })
