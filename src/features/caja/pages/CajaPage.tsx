@@ -20,6 +20,7 @@ import {
   useCashRegisters,
   useCloseCashRegister,
   useOpenCashRegister,
+  useSaleDetail,
 } from "@/features/admin/hooks/useAdmin"
 import type {
   CashMovement,
@@ -47,6 +48,7 @@ import {
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 import {
+  DetailSkeleton,
   FormSkeleton,
   LoadTransition,
   TableSkeleton,
@@ -80,6 +82,7 @@ export function CajaPage() {
   const [cashDateTo, setCashDateTo] = useState("")
   const [cashStatus, setCashStatus] = useState("all")
   const [selectedCashId, setSelectedCashId] = useState<string>()
+  const [selectedSaleId, setSelectedSaleId] = useState<string>()
   const [isOpenDialogOpen, setIsOpenDialogOpen] = useState(false)
   const [closingCashId, setClosingCashId] = useState<string>()
   const [closingAmount, setClosingAmount] = useState("")
@@ -111,6 +114,7 @@ export function CajaPage() {
   const effectiveSelectedCashId =
     selectedCashId ?? ownActiveCash?.id ?? currentPageCash[0]?.id
   const selectedCashQuery = useCashRegisterDetail(effectiveSelectedCashId)
+  const saleDetailQuery = useSaleDetail(selectedSaleId)
   const filteredCashRegisters = useMemo(
     () =>
       currentPageCash.filter(
@@ -465,6 +469,7 @@ export function CajaPage() {
                 totals={selectedTotals}
                 canClose={Boolean(canCloseSelected)}
                 onClose={() => requestClose(selectedCash)}
+                onViewSale={setSelectedSaleId}
                 isRefreshing={selectedCashQuery.isFetching}
               />
             ) : selectedCashQuery.isError ? (
@@ -619,6 +624,38 @@ export function CajaPage() {
           </form>
         </DialogContent>
       </Dialog>
+
+      <Dialog
+        open={Boolean(selectedSaleId)}
+        onOpenChange={(open) => {
+          if (!open) {
+            setSelectedSaleId(undefined)
+          }
+        }}
+      >
+        <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>Detalle de venta</DialogTitle>
+            <DialogDescription>
+              Informacion completa de la venta asociada a caja.
+            </DialogDescription>
+          </DialogHeader>
+          {saleDetailQuery.isLoading ? (
+            <DetailSkeleton items={4} />
+          ) : saleDetailQuery.data ? (
+            <LoadTransition>
+              <SaleDetailContent sale={saleDetailQuery.data} />
+            </LoadTransition>
+          ) : saleDetailQuery.isError ? (
+            <div className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+              {getErrorMessage(
+                saleDetailQuery.error,
+                "No se pudo cargar el detalle de venta."
+              )}
+            </div>
+          ) : null}
+        </DialogContent>
+      </Dialog>
     </section>
   )
 }
@@ -628,12 +665,14 @@ function CashDetailPanel({
   totals,
   canClose,
   onClose,
+  onViewSale,
   isRefreshing,
 }: {
   cash: CashRegisterDetail
   totals: CashTotals
   canClose: boolean
   onClose: () => void
+  onViewSale: (id: string) => void
   isRefreshing?: boolean
 }) {
   const finalBalance = cash.saldoFinal ?? totals.expected
@@ -690,7 +729,7 @@ function CashDetailPanel({
           <CashMovementsTable movements={cash.movimientos} />
         </TabsContent>
         <TabsContent value="ventas">
-          <CashSalesTable sales={cash.ventas} />
+          <CashSalesTable sales={cash.ventas} onViewSale={onViewSale} />
         </TabsContent>
       </Tabs>
     </div>
@@ -752,7 +791,13 @@ function CashMovementsTable({ movements }: { movements: CashMovement[] }) {
   )
 }
 
-function CashSalesTable({ sales }: { sales: CashRegisterDetail["ventas"] }) {
+function CashSalesTable({
+  sales,
+  onViewSale,
+}: {
+  sales: CashRegisterDetail["ventas"]
+  onViewSale: (id: string) => void
+}) {
   if (sales.length === 0) {
     return (
       <div className="rounded-md border border-dashed py-8 text-center text-sm text-muted-foreground">
@@ -763,12 +808,13 @@ function CashSalesTable({ sales }: { sales: CashRegisterDetail["ventas"] }) {
 
   return (
     <div className="max-h-[300px] overflow-auto rounded-md border">
-      <Table className="min-w-[420px]">
+      <Table className="min-w-[500px]">
         <TableHeader>
           <TableRow>
             <TableHead>Venta</TableHead>
             <TableHead>Fecha</TableHead>
             <TableHead className="text-right">Total</TableHead>
+            <TableHead className="w-24 text-right">Acciones</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -781,10 +827,133 @@ function CashSalesTable({ sales }: { sales: CashRegisterDetail["ventas"] }) {
               <TableCell className="text-right">
                 {formatCurrency(sale.total)}
               </TableCell>
+              <TableCell className="text-right">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => onViewSale(sale.id)}
+                >
+                  Detalle
+                </Button>
+              </TableCell>
             </TableRow>
           ))}
         </TableBody>
       </Table>
+    </div>
+  )
+}
+
+function SaleDetailContent({
+  sale,
+}: {
+  sale: NonNullable<ReturnType<typeof useSaleDetail>["data"]>
+}) {
+  return (
+    <div className="space-y-4">
+      <div className="grid gap-3 rounded-md border p-3 text-sm sm:grid-cols-2 lg:grid-cols-4">
+        <InfoBlock label="Fecha" value={formatDate(sale.fecha)} />
+        <InfoBlock label="Cliente" value={sale.cliente || "Consumidor final"} />
+        <InfoBlock label="NIT" value={sale.nit || "CF"} />
+        <InfoBlock label="Vendedor" value={sale.usuario || "-"} />
+      </div>
+
+      <div className="space-y-2">
+        <h3 className="text-sm font-medium">Productos</h3>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Prenda</TableHead>
+              <TableHead>Cantidad</TableHead>
+              <TableHead>Precio</TableHead>
+              <TableHead className="text-right">Subtotal</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {sale.detalles.length > 0 ? (
+              sale.detalles.map((item) => (
+                <TableRow key={item.id}>
+                  <TableCell>
+                    <div className="font-medium">{item.prenda || "-"}</div>
+                    <div className="text-xs text-muted-foreground">
+                      {item.sku || item.codigoBarras || "Sin codigo"}
+                    </div>
+                  </TableCell>
+                  <TableCell>{item.cantidad}</TableCell>
+                  <TableCell>{formatCurrency(item.precioUnitario)}</TableCell>
+                  <TableCell className="text-right">
+                    {formatCurrency(item.subtotal)}
+                  </TableCell>
+                </TableRow>
+              ))
+            ) : (
+              <TableRow>
+                <TableCell
+                  colSpan={4}
+                  className="text-center text-muted-foreground"
+                >
+                  Sin productos en el detalle.
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </div>
+
+      <div className="space-y-2">
+        <h3 className="text-sm font-medium">Cobros</h3>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Metodo</TableHead>
+              <TableHead>Referencia</TableHead>
+              <TableHead>Recibido</TableHead>
+              <TableHead className="text-right">Monto</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {sale.pagos.length > 0 ? (
+              sale.pagos.map((item) => (
+                <TableRow key={item.id}>
+                  <TableCell>{item.metodo}</TableCell>
+                  <TableCell>{item.numeroReferencia || "-"}</TableCell>
+                  <TableCell>
+                    {item.montoRecibido === undefined
+                      ? "-"
+                      : formatCurrency(item.montoRecibido)}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    {formatCurrency(item.monto)}
+                  </TableCell>
+                </TableRow>
+              ))
+            ) : (
+              <TableRow>
+                <TableCell
+                  colSpan={4}
+                  className="text-center text-muted-foreground"
+                >
+                  Sin cobros en el detalle.
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </div>
+
+      <div className="flex justify-end rounded-md bg-muted px-3 py-2 text-sm font-medium">
+        Total: {formatCurrency(sale.total)}
+      </div>
+    </div>
+  )
+}
+
+function InfoBlock({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <div className="text-xs text-muted-foreground">{label}</div>
+      <div className="font-medium">{value}</div>
     </div>
   )
 }

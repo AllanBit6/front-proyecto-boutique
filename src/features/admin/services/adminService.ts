@@ -187,7 +187,7 @@ function readRecord<T>(response: unknown, keys: string[] = ["data"]) {
     const value = record[key]
 
     if (value && typeof value === "object" && !Array.isArray(value)) {
-      return value as T
+      return readRecord<T>(value, keys)
     }
   }
 
@@ -639,4 +639,11 @@ export async function fetchPayments(params: {
     readArray<Record<string, unknown>>(response).map(normalizePayment)
 
   return toPaginated(response, payments, params)
+}
+
+export async function fetchPaymentDetail(id: string): Promise<Payment> {
+  const response = await request<unknown>(`/pagos/${id}`)
+  const item = readRecord<Record<string, unknown>>(response, ["data", "pago"])
+
+  return normalizePayment(item)
 }

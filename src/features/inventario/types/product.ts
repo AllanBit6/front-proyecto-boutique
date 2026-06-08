@@ -16,6 +16,8 @@ export interface Variant {
   id: string
   producto_id: string
   producto_nombre: string
+  marca_id: string
+  marca_nombre: string
   talla_id: string
   talla_nombre: string
   color_id: string

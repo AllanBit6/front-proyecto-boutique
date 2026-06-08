@@ -12,6 +12,7 @@ import {
   fetchCashRegisters,
   fetchDashboard,
   fetchInventoryMovements,
+  fetchPaymentDetail,
   fetchPayments,
   fetchPurchases,
   fetchSaleDetail,
@@ -31,6 +32,7 @@ export const adminKeys = {
   saleDetail: ["admin-sale-detail"],
   movements: ["admin-movements"],
   payments: ["admin-payments"],
+  paymentDetail: ["admin-payment-detail"],
 }
 
 export function useDashboard() {
@@ -227,5 +229,13 @@ export function usePayments(params: { page: number; limit: number }) {
   return useQuery({
     queryKey: [...adminKeys.payments, params],
     queryFn: () => fetchPayments(params),
+  })
+}
+
+export function usePaymentDetail(id?: string) {
+  return useQuery({
+    queryKey: [...adminKeys.paymentDetail, id],
+    queryFn: () => fetchPaymentDetail(id ?? ""),
+    enabled: Boolean(id),
   })
 }
