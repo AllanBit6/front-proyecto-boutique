@@ -7,6 +7,7 @@ import {
   createColor,
   createVariant,
   createSize,
+  deleteBrand,
   deleteProduct,
   deleteColor,
   deleteSize,
@@ -70,6 +71,19 @@ export function useCreateBrand() {
     mutationFn: (input: CreateBrandInput) => createBrand(input),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: brandsQueryKey })
+    },
+  })
+}
+
+export function useDeleteBrand() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (id: string) => deleteBrand(id),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: brandsQueryKey })
+      void queryClient.invalidateQueries({ queryKey: productsQueryKey })
+      void queryClient.invalidateQueries({ queryKey: variantsQueryKey })
     },
   })
 }

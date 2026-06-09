@@ -15,8 +15,10 @@ import {
 import { Input } from "@/components/ui/input"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
+  useCreateBrand,
   useCreateColor,
   useCreateSize,
+  useDeleteBrand,
   useDeleteColor,
   useDeleteSize,
 } from "@/features/inventario/hooks/useProducts"
@@ -24,17 +26,29 @@ import type { CatalogOption } from "@/features/inventario/types/product"
 import { normalizeTextInput } from "@/shared/utils/security"
 
 interface CatalogManagerProps {
+  brands: CatalogOption[]
   sizes: CatalogOption[]
   colors: CatalogOption[]
 }
 
-export function CatalogManager({ sizes, colors }: CatalogManagerProps) {
+export function CatalogManager({ brands, sizes, colors }: CatalogManagerProps) {
   return (
-    <Tabs defaultValue="sizes">
+    <Tabs defaultValue="brands">
       <TabsList>
+        <TabsTrigger value="brands">Marcas</TabsTrigger>
         <TabsTrigger value="sizes">Tallas</TabsTrigger>
         <TabsTrigger value="colors">Colores</TabsTrigger>
       </TabsList>
+      <TabsContent value="brands" className="mt-3">
+        <CatalogList
+          items={brands}
+          itemLabel="marca"
+          placeholder="Nueva marca"
+          emptyText="No hay marcas activas."
+          useCreate={useCreateBrand}
+          useDelete={useDeleteBrand}
+        />
+      </TabsContent>
       <TabsContent value="sizes" className="mt-3">
         <CatalogList
           items={sizes}

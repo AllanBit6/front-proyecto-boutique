@@ -414,6 +414,10 @@ export async function createBrand(
   return normalizeCatalog(response, "id_marca")
 }
 
+export async function deleteBrand(id: string): Promise<void> {
+  await request<void>(`/marcas/${id}`, { method: "DELETE" })
+}
+
 export async function fetchSizes(): Promise<CatalogOption[]> {
   const response = await request<unknown>("/tallas")
 

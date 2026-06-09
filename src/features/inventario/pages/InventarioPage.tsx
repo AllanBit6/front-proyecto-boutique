@@ -157,7 +157,7 @@ export function InventarioPage() {
               onClick={() => setIsCatalogManagerOpen(true)}
             >
               <Settings2 />
-              Tallas y colores
+              Catalogos
             </Button>
           ) : null}
         </div>
@@ -314,10 +314,10 @@ export function InventarioPage() {
       >
         <DialogContent className="max-h-[88svh] overflow-y-auto sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle>Tallas y colores</DialogTitle>
+            <DialogTitle>Catalogos</DialogTitle>
             <DialogDescription>Opciones para inventario.</DialogDescription>
           </DialogHeader>
-          <CatalogManager sizes={sizes} colors={colors} />
+          <CatalogManager brands={brands} sizes={sizes} colors={colors} />
         </DialogContent>
       </Dialog>
 
