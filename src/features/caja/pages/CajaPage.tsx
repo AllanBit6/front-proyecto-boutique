@@ -86,6 +86,8 @@ export function CajaPage() {
   const [isOpenDialogOpen, setIsOpenDialogOpen] = useState(false)
   const [closingCashId, setClosingCashId] = useState<string>()
   const [closingAmount, setClosingAmount] = useState("")
+  const [closeConfirmation, setCloseConfirmation] =
+    useState<CloseConfirmation | null>(null)
   const detailPanelRef = useRef<HTMLDivElement>(null)
   const activeCashQuery = useActiveCashRegister()
   const cashQuery = useCashRegisters({ page, limit: PAGE_SIZE })
@@ -188,24 +190,32 @@ export function CajaPage() {
       return
     }
 
-    if (Math.abs(closingDifference) > 0.009) {
-      const confirmed = window.confirm(
-        `La diferencia es ${formatCurrency(closingDifference)}. Deseas cerrar la caja?`
-      )
-
-      if (!confirmed) {
-        return
-      }
-    }
-
     const form = new FormData(event.currentTarget)
-    const promise = closeCash.mutateAsync({
+    const input = {
       id: closingCashId,
       saldo_final: moneyValue(form.get("saldo_final")),
       observaciones: normalizeTextInput(form.get("observaciones"), {
         maxLength: 240,
       }),
-    })
+    }
+
+    if (Math.abs(closingDifference) > 0.009) {
+      setCloseConfirmation({
+        ...input,
+        expected: closingTotals.expected,
+        difference: closingDifference,
+      })
+      return
+    }
+
+    await submitCloseCash(input, event.currentTarget)
+  }
+
+  async function submitCloseCash(
+    input: CloseCashInput,
+    form?: HTMLFormElement
+  ) {
+    const promise = closeCash.mutateAsync(input)
 
     toast.promise(promise, {
       loading: "Cerrando caja...",
@@ -215,9 +225,10 @@ export function CajaPage() {
 
     try {
       await promise
-      event.currentTarget.reset()
+      form?.reset()
       setClosingAmount("")
       setClosingCashId(undefined)
+      setCloseConfirmation(null)
     } catch {
       // toast.promise displays the error.
     }
@@ -546,6 +557,7 @@ export function CajaPage() {
           if (!open) {
             setClosingCashId(undefined)
             setClosingAmount("")
+            setCloseConfirmation(null)
           }
         }}
       >
@@ -622,6 +634,67 @@ export function CajaPage() {
               </Button>
             </DialogFooter>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={Boolean(closeConfirmation)}
+        onOpenChange={(open) => {
+          if (!open) {
+            setCloseConfirmation(null)
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Confirmar diferencia de caja</DialogTitle>
+            <DialogDescription>
+              Revisa el arqueo antes de cerrar la caja.
+            </DialogDescription>
+          </DialogHeader>
+          {closeConfirmation ? (
+            <div className="grid gap-2 rounded-md border p-3 text-sm">
+              <MoneyLine
+                label="Efectivo esperado"
+                value={closeConfirmation.expected}
+              />
+              <MoneyLine
+                label="Saldo contado"
+                value={closeConfirmation.saldo_final}
+              />
+              <MoneyLine
+                label="Diferencia"
+                value={closeConfirmation.difference}
+                strong
+              />
+            </div>
+          ) : null}
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={closeCash.isPending}
+              onClick={() => setCloseConfirmation(null)}
+            >
+              Revisar
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              disabled={closeCash.isPending || !closeConfirmation}
+              onClick={() => {
+                if (closeConfirmation) {
+                  void submitCloseCash({
+                    id: closeConfirmation.id,
+                    saldo_final: closeConfirmation.saldo_final,
+                    observaciones: closeConfirmation.observaciones,
+                  })
+                }
+              }}
+            >
+              {closeCash.isPending ? "Cerrando..." : "Cerrar caja"}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
@@ -963,6 +1036,17 @@ interface CashTotals {
   income: number
   expenses: number
   expected: number
+}
+
+interface CloseCashInput {
+  id: string
+  saldo_final: number
+  observaciones?: string
+}
+
+interface CloseConfirmation extends CloseCashInput {
+  expected: number
+  difference: number
 }
 
 function calculateCashTotals(
