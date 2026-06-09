@@ -6,8 +6,11 @@ const API_URL = import.meta.env.VITE_API_URL ?? ""
 interface ApiCatalog {
   id?: string
   id_producto?: string
+  id_marca?: string
   id_talla?: string
   id_color?: string
+  marca_id?: string
+  marca?: ApiCatalog
   nombre?: string
   activo?: boolean | string | number
   estado?: string
@@ -117,6 +120,12 @@ function normalizeVariant(variant: ApiVariant): Variant {
       variant.producto?.id ??
       "",
     producto_nombre: variant.producto?.nombre ?? "",
+    marca_id:
+      variant.producto?.marca_id ??
+      variant.producto?.marca?.id_marca ??
+      variant.producto?.marca?.id ??
+      "",
+    marca_nombre: variant.producto?.marca?.nombre ?? "",
     talla_id:
       variant.talla_id ?? variant.talla?.id_talla ?? variant.talla?.id ?? "",
     talla_nombre: variant.talla?.nombre ?? "",

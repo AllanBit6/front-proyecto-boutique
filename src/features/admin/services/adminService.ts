@@ -25,6 +25,7 @@ export interface DashboardMetrics {
 
 export interface CashRegister {
   id: string
+  usuarioId: string
   usuario: string
   saldoInicial: number
   saldoFinal?: number
@@ -32,6 +33,29 @@ export interface CashRegister {
   fechaCierre?: string
   activo: boolean
   observaciones?: string
+  ventasCount: number
+  movimientosCount: number
+}
+
+export interface CashMovement {
+  id: string
+  cajaId?: string
+  tipo: "INGRESO" | "EGRESO" | string
+  monto: number
+  motivo: string
+  ventaId?: string
+  fecha: string
+}
+
+export interface CashSaleSummary {
+  id: string
+  fecha: string
+  total: number
+}
+
+export interface CashRegisterDetail extends CashRegister {
+  ventas: CashSaleSummary[]
+  movimientos: CashMovement[]
 }
 
 export interface Purchase {
@@ -152,6 +176,24 @@ function readArray<T>(
   return []
 }
 
+function readRecord<T>(response: unknown, keys: string[] = ["data"]) {
+  if (!response || typeof response !== "object") {
+    return {} as T
+  }
+
+  const record = response as Record<string, unknown>
+
+  for (const key of keys) {
+    const value = record[key]
+
+    if (value && typeof value === "object" && !Array.isArray(value)) {
+      return readRecord<T>(value, keys)
+    }
+  }
+
+  return record as T
+}
+
 function toPaginated<T>(
   response: unknown,
   data: T[],
@@ -182,6 +224,16 @@ function fullName(value: unknown) {
   const user = value as Record<string, unknown>
 
   return [user.nombre, user.apellido].filter(Boolean).join(" ")
+}
+
+function userId(value: unknown) {
+  if (!value || typeof value !== "object") {
+    return ""
+  }
+
+  const user = value as Record<string, unknown>
+
+  return String(user.id_usuario ?? user.id ?? "")
 }
 
 function numberValue(value: unknown) {
@@ -270,6 +322,67 @@ function normalizePayment(item: Record<string, unknown>): Payment {
   }
 }
 
+function normalizeCashRegister(item: Record<string, unknown>): CashRegister {
+  const count = item._count as Record<string, unknown> | undefined
+
+  return {
+    id: String(item.id_caja ?? item.id ?? ""),
+    usuarioId: String(item.usuario_id ?? userId(item.usuario)),
+    usuario: fullName(item.usuario),
+    saldoInicial: numberValue(item.saldo_inicial),
+    saldoFinal:
+      item.saldo_final === null || item.saldo_final === undefined
+        ? undefined
+        : numberValue(item.saldo_final),
+    fechaApertura: String(item.fecha_apertura ?? ""),
+    fechaCierre: item.fecha_cierre ? String(item.fecha_cierre) : undefined,
+    activo: Boolean(item.activo),
+    observaciones: String(item.observaciones ?? ""),
+    ventasCount: numberValue(count?.ventas),
+    movimientosCount: numberValue(count?.movimientos),
+  }
+}
+
+function normalizeCashMovement(item: Record<string, unknown>): CashMovement {
+  return {
+    id: String(item.id_movimiento_caja ?? item.id ?? ""),
+    cajaId: String(item.caja_id ?? ""),
+    tipo: String(item.tipo ?? ""),
+    monto: numberValue(item.monto),
+    motivo: String(item.motivo ?? ""),
+    ventaId: item.venta_id ? String(item.venta_id) : undefined,
+    fecha: String(item.fecha_movimiento ?? item.fecha ?? ""),
+  }
+}
+
+function normalizeCashSale(item: Record<string, unknown>): CashSaleSummary {
+  return {
+    id: String(item.id_venta ?? item.id ?? ""),
+    fecha: String(item.fecha_venta ?? item.fecha ?? ""),
+    total: numberValue(item.total),
+  }
+}
+
+function normalizeCashRegisterDetail(
+  item: Record<string, unknown>
+): CashRegisterDetail {
+  const base = normalizeCashRegister(item)
+  const ventas = readArray<Record<string, unknown>>(item, ["ventas"]).map(
+    normalizeCashSale
+  )
+  const movimientos = readArray<Record<string, unknown>>(item, [
+    "movimientos",
+  ]).map(normalizeCashMovement)
+
+  return {
+    ...base,
+    ventas,
+    movimientos,
+    ventasCount: base.ventasCount || ventas.length,
+    movimientosCount: base.movimientosCount || movimientos.length,
+  }
+}
+
 export async function fetchDashboard(): Promise<DashboardMetrics> {
   return request<DashboardMetrics>("/dashboard")
 }
@@ -284,19 +397,7 @@ export async function fetchCashRegisters(params: {
   })
   const response = await request<unknown>(`/caja?${search}`)
   const registers = readArray<Record<string, unknown>>(response).map(
-    (item) => ({
-      id: String(item.id_caja ?? item.id ?? ""),
-      usuario: fullName(item.usuario),
-      saldoInicial: numberValue(item.saldo_inicial),
-      saldoFinal:
-        item.saldo_final === null || item.saldo_final === undefined
-          ? undefined
-          : numberValue(item.saldo_final),
-      fechaApertura: String(item.fecha_apertura ?? ""),
-      fechaCierre: item.fecha_cierre ? String(item.fecha_cierre) : undefined,
-      activo: Boolean(item.activo),
-      observaciones: String(item.observaciones ?? ""),
-    })
+    normalizeCashRegister
   )
 
   return toPaginated(response, registers, params)
@@ -304,48 +405,52 @@ export async function fetchCashRegisters(params: {
 
 export async function fetchActiveCashRegister(): Promise<CashRegister | null> {
   try {
-    const item = await request<Record<string, unknown>>("/caja/activa")
+    const response = await request<unknown>("/caja/activa")
+    const item = readRecord<Record<string, unknown>>(response, ["data", "caja"])
 
-    return {
-      id: String(item.id_caja ?? item.id ?? ""),
-      usuario: fullName(item.usuario),
-      saldoInicial: numberValue(item.saldo_inicial),
-      saldoFinal:
-        item.saldo_final === null || item.saldo_final === undefined
-          ? undefined
-          : numberValue(item.saldo_final),
-      fechaApertura: String(item.fecha_apertura ?? ""),
-      fechaCierre: item.fecha_cierre ? String(item.fecha_cierre) : undefined,
-      activo: Boolean(item.activo),
-      observaciones: String(item.observaciones ?? ""),
-    }
+    return normalizeCashRegister(item)
   } catch {
     return null
   }
 }
 
+export async function fetchCashRegisterDetail(
+  id: string
+): Promise<CashRegisterDetail> {
+  const response = await request<unknown>(`/caja/${id}`)
+  const item = readRecord<Record<string, unknown>>(response, ["data", "caja"])
+
+  return normalizeCashRegisterDetail(item)
+}
+
 export async function openCashRegister(input: {
   saldo_inicial: number
   observaciones?: string
-}) {
-  return request("/caja/apertura", {
+}): Promise<CashRegisterDetail> {
+  const response = await request<unknown>("/caja/apertura", {
     method: "POST",
     body: JSON.stringify(input),
   })
+  const item = readRecord<Record<string, unknown>>(response, ["data", "caja"])
+
+  return normalizeCashRegisterDetail(item)
 }
 
 export async function closeCashRegister(input: {
   id: string
   saldo_final: number
   observaciones?: string
-}) {
-  return request(`/caja/${input.id}/cierre`, {
+}): Promise<CashRegisterDetail> {
+  const response = await request<unknown>(`/caja/${input.id}/cierre`, {
     method: "PATCH",
     body: JSON.stringify({
       saldo_final: input.saldo_final,
       observaciones: input.observaciones,
     }),
   })
+  const item = readRecord<Record<string, unknown>>(response, ["data", "caja"])
+
+  return normalizeCashRegisterDetail(item)
 }
 
 export async function fetchPurchases(params: {
@@ -421,10 +526,7 @@ export async function fetchSales(params: {
 
 export async function fetchSaleDetail(id: string): Promise<SaleDetail> {
   const response = await request<unknown>(`/ventas/${id}`)
-  const item =
-    response && typeof response === "object" && "data" in response
-      ? ((response as Record<string, unknown>).data as Record<string, unknown>)
-      : (response as Record<string, unknown>)
+  const item = readRecord<Record<string, unknown>>(response)
   const details = readArray<Record<string, unknown>>(item, [
     "detalles_venta",
     "detalles",
@@ -537,4 +639,11 @@ export async function fetchPayments(params: {
     readArray<Record<string, unknown>>(response).map(normalizePayment)
 
   return toPaginated(response, payments, params)
+}
+
+export async function fetchPaymentDetail(id: string): Promise<Payment> {
+  const response = await request<unknown>(`/pagos/${id}`)
+  const item = readRecord<Record<string, unknown>>(response, ["data", "pago"])
+
+  return normalizePayment(item)
 }

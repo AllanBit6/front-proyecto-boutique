@@ -52,7 +52,7 @@ interface ApiVariant {
   producto_id?: string
   talla_id?: string
   color_id?: string
-  producto?: ApiCatalog & { id_producto?: string }
+  producto?: ApiProduct
   talla?: ApiCatalog & { id_talla?: string }
   color?: ApiCatalog & { id_color?: string }
   sku?: string
@@ -201,14 +201,14 @@ function normalizeProduct(product: ApiProduct): Product {
 }
 
 function normalizeVariant(variant: ApiVariant): Variant {
+  const product = normalizeProduct(variant.producto ?? {})
+
   return {
     id: variant.id_variante ?? variant.id ?? "",
-    producto_id:
-      variant.producto_id ??
-      variant.producto?.id_producto ??
-      variant.producto?.id ??
-      "",
-    producto_nombre: variant.producto?.nombre ?? "",
+    producto_id: variant.producto_id ?? product.id,
+    producto_nombre: product.nombre,
+    marca_id: product.marca_id,
+    marca_nombre: product.marca_nombre,
     talla_id:
       variant.talla_id ?? variant.talla?.id_talla ?? variant.talla?.id ?? "",
     talla_nombre: variant.talla?.nombre ?? "",
@@ -221,7 +221,7 @@ function normalizeVariant(variant: ApiVariant): Variant {
     precio_venta: Number(variant.precio_venta ?? 0),
     stock_minimo: variant.stock_minimo ?? 0,
     stock_actual: variant.stock_actual ?? 0,
-    activo: readActive(variant) && readActive(variant.producto ?? {}),
+    activo: readActive(variant) && product.activo,
   }
 }
 
@@ -412,6 +412,10 @@ export async function createBrand(
   })
 
   return normalizeCatalog(response, "id_marca")
+}
+
+export async function deleteBrand(id: string): Promise<void> {
+  await request<void>(`/marcas/${id}`, { method: "DELETE" })
 }
 
 export async function fetchSizes(): Promise<CatalogOption[]> {

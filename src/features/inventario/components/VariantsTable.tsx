@@ -43,11 +43,12 @@ export function VariantsTable({
 
   return (
     <div className="rounded-md border">
-      <Table className="min-w-[560px]">
+      <Table className="min-w-[660px]">
         <TableHeader>
           <TableRow>
             <TableHead className="hidden md:table-cell">SKU</TableHead>
             <TableHead>Prenda</TableHead>
+            <TableHead>Marca</TableHead>
             <TableHead>Talla / color</TableHead>
             <TableHead className="text-right">Precio</TableHead>
             <TableHead>Stock</TableHead>
@@ -74,6 +75,9 @@ export function VariantsTable({
                   <div className="text-xs text-muted-foreground md:hidden">
                     {variant.sku || "Sin SKU"}
                   </div>
+                </TableCell>
+                <TableCell className="max-w-36 whitespace-normal">
+                  {variant.marca_nombre || variant.marca_id || "-"}
                 </TableCell>
                 <TableCell>
                   {variant.talla_nombre || variant.talla_id} /{" "}
