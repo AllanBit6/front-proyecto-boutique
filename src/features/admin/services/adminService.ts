@@ -82,6 +82,7 @@ export interface SaleDetail extends Sale {
   detalles: Array<{
     id: string
     prenda: string
+    marca_nombre?: string
     sku?: string
     codigoBarras?: string
     cantidad: number
@@ -100,6 +101,7 @@ export interface InventoryMovement {
   motivo?: string
   stockResultante: number
   prenda: string
+  marcaNombre: string
   usuario: string
 }
 
@@ -549,12 +551,19 @@ export async function fetchSaleDetail(id: string): Promise<SaleDetail> {
       const variant = detail.variante as Record<string, unknown> | undefined
       const cantidad = numberValue(detail.cantidad)
       const precioUnitario = numberValue(detail.precio_unitario)
+      const saleProduct = variant?.producto as
+        | Record<string, unknown>
+        | undefined
+      const saleBrand = saleProduct?.marca as
+        | Record<string, unknown>
+        | undefined
 
       return {
         id: String(
           detail.id_detalle_venta ?? detail.id ?? variant?.id_variante ?? ""
         ),
         prenda: variantName(variant) || String(detail.descripcion ?? ""),
+        marca_nombre: String(saleBrand?.nombre ?? "") || undefined,
         sku: String(variant?.sku ?? ""),
         codigoBarras: String(
           variant?.codigo_barras ?? variant?.codigoBarras ?? ""
@@ -595,6 +604,9 @@ export async function fetchInventoryMovements(params: {
     const product = variant?.producto as Record<string, unknown> | undefined
     const size = variant?.talla as Record<string, unknown> | undefined
     const color = variant?.color as Record<string, unknown> | undefined
+    const movementBrand = product?.marca as
+      | Record<string, unknown>
+      | undefined
 
     return {
       id: String(item.id_movimiento_inventario ?? item.id ?? ""),
@@ -607,6 +619,7 @@ export async function fetchInventoryMovements(params: {
       prenda: [product?.nombre, size?.nombre, color?.nombre]
         .filter(Boolean)
         .join(" / "),
+      marcaNombre: String(movementBrand?.nombre ?? ""),
       usuario: fullName(item.usuario),
     }
   })
