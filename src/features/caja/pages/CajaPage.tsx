@@ -1,10 +1,10 @@
-import { useMemo, useRef, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import {
   ArrowDownCircle,
   ArrowUpCircle,
-  Eye,
   LockKeyhole,
   Plus,
+  ShoppingCart,
 } from "lucide-react"
 import { toast } from "sonner"
 
@@ -28,6 +28,7 @@ import type {
   CashRegisterDetail,
 } from "@/features/admin/services/adminService"
 import { useAuthStore } from "@/store"
+import { cn } from "@/lib/utils"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -89,6 +90,20 @@ export function CajaPage() {
   const [closeConfirmation, setCloseConfirmation] =
     useState<CloseConfirmation | null>(null)
   const detailPanelRef = useRef<HTMLDivElement>(null)
+  const openButtonRef = useRef<HTMLButtonElement>(null)
+
+  useEffect(() => {
+    if (!isOpenDialogOpen) {
+      openButtonRef.current?.focus()
+    }
+  }, [isOpenDialogOpen])
+
+  useEffect(() => {
+    if (!selectedSaleId) {
+      openButtonRef.current?.focus()
+    }
+  }, [selectedSaleId])
+
   const activeCashQuery = useActiveCashRegister()
   const cashQuery = useCashRegisters({ page, limit: PAGE_SIZE })
   const openCash = useOpenCashRegister()
@@ -153,32 +168,28 @@ export function CajaPage() {
 
   async function handleOpen(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    const form = new FormData(event.currentTarget)
+    const formEl = event.currentTarget
+    const formData = new FormData(formEl)
     const observaciones =
-      normalizeTextInput(form.get("observaciones"), {
+      normalizeTextInput(formData.get("observaciones"), {
         maxLength: 240,
       }) || undefined
-    const promise = openCash.mutateAsync({
-      saldo_inicial: moneyValue(form.get("saldo_inicial")),
-      observaciones,
-    })
-
-    toast.promise(promise, {
-      loading: "Abriendo caja...",
-      success: "Caja abierta correctamente.",
-      error: (error) => getErrorMessage(error, "No se pudo abrir la caja."),
-    })
 
     try {
-      const opened = await promise
-      event.currentTarget.reset()
+      const opened = await openCash.mutateAsync({
+        saldo_inicial: moneyValue(formData.get("saldo_inicial")),
+        observaciones,
+      })
+
+      toast.success("Caja abierta correctamente.")
+      formEl.reset()
       setIsOpenDialogOpen(false)
 
       if (opened.id) {
         viewCashDetail(opened.id)
       }
-    } catch {
-      // toast.promise displays the error.
+    } catch (error) {
+      toast.error(getErrorMessage(error, "No se pudo abrir la caja."))
     }
   }
 
@@ -215,22 +226,16 @@ export function CajaPage() {
     input: CloseCashInput,
     form?: HTMLFormElement
   ) {
-    const promise = closeCash.mutateAsync(input)
-
-    toast.promise(promise, {
-      loading: "Cerrando caja...",
-      success: "Caja cerrada correctamente.",
-      error: (error) => getErrorMessage(error, "No se pudo cerrar la caja."),
-    })
-
     try {
-      await promise
+      await closeCash.mutateAsync(input)
+
+      toast.success("Caja cerrada correctamente.")
       form?.reset()
       setClosingAmount("")
       setClosingCashId(undefined)
       setCloseConfirmation(null)
-    } catch {
-      // toast.promise displays the error.
+    } catch (error) {
+      toast.error(getErrorMessage(error, "No se pudo cerrar la caja."))
     }
   }
 
@@ -246,13 +251,6 @@ export function CajaPage() {
     if (effectiveSelectedCashId === id) {
       void selectedCashQuery.refetch()
     }
-
-    window.setTimeout(() => {
-      detailPanelRef.current?.scrollIntoView({
-        behavior: "smooth",
-        block: "start",
-      })
-    }, 0)
   }
 
   return (
@@ -266,7 +264,15 @@ export function CajaPage() {
         </div>
         <Button
           type="button"
+          ref={openButtonRef}
           disabled={Boolean(ownActiveCash) || activeCashQuery.isLoading}
+          title={
+            activeCashQuery.isLoading
+              ? "Verificando caja activa…"
+              : ownActiveCash
+                ? "Ya tienes una caja abierta"
+                : "Abrir nueva caja"
+          }
           onClick={() => setIsOpenDialogOpen(true)}
         >
           <Plus />
@@ -285,14 +291,14 @@ export function CajaPage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
-            <div className="grid gap-2 md:grid-cols-[minmax(220px,1fr)_160px_160px_150px]">
+            <div className="grid gap-2 md:grid-cols-4">
               <Input
                 value={cashSearch}
                 onChange={(event) => {
                   setCashSearch(event.target.value)
                   setPage(1)
                 }}
-                placeholder="Buscar usuario, ID u observaciones"
+                placeholder="Buscar usuario, ID u observaciones…"
               />
               <Input
                 type="date"
@@ -318,7 +324,7 @@ export function CajaPage() {
                 }}
               >
                 <SelectTrigger className="w-full">
-                  <span>
+                  <span className="truncate">
                     {cashStatus === "active"
                       ? "Abiertas"
                       : cashStatus === "closed"
@@ -361,20 +367,17 @@ export function CajaPage() {
                         </TableHead>
                         <TableHead className="text-right">Ventas</TableHead>
                         <TableHead className="text-right">Mov.</TableHead>
-                        <TableHead className="w-40 text-right">
-                          Acciones
-                        </TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {filteredCashRegisters.map((item) => (
                         <TableRow
                           key={item.id}
-                          data-state={
-                            effectiveSelectedCashId === item.id
-                              ? "selected"
-                              : undefined
-                          }
+                          className={cn(
+                            "cursor-pointer",
+                            item.id === effectiveSelectedCashId && "bg-muted/30"
+                          )}
+                          onClick={() => viewCashDetail(item.id)}
                         >
                           <TableCell>
                             <Badge
@@ -404,39 +407,13 @@ export function CajaPage() {
                           <TableCell className="text-right">
                             {item.movimientosCount}
                           </TableCell>
-                          <TableCell>
-                            <div className="flex justify-end gap-2">
-                              <Button
-                                type="button"
-                                size="icon-sm"
-                                variant="outline"
-                                aria-label="Ver detalle"
-                                onClick={() => viewCashDetail(item.id)}
-                              >
-                                <Eye />
-                              </Button>
-                              <Button
-                                type="button"
-                                size="icon-sm"
-                                variant="outline"
-                                aria-label="Cerrar caja"
-                                disabled={
-                                  !item.activo ||
-                                  (role !== "admin" &&
-                                    item.usuarioId !== user?.id)
-                                }
-                                onClick={() => requestClose(item)}
-                              >
-                                <LockKeyhole />
-                              </Button>
-                            </div>
-                          </TableCell>
+                          <TableCell />
                         </TableRow>
                       ))}
                       {!filteredCashRegisters.length ? (
                         <TableRow>
                           <TableCell
-                            colSpan={9}
+                            colSpan={8}
                             className="py-8 text-center text-sm text-muted-foreground"
                           >
                             Sin cajas para mostrar.
@@ -464,7 +441,7 @@ export function CajaPage() {
 
         <Card ref={detailPanelRef}>
           <CardHeader>
-            <CardTitle>Detalle y arqueo</CardTitle>
+            <CardTitle>Detalle</CardTitle>
             <CardDescription>
               {selectedCash
                 ? `${selectedCash.usuario || "Usuario"} - ${selectedCash.activo ? "abierta" : "cerrada"}`
@@ -518,6 +495,7 @@ export function CajaPage() {
                   step="0.01"
                   min="0"
                   max="999999.99"
+                  autoComplete="off"
                   required
                 />
               </Field>
@@ -529,6 +507,7 @@ export function CajaPage() {
                   id="observaciones_apertura"
                   name="observaciones"
                   maxLength={240}
+                  autoComplete="off"
                 />
               </Field>
             </FieldGroup>
@@ -544,7 +523,7 @@ export function CajaPage() {
                 type="submit"
                 disabled={openCash.isPending || Boolean(ownActiveCash)}
               >
-                {openCash.isPending ? "Abriendo..." : "Abrir caja"}
+                {openCash.isPending ? "Abriendo…" : "Abrir caja"}
               </Button>
             </DialogFooter>
           </form>
@@ -554,7 +533,7 @@ export function CajaPage() {
       <Dialog
         open={Boolean(closingCashId)}
         onOpenChange={(open) => {
-          if (!open) {
+          if (!open && !closeCash.isPending) {
             setClosingCashId(undefined)
             setClosingAmount("")
             setCloseConfirmation(null)
@@ -584,6 +563,15 @@ export function CajaPage() {
                   label="Diferencia"
                   value={closingAmount ? closingDifference : 0}
                   strong
+                  colorClass={
+                    !closingAmount
+                      ? ""
+                      : Math.abs(closingDifference) === 0
+                        ? "text-emerald-600 dark:text-emerald-500"
+                        : Math.abs(closingDifference) < 10
+                          ? "text-amber-600 dark:text-amber-500"
+                          : "text-destructive"
+                  }
                 />
               </div>
             )}
@@ -597,6 +585,7 @@ export function CajaPage() {
                   step="0.01"
                   min="0"
                   max="999999.99"
+                  autoComplete="off"
                   value={closingAmount}
                   onChange={(event) => setClosingAmount(event.target.value)}
                   required
@@ -610,6 +599,7 @@ export function CajaPage() {
                   id="observaciones_cierre"
                   name="observaciones"
                   maxLength={240}
+                  autoComplete="off"
                 />
               </Field>
             </FieldGroup>
@@ -630,7 +620,7 @@ export function CajaPage() {
                   closeCash.isPending || !closingCashId || isClosingCashLoading
                 }
               >
-                {closeCash.isPending ? "Cerrando..." : "Cerrar caja"}
+                {closeCash.isPending ? "Cerrando…" : "Cerrar caja"}
               </Button>
             </DialogFooter>
           </form>
@@ -666,6 +656,13 @@ export function CajaPage() {
                 label="Diferencia"
                 value={closeConfirmation.difference}
                 strong
+                colorClass={
+                  Math.abs(closeConfirmation.difference) === 0
+                    ? "text-emerald-600 dark:text-emerald-500"
+                    : Math.abs(closeConfirmation.difference) < 10
+                      ? "text-amber-600 dark:text-amber-500"
+                      : "text-destructive"
+                }
               />
             </div>
           ) : null}
@@ -754,20 +751,33 @@ function CashDetailPanel({
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center gap-2">
-        <Badge variant={cash.activo ? "secondary" : "outline"}>
-          {cash.activo ? "Abierta" : "Cerrada"}
-        </Badge>
-        {cash.activo && canClose ? (
-          <Button type="button" size="sm" variant="outline" onClick={onClose}>
+      {cash.activo && canClose ? (
+        <div className="rounded-md border border-primary/20 bg-primary/5 p-3 space-y-3">
+          <div className="flex items-center justify-between">
+            <Badge variant="secondary" className="gap-1.5">
+              <span className="size-2 rounded-full bg-emerald-500" />
+              Caja activa
+            </Badge>
+            <span className="text-sm text-muted-foreground">
+              Esperado:{" "}
+              <span className="font-medium tabular-nums">
+                {formatCurrency(totals.expected)}
+              </span>
+            </span>
+          </div>
+          <Button type="button" className="w-full" onClick={onClose}>
             <LockKeyhole />
-            Cerrar
+            Cerrar caja y realizar arqueo
           </Button>
-        ) : null}
-        {isRefreshing ? (
-          <span className="text-xs text-muted-foreground">Actualizando...</span>
-        ) : null}
-      </div>
+        </div>
+      ) : (
+        <div className="flex items-center gap-2">
+          <Badge variant="outline">{cash.activo ? "Abierta" : "Cerrada"}</Badge>
+          {isRefreshing ? (
+            <span className="text-xs text-muted-foreground">Actualizando...</span>
+          ) : null}
+        </div>
+      )}
 
       <dl className="grid gap-2 text-sm">
         <InfoLine label="Usuario" value={cash.usuario || "-"} />
@@ -790,13 +800,26 @@ function CashDetailPanel({
           label="Diferencia"
           value={difference}
           placeholder={cash.activo ? "Pendiente" : undefined}
+          colorClass={
+            cash.activo || cash.saldoFinal === undefined
+              ? ""
+              : Math.abs(difference) === 0
+                ? "text-emerald-600 dark:text-emerald-500"
+                : Math.abs(difference) < 10
+                  ? "text-amber-600 dark:text-amber-500"
+                  : "text-destructive"
+          }
         />
       </div>
 
       <Tabs defaultValue="movimientos">
         <TabsList className="w-full">
-          <TabsTrigger value="movimientos">Movimientos</TabsTrigger>
-          <TabsTrigger value="ventas">Ventas</TabsTrigger>
+          <TabsTrigger value="movimientos">
+            Movimientos ({cash.movimientos.length})
+          </TabsTrigger>
+          <TabsTrigger value="ventas">
+            Ventas ({cash.ventas.length})
+          </TabsTrigger>
         </TabsList>
         <TabsContent value="movimientos">
           <CashMovementsTable movements={cash.movimientos} />
@@ -813,6 +836,7 @@ function CashMovementsTable({ movements }: { movements: CashMovement[] }) {
   if (movements.length === 0) {
     return (
       <div className="rounded-md border border-dashed py-8 text-center text-sm text-muted-foreground">
+        <ArrowDownCircle className="mx-auto mb-2 size-8 text-muted-foreground/50" />
         Sin movimientos.
       </div>
     )
@@ -851,7 +875,7 @@ function CashMovementsTable({ movements }: { movements: CashMovement[] }) {
                   ) : null}
                 </TableCell>
                 <TableCell>{formatDate(movement.fecha)}</TableCell>
-                <TableCell className="text-right font-medium">
+                <TableCell className="text-right font-medium tabular-nums">
                   {isIncome ? "+" : "-"}
                   {formatCurrency(movement.monto)}
                 </TableCell>
@@ -874,6 +898,7 @@ function CashSalesTable({
   if (sales.length === 0) {
     return (
       <div className="rounded-md border border-dashed py-8 text-center text-sm text-muted-foreground">
+        <ShoppingCart className="mx-auto mb-2 size-8 text-muted-foreground/50" />
         Sin ventas asociadas.
       </div>
     )
@@ -897,7 +922,7 @@ function CashSalesTable({
                 {sale.id.slice(0, 8)}
               </TableCell>
               <TableCell>{formatDate(sale.fecha)}</TableCell>
-              <TableCell className="text-right">
+              <TableCell className="text-right tabular-nums">
                 {formatCurrency(sale.total)}
               </TableCell>
               <TableCell className="text-right">
@@ -950,12 +975,15 @@ function SaleDetailContent({
                   <TableCell>
                     <div className="font-medium">{item.prenda || "-"}</div>
                     <div className="text-xs text-muted-foreground">
+                      {item.marca_nombre || ""}
+                    </div>
+                    <div className="text-xs text-muted-foreground">
                       {item.sku || item.codigoBarras || "Sin codigo"}
                     </div>
                   </TableCell>
                   <TableCell>{item.cantidad}</TableCell>
-                  <TableCell>{formatCurrency(item.precioUnitario)}</TableCell>
-                  <TableCell className="text-right">
+                  <TableCell className="tabular-nums">{formatCurrency(item.precioUnitario)}</TableCell>
+                  <TableCell className="text-right tabular-nums">
                     {formatCurrency(item.subtotal)}
                   </TableCell>
                 </TableRow>
@@ -991,12 +1019,12 @@ function SaleDetailContent({
                 <TableRow key={item.id}>
                   <TableCell>{item.metodo}</TableCell>
                   <TableCell>{item.numeroReferencia || "-"}</TableCell>
-                  <TableCell>
+                  <TableCell className="tabular-nums">
                     {item.montoRecibido === undefined
                       ? "-"
                       : formatCurrency(item.montoRecibido)}
                   </TableCell>
-                  <TableCell className="text-right">
+                  <TableCell className="text-right tabular-nums">
                     {formatCurrency(item.monto)}
                   </TableCell>
                 </TableRow>
@@ -1083,11 +1111,13 @@ function MoneyLine({
   value,
   placeholder,
   strong,
+  colorClass,
 }: {
   label: string
   value?: number
   placeholder?: string
   strong?: boolean
+  colorClass?: string
 }) {
   const content =
     value === undefined || Number.isNaN(value)
@@ -1097,7 +1127,9 @@ function MoneyLine({
   return (
     <div className="flex items-center justify-between gap-3">
       <span className="text-muted-foreground">{label}</span>
-      <span className={strong ? "font-semibold" : "font-medium"}>
+      <span
+        className={`${strong ? "font-semibold" : "font-medium"} tabular-nums ${colorClass ?? ""}`}
+      >
         {content}
       </span>
     </div>

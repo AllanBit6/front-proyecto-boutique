@@ -334,6 +334,9 @@ export function VentasPage() {
                                 {item.prenda || "-"}
                               </div>
                               <div className="text-xs text-muted-foreground">
+                                {item.marca_nombre || ""}
+                              </div>
+                              <div className="text-xs text-muted-foreground">
                                 {item.sku || item.codigoBarras || "Sin código"}
                               </div>
                             </TableCell>

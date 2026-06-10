@@ -431,6 +431,9 @@ export function InventoryAdjustmentsPage() {
                           <TableCell>{formatDate(item.fecha)}</TableCell>
                           <TableCell className="max-w-44 whitespace-normal">
                             <div>{item.prenda || "-"}</div>
+                            <div className="text-xs text-muted-foreground">
+                              {item.marcaNombre || ""}
+                            </div>
                             <div className="text-xs text-muted-foreground md:hidden">
                               {item.motivo || item.origen}
                             </div>
