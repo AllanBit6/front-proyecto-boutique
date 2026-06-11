@@ -9,23 +9,23 @@ import {
 import { Fragment, useEffect, useMemo, useRef, useState } from "react"
 import { toast } from "sonner"
 
+import {
+  useActiveCashRegister,
+  useCashRegisters,
+} from "@/features/admin/hooks/useAdmin"
+import { AdminPager } from "@/features/admin/components/AdminTable"
 import { formatCurrency } from "@/features/admin/utils/formatters"
-import { useAllVariants } from "@/features/inventario/hooks/useProducts"
+import {
+  useAllVariants,
+  useVariants,
+} from "@/features/inventario/hooks/useProducts"
 import type { Variant } from "@/features/inventario/types/product"
-import {
-  useCreateSale,
-  useFindVariantByBarcode,
-} from "@/features/cajero/hooks/usePos"
-import type { PaymentMethod } from "@/features/cajero/services/posService"
-import {
-  moneyValue,
-  normalizeCodeInput,
-  normalizeTextInput,
-} from "@/shared/utils/security"
+import { useFindVariantByBarcode } from "@/features/cajero/hooks/usePos"
+import { normalizeCodeInput, normalizeTextInput } from "@/shared/utils/security"
+import { useAuthStore } from "@/store"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Field, FieldGroup, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 import {
   LoadTransition,
@@ -45,24 +45,17 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import { PaymentForm } from "@/features/cajero/components/PaymentForm"
+import type { CartItem } from "@/features/cajero/types/posTypes"
+import { variantLabel } from "@/features/cajero/helpers/posHelpers"
 
-interface CartItem {
-  variant: Variant
-  quantity: number
-}
-
-const PAYMENT_METHODS: Array<{ value: PaymentMethod; label: string }> = [
-  { value: "EFECTIVO", label: "Efectivo" },
-  { value: "TARJETA_CREDITO", label: "Tarjeta crédito" },
-  { value: "TARJETA_DEBITO", label: "Tarjeta débito" },
-  { value: "TRANSFERENCIA", label: "Transferencia" },
-]
-
-function variantLabel(variant: Variant) {
-  return [variant.producto_nombre, variant.talla_nombre, variant.color_nombre]
-    .filter(Boolean)
-    .join(" / ")
-}
+const PRODUCT_PAGE_SIZE = 10
 
 function normalizeSearch(value: string) {
   return value
@@ -146,48 +139,84 @@ function playSaleSuccess() {
 }
 
 export function CajeroPage() {
+  const user = useAuthStore((state) => state.user)
   const [barcode, setBarcode] = useState("")
   const [productSearch, setProductSearch] = useState("")
   const [sizeFilter, setSizeFilter] = useState("all")
   const [colorFilter, setColorFilter] = useState("all")
+  const [variantsPage, setVariantsPage] = useState(1)
   const [cart, setCart] = useState<CartItem[]>([])
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("EFECTIVO")
-  const [amountReceived, setAmountReceived] = useState("")
-  const [referenceNumber, setReferenceNumber] = useState("")
+  const [paymentOpen, setPaymentOpen] = useState(false)
   const [error, setError] = useState("")
   const barcodeInputRef = useRef<HTMLInputElement>(null)
   const [shouldFocusBarcode, setShouldFocusBarcode] = useState(true)
-  const variantsQuery = useAllVariants()
+  const variantsQuery = useVariants({
+    page: variantsPage,
+    limit: PRODUCT_PAGE_SIZE,
+  })
+  const variantFiltersQuery = useAllVariants()
+  const activeCashQuery = useActiveCashRegister()
+  const cashRegistersQuery = useCashRegisters({ page: 1, limit: 100 })
   const findByBarcode = useFindVariantByBarcode()
-  const createSale = useCreateSale()
+  const ownActiveCash = useMemo(() => {
+    const fromList = cashRegistersQuery.data?.data.find(
+      (item) => item.activo && item.usuarioId === user?.id
+    )
+
+    if (fromList) {
+      return fromList
+    }
+
+    const activeCash = activeCashQuery.data
+
+    if (activeCash?.activo && activeCash.usuarioId === user?.id) {
+      return activeCash
+    }
+
+    return null
+  }, [activeCashQuery.data, cashRegistersQuery.data?.data, user?.id])
+  const isCheckingCash =
+    activeCashQuery.isLoading || cashRegistersQuery.isLoading
+  const canSell = Boolean(ownActiveCash)
+  const isSaleLocked = isCheckingCash || !canSell
+  const saleLockMessage = isCheckingCash
+    ? "Validando caja activa..."
+    : "Venta bloqueada. Abre caja antes de usar venta de mostrador."
   const sellableVariants = useMemo(
     () =>
-      (variantsQuery.data ?? []).filter(
+      (variantsQuery.data?.data ?? []).filter(
         (variant) => variant.activo && variant.stock_actual > 0
       ),
-    [variantsQuery.data]
+    [variantsQuery.data?.data]
+  )
+  const filterableVariants = useMemo(
+    () =>
+      (variantFiltersQuery.data ?? []).filter(
+        (variant) => variant.activo && variant.stock_actual > 0
+      ),
+    [variantFiltersQuery.data]
   )
   const sizeOptions = useMemo(
     () =>
       Array.from(
         new Set(
-          sellableVariants
+          filterableVariants
             .map((variant) => variant.talla_nombre)
             .filter(Boolean)
         )
       ).sort(),
-    [sellableVariants]
+    [filterableVariants]
   )
   const colorOptions = useMemo(
     () =>
       Array.from(
         new Set(
-          sellableVariants
+          filterableVariants
             .map((variant) => variant.color_nombre)
             .filter(Boolean)
         )
       ).sort(),
-    [sellableVariants]
+    [filterableVariants]
   )
   const filteredVariants = useMemo(() => {
     const terms = normalizeSearch(productSearch).split(" ").filter(Boolean)
@@ -204,6 +233,7 @@ export function CajeroPage() {
       const searchable = normalizeSearch(
         [
           variant.producto_nombre,
+          variant.marca_nombre,
           variant.talla_nombre,
           variant.color_nombre,
           variant.sku,
@@ -215,9 +245,6 @@ export function CajeroPage() {
       return terms.every((term) => searchable.includes(term))
     })
   }, [colorFilter, productSearch, sellableVariants, sizeFilter])
-  const selectedPaymentMethod = PAYMENT_METHODS.find(
-    (method) => method.value === paymentMethod
-  )
   const total = useMemo(
     () =>
       cart.reduce(
@@ -226,9 +253,6 @@ export function CajeroPage() {
       ),
     [cart]
   )
-  const received = moneyValue(amountReceived)
-  const change =
-    paymentMethod === "EFECTIVO" ? Math.max(0, received - total) : 0
 
   useEffect(() => {
     if (findByBarcode.isPending || !shouldFocusBarcode) {
@@ -244,12 +268,31 @@ export function CajeroPage() {
     return () => window.clearTimeout(timeoutId)
   }, [findByBarcode.isPending, shouldFocusBarcode])
 
+  useEffect(() => {
+    if (isCheckingCash || canSell) {
+      return
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      setCart([])
+      setPaymentOpen(false)
+    }, 0)
+
+    return () => window.clearTimeout(timeoutId)
+  }, [canSell, isCheckingCash])
+
   function requestBarcodeFocus() {
     setShouldFocusBarcode(true)
   }
 
   function addVariant(variant: Variant) {
     setError("")
+
+    if (isSaleLocked) {
+      setError(saleLockMessage)
+      toast.error(saleLockMessage)
+      return false
+    }
 
     if (!variant.activo || variant.stock_actual <= 0) {
       setError("La variante no tiene stock disponible.")
@@ -285,6 +328,13 @@ export function CajeroPage() {
 
   function updateQuantity(variantId: string, quantity: number) {
     setError("")
+
+    if (isSaleLocked) {
+      setError(saleLockMessage)
+      toast.error(saleLockMessage)
+      return
+    }
+
     const nextQuantity = Math.max(
       1,
       Math.trunc(Number.isFinite(quantity) ? quantity : 1)
@@ -306,6 +356,12 @@ export function CajeroPage() {
   }
 
   function handleProductSelect(variant: Variant) {
+    if (isSaleLocked) {
+      setError(saleLockMessage)
+      toast.error(saleLockMessage)
+      return
+    }
+
     if (addVariant(variant)) {
       toast.success(`${variantLabel(variant)} agregado al carrito.`)
     }
@@ -314,6 +370,13 @@ export function CajeroPage() {
 
   async function handleBarcodeSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
+
+    if (isSaleLocked) {
+      setError(saleLockMessage)
+      toast.error(saleLockMessage)
+      return
+    }
+
     const code = normalizeCodeInput(barcode)
 
     if (!code) {
@@ -340,87 +403,11 @@ export function CajeroPage() {
     }
   }
 
-  async function submitCheckout(form?: HTMLFormElement | null) {
-    setError("")
-
-    if (cart.length === 0) {
-      setError("Agrega al menos una prenda al carrito.")
-      toast.error("Agrega al menos una prenda al carrito.")
-      return
-    }
-
-    const inactiveItem = cart.find(
-      (item) => !item.variant.activo || item.variant.stock_actual <= 0
-    )
-
-    if (inactiveItem) {
-      const message = `${variantLabel(inactiveItem.variant)} ya no esta disponible para vender.`
-      setError(message)
-      toast.error(message)
-      return
-    }
-
-    if (paymentMethod === "EFECTIVO" && received < total) {
-      setError("El monto recibido no cubre el total.")
-      toast.error("El monto recibido no cubre el total.")
-      return
-    }
-
-    try {
-      const formData = form ? new FormData(form) : new FormData()
-      const customerName =
-        normalizeTextInput(formData.get("nombre_cliente"), {
-          maxLength: 80,
-        }) || "Cliente final"
-      const customerNit = normalizeCodeInput(formData.get("nit"), 20) || "CF"
-      const reference = normalizeCodeInput(referenceNumber, 60)
-      const payload = {
-        nombre_cliente: customerName,
-        nit: customerNit,
-        detalles: cart.map((item) => ({
-          variante_id: item.variant.id,
-          cantidad: item.quantity,
-          precio_unitario: item.variant.precio_venta,
-        })),
-        pagos: [
-          {
-            metodo: paymentMethod,
-            monto: total,
-            monto_recibido: paymentMethod === "EFECTIVO" ? received : undefined,
-            numero_referencia:
-              paymentMethod === "EFECTIVO" ? undefined : reference || undefined,
-          },
-        ],
-      }
-
-      const promise = createSale.mutateAsync(payload)
-
-      toast.promise(promise, {
-        loading: "Registrando venta...",
-        success: "Venta registrada correctamente.",
-        error: (error) =>
-          getErrorMessage(error, "No se pudo registrar la venta."),
-      })
-
-      await promise
-      playSaleSuccess()
-      setCart([])
-      setAmountReceived("")
-      setReferenceNumber("")
-      form?.reset()
-      requestBarcodeFocus()
-    } catch (exception) {
-      const message = getErrorMessage(
-        exception,
-        "No se pudo registrar la venta."
-      )
-      setError(message)
-    }
-  }
-
-  async function handleCheckout(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    await submitCheckout(event.currentTarget)
+  function handleSuccess() {
+    playSaleSuccess()
+    setCart([])
+    setPaymentOpen(false)
+    requestBarcodeFocus()
   }
 
   return (
@@ -434,6 +421,12 @@ export function CajeroPage() {
       {error ? (
         <div className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
           {error}
+        </div>
+      ) : null}
+
+      {isSaleLocked ? (
+        <div className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+          {saleLockMessage}
         </div>
       ) : null}
 
@@ -459,13 +452,13 @@ export function CajeroPage() {
                     placeholder="Código"
                     autoComplete="off"
                     maxLength={64}
-                    disabled={findByBarcode.isPending}
+                    disabled={findByBarcode.isPending || isSaleLocked}
                   />
                   <Button
                     type="submit"
                     size="icon"
                     aria-label="Buscar código"
-                    disabled={findByBarcode.isPending}
+                    disabled={findByBarcode.isPending || isSaleLocked}
                   >
                     <ScanBarcode />
                   </Button>
@@ -475,23 +468,30 @@ export function CajeroPage() {
                   <Input
                     className="min-w-0 pl-9"
                     value={productSearch}
-                    onChange={(event) =>
+                    onChange={(event) => {
                       setProductSearch(
                         normalizeTextInput(event.target.value, {
                           maxLength: 80,
                         })
                       )
-                    }
+                      setVariantsPage(1)
+                    }}
                     placeholder="Buscar producto"
                     maxLength={80}
-                    disabled={variantsQuery.isLoading}
+                    disabled={variantsQuery.isLoading || isSaleLocked}
                   />
                 </div>
                 <Select
                   value={sizeFilter}
-                  onValueChange={(value) => setSizeFilter(value ?? "all")}
+                  onValueChange={(value) => {
+                    setSizeFilter(value ?? "all")
+                    setVariantsPage(1)
+                  }}
                 >
-                  <SelectTrigger className="w-full min-w-0">
+                  <SelectTrigger
+                    className="w-full min-w-0"
+                    disabled={isSaleLocked}
+                  >
                     <span className="truncate">
                       {sizeFilter === "all" ? "Todas las tallas" : sizeFilter}
                     </span>
@@ -507,9 +507,15 @@ export function CajeroPage() {
                 </Select>
                 <Select
                   value={colorFilter}
-                  onValueChange={(value) => setColorFilter(value ?? "all")}
+                  onValueChange={(value) => {
+                    setColorFilter(value ?? "all")
+                    setVariantsPage(1)
+                  }}
                 >
-                  <SelectTrigger className="w-full min-w-0">
+                  <SelectTrigger
+                    className="w-full min-w-0"
+                    disabled={isSaleLocked}
+                  >
                     <span className="truncate">
                       {colorFilter === "all"
                         ? "Todos los colores"
@@ -527,7 +533,8 @@ export function CajeroPage() {
                 </Select>
               </div>
               <div className="text-xs text-muted-foreground">
-                {filteredVariants.length} de {sellableVariants.length}
+                {filteredVariants.length} visibles de{" "}
+                {variantsQuery.data?.total ?? 0} registros
               </div>
 
               {variantsQuery.isLoading ? (
@@ -570,6 +577,9 @@ export function CajeroPage() {
                                   {variant.producto_nombre || "-"}
                                 </div>
                                 <div className="text-xs text-muted-foreground">
+                                  {variant.marca_nombre || ""}
+                                </div>
+                                <div className="text-xs text-muted-foreground">
                                   {variant.codigo_barras ||
                                     variant.sku ||
                                     "Sin código de barras"}
@@ -593,7 +603,7 @@ export function CajeroPage() {
                                 <Button
                                   type="button"
                                   size="sm"
-                                  disabled={!canAdd}
+                                  disabled={!canAdd || isSaleLocked}
                                   onClick={() => handleProductSelect(variant)}
                                 >
                                   <Plus />
@@ -612,10 +622,26 @@ export function CajeroPage() {
                   Sin resultados.
                 </div>
               )}
+              {variantsQuery.data ? (
+                <AdminPager
+                  page={variantsQuery.data.page}
+                  totalPages={variantsQuery.data.totalPages}
+                  total={variantsQuery.data.total}
+                  disabled={variantsQuery.isFetching}
+                  onPrevious={() =>
+                    setVariantsPage((currentPage) => currentPage - 1)
+                  }
+                  onNext={() =>
+                    setVariantsPage((currentPage) => currentPage + 1)
+                  }
+                />
+              ) : null}
             </CardContent>
           </Card>
+        </div>
 
-          <Card>
+        <div className="space-y-4">
+          <Card className="xl:sticky xl:top-18 xl:self-start">
             <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
               <div>
                 <CardTitle className="flex items-center gap-2">
@@ -627,7 +653,7 @@ export function CajeroPage() {
                 type="button"
                 variant="outline"
                 size="sm"
-                disabled={cart.length === 0}
+                disabled={cart.length === 0 || isSaleLocked}
                 onClick={() => setCart([])}
               >
                 <Trash2 />
@@ -659,6 +685,9 @@ export function CajeroPage() {
                             <TableCell className="max-w-48 whitespace-normal">
                               <div className="font-medium">
                                 {variantLabel(item.variant)}
+                              </div>
+                              <div className="text-xs text-muted-foreground">
+                                {item.variant.marca_nombre || ""}
                               </div>
                               <div className="text-xs text-muted-foreground md:hidden">
                                 {item.variant.sku ||
@@ -700,7 +729,9 @@ export function CajeroPage() {
                                       variant="outline"
                                       size="icon"
                                       aria-label="Reducir"
-                                      disabled={item.quantity <= 1}
+                                      disabled={
+                                        item.quantity <= 1 || isSaleLocked
+                                      }
                                       onClick={() =>
                                         updateQuantity(
                                           item.variant.id,
@@ -716,6 +747,7 @@ export function CajeroPage() {
                                       min="1"
                                       max={item.variant.stock_actual}
                                       value={item.quantity}
+                                      disabled={isSaleLocked}
                                       onChange={(event) =>
                                         updateQuantity(
                                           item.variant.id,
@@ -730,7 +762,8 @@ export function CajeroPage() {
                                       aria-label="Aumentar"
                                       disabled={
                                         item.quantity >=
-                                        item.variant.stock_actual
+                                          item.variant.stock_actual ||
+                                        isSaleLocked
                                       }
                                       onClick={() =>
                                         updateQuantity(
@@ -751,6 +784,7 @@ export function CajeroPage() {
                                     type="button"
                                     variant="ghost"
                                     size="sm"
+                                    disabled={isSaleLocked}
                                     onClick={() =>
                                       setCart((current) =>
                                         current.filter(
@@ -778,112 +812,43 @@ export function CajeroPage() {
                   Carrito vacío.
                 </div>
               )}
+
+              <Button
+                type="button"
+                className="w-full"
+                size="lg"
+                disabled={cart.length === 0 || isSaleLocked}
+                onClick={() => setPaymentOpen(true)}
+              >
+                Pagar — {formatCurrency(total)}
+              </Button>
             </CardContent>
           </Card>
         </div>
-
-        <Card className="xl:sticky xl:top-18 xl:self-start">
-          <CardHeader>
-            <CardTitle>Cobro</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <form className="space-y-4" noValidate onSubmit={handleCheckout}>
-              <div className="rounded-lg border bg-primary px-4 py-3 text-primary-foreground shadow-sm">
-                <div className="text-sm opacity-85">Total a cobrar</div>
-                <div className="text-3xl font-semibold tracking-normal">
-                  {formatCurrency(total)}
-                </div>
-              </div>
-              <FieldGroup className="gap-3">
-                <Field>
-                  <FieldLabel htmlFor="nombre_cliente">Cliente</FieldLabel>
-                  <Input
-                    id="nombre_cliente"
-                    name="nombre_cliente"
-                    defaultValue="Cliente final"
-                    maxLength={80}
-                  />
-                </Field>
-                <Field>
-                  <FieldLabel htmlFor="nit">NIT</FieldLabel>
-                  <Input id="nit" name="nit" defaultValue="CF" maxLength={20} />
-                </Field>
-                <Field>
-                  <FieldLabel>Forma de pago</FieldLabel>
-                  <Select
-                    value={paymentMethod}
-                    onValueChange={(value) =>
-                      setPaymentMethod((value ?? "EFECTIVO") as PaymentMethod)
-                    }
-                  >
-                    <SelectTrigger className="w-full">
-                      <span>{selectedPaymentMethod?.label ?? "Efectivo"}</span>
-                    </SelectTrigger>
-                    <SelectContent>
-                      {PAYMENT_METHODS.map((method) => (
-                        <SelectItem key={method.value} value={method.value}>
-                          {method.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </Field>
-                {paymentMethod === "EFECTIVO" ? (
-                  <>
-                    <Field>
-                      <FieldLabel htmlFor="monto_recibido">
-                        Monto recibido
-                      </FieldLabel>
-                      <Input
-                        id="monto_recibido"
-                        type="number"
-                        min={total}
-                        max="999999.99"
-                        step="0.01"
-                        value={amountReceived}
-                        onChange={(event) =>
-                          setAmountReceived(event.target.value)
-                        }
-                        required
-                      />
-                    </Field>
-                    <div className="rounded-md bg-accent px-3 py-2 text-sm text-accent-foreground">
-                      Vuelto: <strong>{formatCurrency(change)}</strong>
-                    </div>
-                  </>
-                ) : (
-                  <Field>
-                    <FieldLabel htmlFor="numero_referencia">
-                      Referencia
-                    </FieldLabel>
-                    <Input
-                      id="numero_referencia"
-                      value={referenceNumber}
-                      onChange={(event) =>
-                        setReferenceNumber(
-                          normalizeCodeInput(event.target.value, 60)
-                        )
-                      }
-                      maxLength={60}
-                    />
-                  </Field>
-                )}
-              </FieldGroup>
-              <Button
-                type="submit"
-                className="h-10 w-full"
-                disabled={cart.length === 0 || createSale.isPending}
-              >
-                {createSale.isPending ? "Registrando..." : "Finalizar venta"}
-              </Button>
-            </form>
-          </CardContent>
-        </Card>
       </div>
+
+      <Dialog
+        open={paymentOpen}
+        onOpenChange={(open) => {
+          if (open && isSaleLocked) {
+            setError(saleLockMessage)
+            toast.error(saleLockMessage)
+            return
+          }
+
+          setPaymentOpen(open)
+        }}
+      >
+        <DialogContent
+          className="sm:max-w-md"
+          style={{ overscrollBehavior: "contain" }}
+        >
+          <DialogHeader>
+            <DialogTitle>Cobro</DialogTitle>
+          </DialogHeader>
+          <PaymentForm total={total} cart={cart} onSuccess={handleSuccess} />
+        </DialogContent>
+      </Dialog>
     </section>
   )
-}
-
-function getErrorMessage(error: unknown, fallback: string) {
-  return error instanceof Error ? error.message : fallback
 }

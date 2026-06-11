@@ -33,7 +33,7 @@ export function ResetPasswordPage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   if (user && !user.firstLogin) {
-    return <Navigate to="/dashboard" replace />
+    return <Navigate to={getHomePath(user.role)} replace />
   }
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {

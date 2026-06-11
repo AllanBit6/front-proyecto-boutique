@@ -1,4 +1,4 @@
-import { createBrowserRouter } from "react-router-dom"
+import { createHashRouter } from "react-router-dom"
 
 import { AppLayout } from "@/layouts/AppLayout"
 import { LoginPage } from "@/features/auth/pages/LoginPage"
@@ -11,7 +11,7 @@ import {
   RoleProtectedRoute,
 } from "@/route-guards"
 
-export const router = createBrowserRouter([
+export const router = createHashRouter([
   {
     path: "/login",
     element: <LoginPage />,

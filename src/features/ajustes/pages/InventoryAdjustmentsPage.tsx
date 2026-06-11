@@ -12,7 +12,7 @@ import {
   useCreateInventoryAdjustment,
   useInventoryMovements,
 } from "@/features/admin/hooks/useAdmin"
-import { useVariants } from "@/features/inventario/hooks/useProducts"
+import { useAllVariants } from "@/features/inventario/hooks/useProducts"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -61,11 +61,11 @@ export function InventoryAdjustmentsPage() {
     limit: PAGE_SIZE,
     tipo: movementType,
   })
-  const variantsQuery = useVariants({ page: 1, limit: 100 })
+  const variantsQuery = useAllVariants()
   const createAdjustment = useCreateInventoryAdjustment()
   const activeVariants = useMemo(
-    () => (variantsQuery.data?.data ?? []).filter((variant) => variant.activo),
-    [variantsQuery.data?.data]
+    () => (variantsQuery.data ?? []).filter((variant) => variant.activo),
+    [variantsQuery.data]
   )
   const selectedVariant = activeVariants.find(
     (variant) => variant.id === variantId
@@ -431,6 +431,9 @@ export function InventoryAdjustmentsPage() {
                           <TableCell>{formatDate(item.fecha)}</TableCell>
                           <TableCell className="max-w-44 whitespace-normal">
                             <div>{item.prenda || "-"}</div>
+                            <div className="text-xs text-muted-foreground">
+                              {item.marcaNombre || ""}
+                            </div>
                             <div className="text-xs text-muted-foreground md:hidden">
                               {item.motivo || item.origen}
                             </div>

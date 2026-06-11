@@ -7,11 +7,12 @@ import {
   matchesTextSearch,
 } from "@/features/admin/utils/tableFilters"
 import type { Payment } from "@/features/admin/services/adminService"
-import { usePayments } from "@/features/admin/hooks/useAdmin"
+import { usePaymentDetail, usePayments } from "@/features/admin/hooks/useAdmin"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
+  DetailSkeleton,
   LoadTransition,
   TableSkeleton,
 } from "@/components/ui/loading-skeletons"
@@ -48,6 +49,8 @@ export function ReporteriaPage() {
   const [methodFilter, setMethodFilter] = useState("all")
   const [statusFilter, setStatusFilter] = useState("all")
   const paymentsQuery = usePayments({ page: paymentPage, limit: PAGE_SIZE })
+  const paymentDetailQuery = usePaymentDetail(selectedPayment?.id)
+  const paymentDetail = paymentDetailQuery.data ?? selectedPayment
   const hasActiveFilters = Boolean(
     search.trim() ||
     dateFrom ||
@@ -278,29 +281,36 @@ export function ReporteriaPage() {
           <DialogHeader>
             <DialogTitle>Detalle de cobro</DialogTitle>
           </DialogHeader>
-          {selectedPayment ? (
+          {paymentDetailQuery.isLoading && !paymentDetail ? (
+            <DetailSkeleton items={3} />
+          ) : paymentDetail ? (
             <div className="space-y-4">
+              {paymentDetailQuery.isFetching ? (
+                <div className="text-xs text-muted-foreground">
+                  Actualizando detalle...
+                </div>
+              ) : null}
               <div className="grid gap-3 rounded-md border p-3 text-sm sm:grid-cols-2">
                 <DetailItem
                   label="Fecha"
-                  value={formatDate(selectedPayment.fecha)}
+                  value={formatDate(paymentDetail.fecha)}
                 />
                 <DetailItem
                   label="Forma de pago"
-                  value={selectedPayment.metodo}
+                  value={paymentDetail.metodo}
                 />
                 <DetailItem
                   label="Cliente"
-                  value={selectedPayment.cliente || "Consumidor final"}
+                  value={paymentDetail.cliente || "Consumidor final"}
                 />
-                <DetailItem label="NIT" value={selectedPayment.nit || "CF"} />
+                <DetailItem label="NIT" value={paymentDetail.nit || "CF"} />
                 <DetailItem
                   label="Venta"
-                  value={selectedPayment.ventaId || "-"}
+                  value={paymentDetail.ventaId || "-"}
                 />
                 <DetailItem
                   label="Vendedor"
-                  value={selectedPayment.usuario || "-"}
+                  value={paymentDetail.usuario || "-"}
                 />
               </div>
 
@@ -308,39 +318,46 @@ export function ReporteriaPage() {
                 <div className="rounded-md bg-muted px-3 py-2">
                   <div className="text-xs text-muted-foreground">Monto</div>
                   <div className="text-lg font-semibold">
-                    {formatCurrency(selectedPayment.monto)}
+                    {formatCurrency(paymentDetail.monto)}
                   </div>
                 </div>
                 <div className="rounded-md bg-muted px-3 py-2">
                   <div className="text-xs text-muted-foreground">Estado</div>
-                  <Badge variant="secondary">{selectedPayment.estado}</Badge>
+                  <Badge variant="secondary">{paymentDetail.estado}</Badge>
                 </div>
               </div>
 
-              {selectedPayment.metodo === "EFECTIVO" ? (
+              {paymentDetail.metodo === "EFECTIVO" ? (
                 <div className="grid gap-3 text-sm sm:grid-cols-2">
                   <DetailBox
                     label="Monto recibido"
                     value={
-                      selectedPayment.montoRecibido === undefined
+                      paymentDetail.montoRecibido === undefined
                         ? "-"
-                        : formatCurrency(selectedPayment.montoRecibido)
+                        : formatCurrency(paymentDetail.montoRecibido)
                     }
                   />
                   <DetailBox
                     label="Vuelto"
                     value={
-                      selectedPayment.cambio === undefined
+                      paymentDetail.cambio === undefined
                         ? "-"
-                        : formatCurrency(selectedPayment.cambio)
+                        : formatCurrency(paymentDetail.cambio)
                     }
                   />
                 </div>
               ) : (
                 <DetailBox
-                  label="Número de referencia"
-                  value={selectedPayment.numeroReferencia || "-"}
+                  label="Numero de referencia"
+                  value={paymentDetail.numeroReferencia || "-"}
                 />
+              )}
+            </div>
+          ) : paymentDetailQuery.isError ? (
+            <div className="text-sm text-destructive">
+              {getErrorMessage(
+                paymentDetailQuery.error,
+                "No se pudo cargar el detalle de cobro."
               )}
             </div>
           ) : null}

@@ -8,7 +8,7 @@ export const cajeroRoutes: FeatureRoute[] = [
     path: "cajero",
     title: "Vender",
     element: <CajeroPage />,
-    allowedRoles: ["cashier"],
+    allowedRoles: ["admin", "cashier"],
     icon: ScanBarcode,
     showInSidebar: true,
   },

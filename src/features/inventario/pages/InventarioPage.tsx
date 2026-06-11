@@ -39,7 +39,8 @@ import {
   useBrands,
   useColors,
   useDeleteVariant,
-  useProducts,
+  useAllProducts,
+  useAllVariants,
   useSizes,
   useVariant,
   useVariants,
@@ -48,7 +49,6 @@ import type { Product, Variant } from "@/features/inventario/types/product"
 import { useAuthStore } from "@/store"
 
 const PAGE_SIZE = 10
-const CATALOG_LIMIT = 100
 
 export function InventarioPage() {
   const role = useAuthStore((state) => state.role)
@@ -63,33 +63,29 @@ export function InventarioPage() {
   const [editingVariantId, setEditingVariantId] = useState<string | null>(null)
   const [deleteVariant, setDeleteVariant] = useState<Variant | null>(null)
   const [barcodeVariant, setBarcodeVariant] = useState<Variant | null>(null)
-  const productOptionsQuery = useProducts({ page: 1, limit: CATALOG_LIMIT })
-  const activeProductOptionsQuery = useProducts({
-    page: 1,
-    limit: CATALOG_LIMIT,
-    activo: true,
-  })
+  const productOptionsQuery = useAllProducts()
   const variantsQuery = useVariants({ page: variantsPage, limit: PAGE_SIZE })
+  const allVariantsQuery = useAllVariants()
   const brandsQuery = useBrands(canManageInventory)
   const sizesQuery = useSizes(canManageInventory)
   const colorsQuery = useColors(canManageInventory)
   const editVariantQuery = useVariant(editingVariantId)
   const deleteVariantMutation = useDeleteVariant()
-  const productOptions = productOptionsQuery.data?.data ?? []
+  const productOptions = useMemo(
+    () => productOptionsQuery.data ?? [],
+    [productOptionsQuery.data]
+  )
   const activeProductOptions = useMemo(
-    () =>
-      (activeProductOptionsQuery.data?.data ?? []).filter(
-        (product) => product.activo
-      ),
-    [activeProductOptionsQuery.data?.data]
+    () => productOptions.filter((product) => product.activo),
+    [productOptions]
   )
   const variantsData = variantsQuery.data
   const brands = brandsQuery.data ?? []
   const sizes = sizesQuery.data ?? []
   const colors = colorsQuery.data ?? []
   const variantProductOptions = useMemo(
-    () => getVariantProductOptions(variantsData?.data ?? []),
-    [variantsData?.data]
+    () => getVariantProductOptions(allVariantsQuery.data ?? []),
+    [allVariantsQuery.data]
   )
   const selectedProductFilter = variantProductOptions.find(
     (product) => product.id === variantProductFilter
@@ -157,7 +153,7 @@ export function InventarioPage() {
               onClick={() => setIsCatalogManagerOpen(true)}
             >
               <Settings2 />
-              Tallas y colores
+              Catalogos
             </Button>
           ) : null}
         </div>
@@ -314,10 +310,10 @@ export function InventarioPage() {
       >
         <DialogContent className="max-h-[88svh] overflow-y-auto sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle>Tallas y colores</DialogTitle>
+            <DialogTitle>Catalogos</DialogTitle>
             <DialogDescription>Opciones para inventario.</DialogDescription>
           </DialogHeader>
-          <CatalogManager sizes={sizes} colors={colors} />
+          <CatalogManager brands={brands} sizes={sizes} colors={colors} />
         </DialogContent>
       </Dialog>
 

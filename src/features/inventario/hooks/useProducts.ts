@@ -7,6 +7,7 @@ import {
   createColor,
   createVariant,
   createSize,
+  deleteBrand,
   deleteProduct,
   deleteColor,
   deleteSize,
@@ -26,6 +27,7 @@ import type {
   CreateBrandInput,
   CreateCatalogInput,
   CreateVariantInput,
+  Product,
   Variant,
   UpdateProductInput,
   UpdateVariantInput,
@@ -52,6 +54,30 @@ export function useProduct(id: string | null) {
   })
 }
 
+export function useAllProducts() {
+  return useQuery({
+    queryKey: [...productsQueryKey, "all"],
+    queryFn: async () => {
+      const limit = 100
+      const firstPage = await fetchProducts({ page: 1, limit })
+      const products = [...firstPage.data]
+
+      for (let page = 2; page <= firstPage.totalPages; page += 1) {
+        const nextPage = await fetchProducts({ page, limit })
+        products.push(...nextPage.data)
+      }
+
+      const uniqueProducts = new Map<string, Product>()
+
+      for (const product of products) {
+        uniqueProducts.set(product.id, product)
+      }
+
+      return Array.from(uniqueProducts.values())
+    },
+  })
+}
+
 export function useCreateProduct() {
   const queryClient = useQueryClient()
 
@@ -70,6 +96,19 @@ export function useCreateBrand() {
     mutationFn: (input: CreateBrandInput) => createBrand(input),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: brandsQueryKey })
+    },
+  })
+}
+
+export function useDeleteBrand() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (id: string) => deleteBrand(id),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: brandsQueryKey })
+      void queryClient.invalidateQueries({ queryKey: productsQueryKey })
+      void queryClient.invalidateQueries({ queryKey: variantsQueryKey })
     },
   })
 }
