@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="POS Boutique">
+  <rect width="64" height="64" rx="14" fill="#317EFB" />
+  <path d="M18 20h28v7H18zM22 30h20v14H22z" fill="#fff" opacity=".95" />
+  <path d="M24 17h16l4 3H20z" fill="#DFF7EE" />
+  <path d="M29 34h6v10h-6z" fill="#317EFB" />
+</svg>
