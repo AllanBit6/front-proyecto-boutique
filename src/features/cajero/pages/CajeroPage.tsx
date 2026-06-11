@@ -178,6 +178,10 @@ export function CajeroPage() {
   const isCheckingCash =
     activeCashQuery.isLoading || cashRegistersQuery.isLoading
   const canSell = Boolean(ownActiveCash)
+  const isSaleLocked = isCheckingCash || !canSell
+  const saleLockMessage = isCheckingCash
+    ? "Validando caja activa..."
+    : "Venta bloqueada. Abre caja antes de usar venta de mostrador."
   const sellableVariants = useMemo(
     () =>
       (variantsQuery.data?.data ?? []).filter(
@@ -264,12 +268,31 @@ export function CajeroPage() {
     return () => window.clearTimeout(timeoutId)
   }, [findByBarcode.isPending, shouldFocusBarcode])
 
+  useEffect(() => {
+    if (isCheckingCash || canSell) {
+      return
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      setCart([])
+      setPaymentOpen(false)
+    }, 0)
+
+    return () => window.clearTimeout(timeoutId)
+  }, [canSell, isCheckingCash])
+
   function requestBarcodeFocus() {
     setShouldFocusBarcode(true)
   }
 
   function addVariant(variant: Variant) {
     setError("")
+
+    if (isSaleLocked) {
+      setError(saleLockMessage)
+      toast.error(saleLockMessage)
+      return false
+    }
 
     if (!variant.activo || variant.stock_actual <= 0) {
       setError("La variante no tiene stock disponible.")
@@ -305,6 +328,13 @@ export function CajeroPage() {
 
   function updateQuantity(variantId: string, quantity: number) {
     setError("")
+
+    if (isSaleLocked) {
+      setError(saleLockMessage)
+      toast.error(saleLockMessage)
+      return
+    }
+
     const nextQuantity = Math.max(
       1,
       Math.trunc(Number.isFinite(quantity) ? quantity : 1)
@@ -326,6 +356,12 @@ export function CajeroPage() {
   }
 
   function handleProductSelect(variant: Variant) {
+    if (isSaleLocked) {
+      setError(saleLockMessage)
+      toast.error(saleLockMessage)
+      return
+    }
+
     if (addVariant(variant)) {
       toast.success(`${variantLabel(variant)} agregado al carrito.`)
     }
@@ -334,6 +370,13 @@ export function CajeroPage() {
 
   async function handleBarcodeSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
+
+    if (isSaleLocked) {
+      setError(saleLockMessage)
+      toast.error(saleLockMessage)
+      return
+    }
+
     const code = normalizeCodeInput(barcode)
 
     if (!code) {
@@ -381,9 +424,9 @@ export function CajeroPage() {
         </div>
       ) : null}
 
-      {!isCheckingCash && !canSell ? (
-        <div className="rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-200">
-          Caja cerrada. Abre caja antes de finalizar ventas.
+      {isSaleLocked ? (
+        <div className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+          {saleLockMessage}
         </div>
       ) : null}
 
@@ -409,13 +452,13 @@ export function CajeroPage() {
                     placeholder="Código"
                     autoComplete="off"
                     maxLength={64}
-                    disabled={findByBarcode.isPending}
+                    disabled={findByBarcode.isPending || isSaleLocked}
                   />
                   <Button
                     type="submit"
                     size="icon"
                     aria-label="Buscar código"
-                    disabled={findByBarcode.isPending}
+                    disabled={findByBarcode.isPending || isSaleLocked}
                   >
                     <ScanBarcode />
                   </Button>
@@ -435,7 +478,7 @@ export function CajeroPage() {
                     }}
                     placeholder="Buscar producto"
                     maxLength={80}
-                    disabled={variantsQuery.isLoading}
+                    disabled={variantsQuery.isLoading || isSaleLocked}
                   />
                 </div>
                 <Select
@@ -445,7 +488,10 @@ export function CajeroPage() {
                     setVariantsPage(1)
                   }}
                 >
-                  <SelectTrigger className="w-full min-w-0">
+                  <SelectTrigger
+                    className="w-full min-w-0"
+                    disabled={isSaleLocked}
+                  >
                     <span className="truncate">
                       {sizeFilter === "all" ? "Todas las tallas" : sizeFilter}
                     </span>
@@ -466,7 +512,10 @@ export function CajeroPage() {
                     setVariantsPage(1)
                   }}
                 >
-                  <SelectTrigger className="w-full min-w-0">
+                  <SelectTrigger
+                    className="w-full min-w-0"
+                    disabled={isSaleLocked}
+                  >
                     <span className="truncate">
                       {colorFilter === "all"
                         ? "Todos los colores"
@@ -554,7 +603,7 @@ export function CajeroPage() {
                                 <Button
                                   type="button"
                                   size="sm"
-                                  disabled={!canAdd}
+                                  disabled={!canAdd || isSaleLocked}
                                   onClick={() => handleProductSelect(variant)}
                                 >
                                   <Plus />
@@ -604,7 +653,7 @@ export function CajeroPage() {
                 type="button"
                 variant="outline"
                 size="sm"
-                disabled={cart.length === 0}
+                disabled={cart.length === 0 || isSaleLocked}
                 onClick={() => setCart([])}
               >
                 <Trash2 />
@@ -680,7 +729,9 @@ export function CajeroPage() {
                                       variant="outline"
                                       size="icon"
                                       aria-label="Reducir"
-                                      disabled={item.quantity <= 1}
+                                      disabled={
+                                        item.quantity <= 1 || isSaleLocked
+                                      }
                                       onClick={() =>
                                         updateQuantity(
                                           item.variant.id,
@@ -696,6 +747,7 @@ export function CajeroPage() {
                                       min="1"
                                       max={item.variant.stock_actual}
                                       value={item.quantity}
+                                      disabled={isSaleLocked}
                                       onChange={(event) =>
                                         updateQuantity(
                                           item.variant.id,
@@ -710,7 +762,8 @@ export function CajeroPage() {
                                       aria-label="Aumentar"
                                       disabled={
                                         item.quantity >=
-                                        item.variant.stock_actual
+                                          item.variant.stock_actual ||
+                                        isSaleLocked
                                       }
                                       onClick={() =>
                                         updateQuantity(
@@ -731,6 +784,7 @@ export function CajeroPage() {
                                     type="button"
                                     variant="ghost"
                                     size="sm"
+                                    disabled={isSaleLocked}
                                     onClick={() =>
                                       setCart((current) =>
                                         current.filter(
@@ -763,7 +817,7 @@ export function CajeroPage() {
                 type="button"
                 className="w-full"
                 size="lg"
-                disabled={cart.length === 0}
+                disabled={cart.length === 0 || isSaleLocked}
                 onClick={() => setPaymentOpen(true)}
               >
                 Pagar — {formatCurrency(total)}
@@ -773,7 +827,18 @@ export function CajeroPage() {
         </div>
       </div>
 
-      <Dialog open={paymentOpen} onOpenChange={setPaymentOpen}>
+      <Dialog
+        open={paymentOpen}
+        onOpenChange={(open) => {
+          if (open && isSaleLocked) {
+            setError(saleLockMessage)
+            toast.error(saleLockMessage)
+            return
+          }
+
+          setPaymentOpen(open)
+        }}
+      >
         <DialogContent
           className="sm:max-w-md"
           style={{ overscrollBehavior: "contain" }}
