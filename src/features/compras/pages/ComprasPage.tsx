@@ -12,7 +12,7 @@ import {
   useCreatePurchase,
   usePurchases,
 } from "@/features/admin/hooks/useAdmin"
-import { useVariants } from "@/features/inventario/hooks/useProducts"
+import { useAllVariants } from "@/features/inventario/hooks/useProducts"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import {
@@ -67,7 +67,7 @@ export function ComprasPage() {
     message: string
   } | null>(null)
   const purchasesQuery = usePurchases({ page, limit: PAGE_SIZE })
-  const variantsQuery = useVariants({ page: 1, limit: 100 })
+  const variantsQuery = useAllVariants()
   const createPurchase = useCreatePurchase()
   const cancelPurchase = useCancelPurchase()
   const hasActivePurchaseFilters = Boolean(
@@ -77,8 +77,8 @@ export function ComprasPage() {
     purchaseStatus !== "all"
   )
   const activeVariants = useMemo(
-    () => (variantsQuery.data?.data ?? []).filter((variant) => variant.activo),
-    [variantsQuery.data?.data]
+    () => (variantsQuery.data ?? []).filter((variant) => variant.activo),
+    [variantsQuery.data]
   )
   const selectedVariant = activeVariants.find(
     (variant) => variant.id === variantId

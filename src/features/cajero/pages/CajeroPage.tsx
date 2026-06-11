@@ -13,14 +13,15 @@ import {
   useActiveCashRegister,
   useCashRegisters,
 } from "@/features/admin/hooks/useAdmin"
+import { AdminPager } from "@/features/admin/components/AdminTable"
 import { formatCurrency } from "@/features/admin/utils/formatters"
-import { useAllVariants } from "@/features/inventario/hooks/useProducts"
+import {
+  useAllVariants,
+  useVariants,
+} from "@/features/inventario/hooks/useProducts"
 import type { Variant } from "@/features/inventario/types/product"
 import { useFindVariantByBarcode } from "@/features/cajero/hooks/usePos"
-import {
-  normalizeCodeInput,
-  normalizeTextInput,
-} from "@/shared/utils/security"
+import { normalizeCodeInput, normalizeTextInput } from "@/shared/utils/security"
 import { useAuthStore } from "@/store"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -53,6 +54,8 @@ import {
 import { PaymentForm } from "@/features/cajero/components/PaymentForm"
 import type { CartItem } from "@/features/cajero/types/posTypes"
 import { variantLabel } from "@/features/cajero/helpers/posHelpers"
+
+const PRODUCT_PAGE_SIZE = 10
 
 function normalizeSearch(value: string) {
   return value
@@ -141,12 +144,17 @@ export function CajeroPage() {
   const [productSearch, setProductSearch] = useState("")
   const [sizeFilter, setSizeFilter] = useState("all")
   const [colorFilter, setColorFilter] = useState("all")
+  const [variantsPage, setVariantsPage] = useState(1)
   const [cart, setCart] = useState<CartItem[]>([])
   const [paymentOpen, setPaymentOpen] = useState(false)
   const [error, setError] = useState("")
   const barcodeInputRef = useRef<HTMLInputElement>(null)
   const [shouldFocusBarcode, setShouldFocusBarcode] = useState(true)
-  const variantsQuery = useAllVariants()
+  const variantsQuery = useVariants({
+    page: variantsPage,
+    limit: PRODUCT_PAGE_SIZE,
+  })
+  const variantFiltersQuery = useAllVariants()
   const activeCashQuery = useActiveCashRegister()
   const cashRegistersQuery = useCashRegisters({ page: 1, limit: 100 })
   const findByBarcode = useFindVariantByBarcode()
@@ -172,32 +180,39 @@ export function CajeroPage() {
   const canSell = Boolean(ownActiveCash)
   const sellableVariants = useMemo(
     () =>
-      (variantsQuery.data ?? []).filter(
+      (variantsQuery.data?.data ?? []).filter(
         (variant) => variant.activo && variant.stock_actual > 0
       ),
-    [variantsQuery.data]
+    [variantsQuery.data?.data]
+  )
+  const filterableVariants = useMemo(
+    () =>
+      (variantFiltersQuery.data ?? []).filter(
+        (variant) => variant.activo && variant.stock_actual > 0
+      ),
+    [variantFiltersQuery.data]
   )
   const sizeOptions = useMemo(
     () =>
       Array.from(
         new Set(
-          sellableVariants
+          filterableVariants
             .map((variant) => variant.talla_nombre)
             .filter(Boolean)
         )
       ).sort(),
-    [sellableVariants]
+    [filterableVariants]
   )
   const colorOptions = useMemo(
     () =>
       Array.from(
         new Set(
-          sellableVariants
+          filterableVariants
             .map((variant) => variant.color_nombre)
             .filter(Boolean)
         )
       ).sort(),
-    [sellableVariants]
+    [filterableVariants]
   )
   const filteredVariants = useMemo(() => {
     const terms = normalizeSearch(productSearch).split(" ").filter(Boolean)
@@ -410,13 +425,14 @@ export function CajeroPage() {
                   <Input
                     className="min-w-0 pl-9"
                     value={productSearch}
-                    onChange={(event) =>
+                    onChange={(event) => {
                       setProductSearch(
                         normalizeTextInput(event.target.value, {
                           maxLength: 80,
                         })
                       )
-                    }
+                      setVariantsPage(1)
+                    }}
                     placeholder="Buscar producto"
                     maxLength={80}
                     disabled={variantsQuery.isLoading}
@@ -424,7 +440,10 @@ export function CajeroPage() {
                 </div>
                 <Select
                   value={sizeFilter}
-                  onValueChange={(value) => setSizeFilter(value ?? "all")}
+                  onValueChange={(value) => {
+                    setSizeFilter(value ?? "all")
+                    setVariantsPage(1)
+                  }}
                 >
                   <SelectTrigger className="w-full min-w-0">
                     <span className="truncate">
@@ -442,7 +461,10 @@ export function CajeroPage() {
                 </Select>
                 <Select
                   value={colorFilter}
-                  onValueChange={(value) => setColorFilter(value ?? "all")}
+                  onValueChange={(value) => {
+                    setColorFilter(value ?? "all")
+                    setVariantsPage(1)
+                  }}
                 >
                   <SelectTrigger className="w-full min-w-0">
                     <span className="truncate">
@@ -462,7 +484,8 @@ export function CajeroPage() {
                 </Select>
               </div>
               <div className="text-xs text-muted-foreground">
-                {filteredVariants.length} de {sellableVariants.length}
+                {filteredVariants.length} visibles de{" "}
+                {variantsQuery.data?.total ?? 0} registros
               </div>
 
               {variantsQuery.isLoading ? (
@@ -550,6 +573,20 @@ export function CajeroPage() {
                   Sin resultados.
                 </div>
               )}
+              {variantsQuery.data ? (
+                <AdminPager
+                  page={variantsQuery.data.page}
+                  totalPages={variantsQuery.data.totalPages}
+                  total={variantsQuery.data.total}
+                  disabled={variantsQuery.isFetching}
+                  onPrevious={() =>
+                    setVariantsPage((currentPage) => currentPage - 1)
+                  }
+                  onNext={() =>
+                    setVariantsPage((currentPage) => currentPage + 1)
+                  }
+                />
+              ) : null}
             </CardContent>
           </Card>
         </div>
@@ -744,11 +781,7 @@ export function CajeroPage() {
           <DialogHeader>
             <DialogTitle>Cobro</DialogTitle>
           </DialogHeader>
-          <PaymentForm
-            total={total}
-            cart={cart}
-            onSuccess={handleSuccess}
-          />
+          <PaymentForm total={total} cart={cart} onSuccess={handleSuccess} />
         </DialogContent>
       </Dialog>
     </section>
