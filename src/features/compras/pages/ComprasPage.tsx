@@ -95,7 +95,9 @@ export function ComprasPage() {
           ]) &&
           matchesDateRange(item.fecha, purchaseDateFrom, purchaseDateTo) &&
           (purchaseStatus === "all" ||
-            (purchaseStatus === "active" ? item.activo : !item.activo))
+            (purchaseStatus === "active"
+              ? item.activo === true
+              : item.activo === false))
       ),
     [
       purchaseDateFrom,
@@ -407,29 +409,26 @@ export function ComprasPage() {
                               {item.usuario || "Sin usuario"}
                             </div>
                             <div className="text-xs text-muted-foreground sm:hidden">
-                              {item.items} prendas
+                              {formatOptionalCount(item.items)} prendas
                             </div>
                           </TableCell>
                           <TableCell className="hidden md:table-cell">
                             {item.usuario || "-"}
                           </TableCell>
                           <TableCell className="hidden sm:table-cell">
-                            {item.items}
+                            {formatOptionalCount(item.items)}
                           </TableCell>
-                          <TableCell>{formatCurrency(item.total)}</TableCell>
+                          <TableCell>{formatOptionalCurrency(item.total)}</TableCell>
                           <TableCell>
-                            <Badge
-                              variant={item.activo ? "secondary" : "outline"}
-                            >
-                              {item.activo ? "Vigente" : "Anulada"}
-                            </Badge>
+                            <PurchaseStatusBadge activo={item.activo} />
                           </TableCell>
                           <TableCell className="text-right">
                             <Button
                               variant="ghost"
                               size="sm"
                               disabled={
-                                !item.activo || cancelPurchase.isPending
+                                item.activo !== true ||
+                                cancelPurchase.isPending
                               }
                               onClick={() => {
                                 setPurchaseToCancel(item.id)
@@ -517,6 +516,34 @@ export function ComprasPage() {
         </DialogContent>
       </Dialog>
     </section>
+  )
+}
+
+function formatOptionalCurrency(value?: number) {
+  return value === undefined || Number.isNaN(value) ? "-" : formatCurrency(value)
+}
+
+function formatOptionalCount(value?: number) {
+  return value === undefined || Number.isNaN(value) ? "-" : String(value)
+}
+
+function purchaseStatusLabel(activo?: boolean) {
+  if (activo === true) {
+    return "Vigente"
+  }
+
+  if (activo === false) {
+    return "Anulada"
+  }
+
+  return "Sin estado"
+}
+
+function PurchaseStatusBadge({ activo }: { activo?: boolean }) {
+  return (
+    <Badge variant={activo === true ? "secondary" : "outline"}>
+      {purchaseStatusLabel(activo)}
+    </Badge>
   )
 }
 

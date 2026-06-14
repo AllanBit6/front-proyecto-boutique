@@ -263,7 +263,7 @@ export function InventoryAdjustmentsPage() {
                   ) : null}
                 </Field>
                 <Field>
-                  <FieldLabel>Que cambio haras</FieldLabel>
+                  <FieldLabel>Qué cambio harás</FieldLabel>
                   <Select
                     value={adjustmentType}
                     onValueChange={(value) =>

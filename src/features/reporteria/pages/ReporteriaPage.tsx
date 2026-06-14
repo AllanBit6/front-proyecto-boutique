@@ -218,17 +218,17 @@ export function ReporteriaPage() {
                           {item.metodo}
                         </TableCell>
                         <TableCell className="max-w-44 whitespace-normal">
-                          <div>{item.cliente || "Consumidor final"}</div>
+                          <div>{item.cliente || "-"}</div>
                           <div className="text-xs text-muted-foreground md:hidden">
                             {item.metodo}
                           </div>
                           <div className="mt-1 sm:hidden">
-                            <Badge variant="secondary">{item.estado}</Badge>
+                            <PaymentStatusBadge estado={item.estado} />
                           </div>
                         </TableCell>
-                        <TableCell>{formatCurrency(item.monto)}</TableCell>
+                        <TableCell>{formatOptionalCurrency(item.monto)}</TableCell>
                         <TableCell className="hidden sm:table-cell">
-                          <Badge variant="secondary">{item.estado}</Badge>
+                          <PaymentStatusBadge estado={item.estado} />
                         </TableCell>
                         <TableCell className="text-right">
                           <Button
@@ -297,13 +297,13 @@ export function ReporteriaPage() {
                 />
                 <DetailItem
                   label="Forma de pago"
-                  value={paymentDetail.metodo}
+                  value={paymentDetail.metodo || "-"}
                 />
                 <DetailItem
                   label="Cliente"
-                  value={paymentDetail.cliente || "Consumidor final"}
+                  value={paymentDetail.cliente || "-"}
                 />
-                <DetailItem label="NIT" value={paymentDetail.nit || "CF"} />
+                <DetailItem label="NIT" value={paymentDetail.nit || "-"} />
                 <DetailItem
                   label="Venta"
                   value={paymentDetail.ventaId || "-"}
@@ -318,12 +318,12 @@ export function ReporteriaPage() {
                 <div className="rounded-md bg-muted px-3 py-2">
                   <div className="text-xs text-muted-foreground">Monto</div>
                   <div className="text-lg font-semibold">
-                    {formatCurrency(paymentDetail.monto)}
+                    {formatOptionalCurrency(paymentDetail.monto)}
                   </div>
                 </div>
                 <div className="rounded-md bg-muted px-3 py-2">
                   <div className="text-xs text-muted-foreground">Estado</div>
-                  <Badge variant="secondary">{paymentDetail.estado}</Badge>
+                  <PaymentStatusBadge estado={paymentDetail.estado} />
                 </div>
               </div>
 
@@ -348,7 +348,7 @@ export function ReporteriaPage() {
                 </div>
               ) : (
                 <DetailBox
-                  label="Numero de referencia"
+                  label="Número de referencia"
                   value={paymentDetail.numeroReferencia || "-"}
                 />
               )}
@@ -387,4 +387,12 @@ function DetailBox({ label, value }: { label: string; value: string }) {
       <div className="font-medium">{value}</div>
     </div>
   )
+}
+
+function formatOptionalCurrency(value?: number) {
+  return value === undefined || Number.isNaN(value) ? "-" : formatCurrency(value)
+}
+
+function PaymentStatusBadge({ estado }: { estado?: string }) {
+  return <Badge variant="secondary">{estado || "Sin estado"}</Badge>
 }

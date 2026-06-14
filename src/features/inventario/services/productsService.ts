@@ -225,17 +225,6 @@ function normalizeVariant(variant: ApiVariant): Variant {
   }
 }
 
-function withLocalBarcode(variant: Variant, codigoBarras: string): Variant {
-  if (variant.codigo_barras) {
-    return variant
-  }
-
-  return {
-    ...variant,
-    codigo_barras: codigoBarras,
-  }
-}
-
 function toPaginatedData<T>(
   response: unknown,
   data: T[],
@@ -356,19 +345,7 @@ export async function createVariant(
     readRecord<ApiVariant>(response, ["variante"])
   )
 
-  if (variant.id && !variant.codigo_barras) {
-    const updateResponse = await request<unknown>(`/variantes/${variant.id}`, {
-      method: "PATCH",
-      body: JSON.stringify(payload),
-    })
-
-    return withLocalBarcode(
-      normalizeVariant(readRecord<ApiVariant>(updateResponse, ["variante"])),
-      codigoBarras
-    )
-  }
-
-  return withLocalBarcode(variant, codigoBarras)
+  return variant
 }
 
 export async function updateVariant(params: {
@@ -385,10 +362,7 @@ export async function updateVariant(params: {
     body: JSON.stringify(payload),
   })
 
-  return withLocalBarcode(
-    normalizeVariant(readRecord<ApiVariant>(response, ["variante"])),
-    codigoBarras
-  )
+  return normalizeVariant(readRecord<ApiVariant>(response, ["variante"]))
 }
 
 export async function deleteVariant(id: string): Promise<void> {
