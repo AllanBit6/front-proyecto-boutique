@@ -1,6 +1,5 @@
+import { apiUrl } from "@/shared/utils/apiClient"
 import { readSafeApiError } from "@/shared/utils/apiErrors"
-
-const API_URL = import.meta.env.VITE_API_URL ?? ""
 
 export interface PaginatedData<T> {
   data: T[]
@@ -27,14 +26,14 @@ export interface CashRegister {
   id: string
   usuarioId: string
   usuario: string
-  saldoInicial: number
+  saldoInicial?: number
   saldoFinal?: number
   fechaApertura?: string
   fechaCierre?: string
-  activo: boolean
+  activo?: boolean
   observaciones?: string
-  ventasCount: number
-  movimientosCount: number
+  ventasCount?: number
+  movimientosCount?: number
 }
 
 export interface CashMovement {
@@ -50,7 +49,7 @@ export interface CashMovement {
 export interface CashSaleSummary {
   id: string
   fecha: string
-  total: number
+  total?: number
 }
 
 export interface CashRegisterDetail extends CashRegister {
@@ -61,21 +60,21 @@ export interface CashRegisterDetail extends CashRegister {
 export interface Purchase {
   id: string
   fecha: string
-  total: number
-  activo: boolean
+  total?: number
+  activo?: boolean
   usuario: string
-  items: number
+  items?: number
 }
 
 export interface Sale {
   id: string
   fecha: string
-  total: number
-  activo: boolean
+  total?: number
+  activo?: boolean
   cliente?: string
   nit?: string
   usuario: string
-  items: number
+  items?: number
 }
 
 export interface SaleDetail extends Sale {
@@ -86,8 +85,8 @@ export interface SaleDetail extends Sale {
     sku?: string
     codigoBarras?: string
     cantidad: number
-    precioUnitario: number
-    subtotal: number
+    precioUnitario?: number
+    subtotal?: number
   }>
   pagos: Array<Payment>
 }
@@ -109,7 +108,7 @@ export interface Payment {
   id: string
   fecha: string
   metodo: string
-  monto: number
+  monto?: number
   montoRecibido?: number
   cambio?: number
   numeroReferencia?: string
@@ -129,7 +128,7 @@ interface ApiMeta {
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(`${API_URL}${path}`, {
+  const response = await fetch(apiUrl(path), {
     credentials: "include",
     ...init,
     headers: {
@@ -242,7 +241,17 @@ function numberValue(value: unknown) {
   return Number(value ?? 0)
 }
 
-function readActiveState(item: Record<string, unknown>) {
+function optionalNumberValue(value: unknown) {
+  if (value === null || value === undefined || value === "") {
+    return undefined
+  }
+
+  const number = Number(value)
+
+  return Number.isFinite(number) ? number : undefined
+}
+
+function readActiveState(item: Record<string, unknown>): boolean | undefined {
   const status = String(item.estado ?? item.status ?? "")
     .trim()
     .toLocaleLowerCase()
@@ -277,15 +286,13 @@ function readActiveState(item: Record<string, unknown>) {
     }
   }
 
-  return true
-}
-
-function optionalNumberValue(value: unknown) {
-  if (value === null || value === undefined || value === "") {
-    return undefined
+  if (
+    ["activa", "activo", "vigente", "true", "1", "si", "open"].includes(status)
+  ) {
+    return true
   }
 
-  return Number(value)
+  return undefined
 }
 
 function variantName(value: unknown) {
@@ -310,7 +317,7 @@ function normalizePayment(item: Record<string, unknown>): Payment {
     id: String(item.id_pago ?? item.id ?? ""),
     fecha: String(item.fecha_pago ?? ""),
     metodo: String(item.metodo ?? ""),
-    monto: numberValue(item.monto),
+    monto: optionalNumberValue(item.monto),
     montoRecibido: optionalNumberValue(item.monto_recibido),
     cambio: optionalNumberValue(item.cambio ?? item.vuelto),
     numeroReferencia: String(
@@ -326,22 +333,28 @@ function normalizePayment(item: Record<string, unknown>): Payment {
 
 function normalizeCashRegister(item: Record<string, unknown>): CashRegister {
   const count = item._count as Record<string, unknown> | undefined
+  const ventas = item.ventas
+  const movimientos = item.movimientos
 
   return {
     id: String(item.id_caja ?? item.id ?? ""),
     usuarioId: String(item.usuario_id ?? userId(item.usuario)),
     usuario: fullName(item.usuario),
-    saldoInicial: numberValue(item.saldo_inicial),
+    saldoInicial: optionalNumberValue(item.saldo_inicial),
     saldoFinal:
       item.saldo_final === null || item.saldo_final === undefined
         ? undefined
         : numberValue(item.saldo_final),
     fechaApertura: String(item.fecha_apertura ?? ""),
     fechaCierre: item.fecha_cierre ? String(item.fecha_cierre) : undefined,
-    activo: Boolean(item.activo),
+    activo: readActiveState(item),
     observaciones: String(item.observaciones ?? ""),
-    ventasCount: numberValue(count?.ventas),
-    movimientosCount: numberValue(count?.movimientos),
+    ventasCount: Array.isArray(ventas)
+      ? ventas.length
+      : optionalNumberValue(count?.ventas),
+    movimientosCount: Array.isArray(movimientos)
+      ? movimientos.length
+      : optionalNumberValue(count?.movimientos),
   }
 }
 
@@ -361,7 +374,7 @@ function normalizeCashSale(item: Record<string, unknown>): CashSaleSummary {
   return {
     id: String(item.id_venta ?? item.id ?? ""),
     fecha: String(item.fecha_venta ?? item.fecha ?? ""),
-    total: numberValue(item.total),
+    total: optionalNumberValue(item.total),
   }
 }
 
@@ -380,8 +393,8 @@ function normalizeCashRegisterDetail(
     ...base,
     ventas,
     movimientos,
-    ventasCount: base.ventasCount || ventas.length,
-    movimientosCount: base.movimientosCount || movimientos.length,
+    ventasCount: base.ventasCount ?? ventas.length,
+    movimientosCount: base.movimientosCount ?? movimientos.length,
   }
 }
 
@@ -468,10 +481,10 @@ export async function fetchPurchases(params: {
     (item) => ({
       id: String(item.id_compra ?? item.id ?? ""),
       fecha: String(item.fecha_compra ?? ""),
-      total: numberValue(item.total),
+      total: optionalNumberValue(item.total),
       activo: readActiveState(item),
       usuario: fullName(item.usuario),
-      items: numberValue(
+      items: optionalNumberValue(
         (item._count as Record<string, unknown>)?.detalles_compras
       ),
     })
@@ -513,12 +526,12 @@ export async function fetchSales(params: {
   const sales = readArray<Record<string, unknown>>(response).map((item) => ({
     id: String(item.id_venta ?? item.id ?? ""),
     fecha: String(item.fecha_venta ?? ""),
-    total: numberValue(item.total),
+    total: optionalNumberValue(item.total),
     activo: readActiveState(item),
     cliente: String(item.nombre_cliente ?? ""),
     nit: String(item.nit ?? ""),
     usuario: fullName(item.usuario),
-    items: numberValue(
+    items: optionalNumberValue(
       (item._count as Record<string, unknown>)?.detalles_venta
     ),
   }))
@@ -541,7 +554,7 @@ export async function fetchSaleDetail(id: string): Promise<SaleDetail> {
   return {
     id: String(item.id_venta ?? item.id ?? ""),
     fecha: String(item.fecha_venta ?? ""),
-    total: numberValue(item.total),
+    total: optionalNumberValue(item.total),
     activo: readActiveState(item),
     cliente: String(item.nombre_cliente ?? ""),
     nit: String(item.nit ?? ""),
@@ -550,7 +563,8 @@ export async function fetchSaleDetail(id: string): Promise<SaleDetail> {
     detalles: details.map((detail) => {
       const variant = detail.variante as Record<string, unknown> | undefined
       const cantidad = numberValue(detail.cantidad)
-      const precioUnitario = numberValue(detail.precio_unitario)
+      const precioUnitario = optionalNumberValue(detail.precio_unitario)
+      const subtotal = optionalNumberValue(detail.subtotal)
       const saleProduct = variant?.producto as
         | Record<string, unknown>
         | undefined
@@ -570,7 +584,8 @@ export async function fetchSaleDetail(id: string): Promise<SaleDetail> {
         ),
         cantidad,
         precioUnitario,
-        subtotal: numberValue(detail.subtotal) || cantidad * precioUnitario,
+        subtotal:
+          subtotal ?? (precioUnitario === undefined ? undefined : cantidad * precioUnitario),
       }
     }),
     pagos: payments,

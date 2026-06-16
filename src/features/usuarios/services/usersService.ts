@@ -6,6 +6,7 @@ import type {
   User,
   UsersPageData,
 } from "@/features/usuarios/types/user"
+import { apiUrl } from "@/shared/utils/apiClient"
 import { readSafeApiError } from "@/shared/utils/apiErrors"
 
 interface ApiRole {
@@ -38,10 +39,8 @@ interface PaginationMeta {
   total_pages?: number
 }
 
-const API_URL = import.meta.env.VITE_API_URL ?? ""
-
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(`${API_URL}${path}`, {
+  const response = await fetch(apiUrl(path), {
     credentials: "include",
     ...init,
     headers: {

@@ -153,7 +153,7 @@ export function InventarioPage() {
               onClick={() => setIsCatalogManagerOpen(true)}
             >
               <Settings2 />
-              Catalogos
+              Catálogos
             </Button>
           ) : null}
         </div>
@@ -310,7 +310,7 @@ export function InventarioPage() {
       >
         <DialogContent className="max-h-[88svh] overflow-y-auto sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle>Catalogos</DialogTitle>
+            <DialogTitle>Catálogos</DialogTitle>
             <DialogDescription>Opciones para inventario.</DialogDescription>
           </DialogHeader>
           <CatalogManager brands={brands} sizes={sizes} colors={colors} />

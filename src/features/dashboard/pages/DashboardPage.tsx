@@ -64,28 +64,26 @@ export function DashboardPage() {
       title: "Caja de hoy",
       value: isLoading
         ? "..."
-        : formatCurrency(Number(metrics?.ingresosHoy ?? 0)),
+        : formatOptionalCurrency(metrics?.ingresosHoy),
       icon: TrendingUp,
     },
     {
       title: "Ventas de hoy",
-      value: isLoading ? "..." : Number(metrics?.ventasHoy ?? 0),
+      value: isLoading ? "..." : formatOptionalCount(metrics?.ventasHoy),
       icon: Receipt,
     },
     {
       title: "Ingresos del mes",
       value: isLoading
         ? "..."
-        : formatCurrency(Number(metrics?.ingresosMes ?? 0)),
+        : formatOptionalCurrency(metrics?.ingresosMes),
       icon: CalendarDays,
     },
     {
       title: "Ticket promedio",
       value: isLoading
         ? "..."
-        : formatCurrency(
-            Number(metrics?.ticketProm ?? metrics?.ticketPromedio ?? 0)
-          ),
+        : formatOptionalCurrency(metrics?.ticketProm ?? metrics?.ticketPromedio),
       icon: CreditCard,
     },
   ]
@@ -175,7 +173,7 @@ export function DashboardPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Mas vendidos</CardTitle>
+            <CardTitle>Más vendidos</CardTitle>
           </CardHeader>
           <CardContent>
             {isLoading ? (
@@ -300,32 +298,35 @@ export function DashboardPage() {
 
 function normalizeTopProducts(items: Array<Record<string, unknown>>) {
   return items
-    .map((item, index) => {
+    .map((item) => {
       const variant = readRecord(item.variante)
       const product = readRecord(item.producto)
       const nestedProduct = readRecord(variant?.producto)
       const size = readRecord(variant?.talla)
       const color = readRecord(variant?.color)
-      const productName =
-        readText(
-          item.nombre,
-          item.name,
-          item.producto_nombre,
-          item.nombre_producto,
-          item.productName,
-          item.nombreProducto,
-          item.prenda,
-          item.prenda_nombre,
-          item.descripcion,
-          item.articulo,
-          item.modelo,
-          product?.nombre,
-          nestedProduct?.nombre,
-          variant?.producto_nombre,
-          variant?.nombre,
-          variant?.sku,
-          item.producto
-        ) ?? `Producto ${index + 1}`
+      const productName = readText(
+        item.nombre,
+        item.name,
+        item.producto_nombre,
+        item.nombre_producto,
+        item.productName,
+        item.nombreProducto,
+        item.prenda,
+        item.prenda_nombre,
+        item.descripcion,
+        item.articulo,
+        item.modelo,
+        product?.nombre,
+        nestedProduct?.nombre,
+        variant?.producto_nombre,
+        variant?.nombre,
+        variant?.sku,
+        item.producto
+      )
+
+      if (!productName) {
+        return null
+      }
       const variantDetail = [
         readText(item.talla, item.talla_nombre, size?.nombre),
         readText(item.color, item.color_nombre, color?.nombre),
@@ -335,7 +336,7 @@ function normalizeTopProducts(items: Array<Record<string, unknown>>) {
       const name = variantDetail
         ? `${productName} / ${variantDetail}`
         : productName
-      const quantity = Number(
+      const quantity = readNumber(
         item.cantidad ??
           item.cantidad_vendida ??
           item.cantidadVendida ??
@@ -347,8 +348,7 @@ function normalizeTopProducts(items: Array<Record<string, unknown>>) {
           item.unidadesVendidas ??
           item.vendidos ??
           (item._sum as Record<string, unknown> | undefined)?.cantidad ??
-          (item._count as Record<string, unknown> | undefined)?.cantidad ??
-          0
+          (item._count as Record<string, unknown> | undefined)?.cantidad
       )
 
       return {
@@ -356,7 +356,26 @@ function normalizeTopProducts(items: Array<Record<string, unknown>>) {
         cantidad: quantity,
       }
     })
-    .filter((item) => item.nombre && item.cantidad > 0)
+    .filter(
+      (item): item is { nombre: string; cantidad: number } =>
+        Boolean(
+          item?.nombre &&
+            typeof item.cantidad === "number" &&
+            item.cantidad > 0
+        )
+    )
+}
+
+function formatOptionalCurrency(value?: number) {
+  return value === undefined || Number.isNaN(value)
+    ? "No disponible"
+    : formatCurrency(value)
+}
+
+function formatOptionalCount(value?: number) {
+  return value === undefined || Number.isNaN(value)
+    ? "No disponible"
+    : String(value)
 }
 
 function readRecord(value: unknown) {
@@ -383,6 +402,16 @@ function readText(...values: unknown[]) {
   }
 
   return undefined
+}
+
+function readNumber(value: unknown) {
+  if (value === null || value === undefined || value === "") {
+    return undefined
+  }
+
+  const number = Number(value)
+
+  return Number.isFinite(number) ? number : undefined
 }
 
 function isGenericProductLabel(value: string) {

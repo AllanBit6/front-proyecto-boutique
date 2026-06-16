@@ -36,14 +36,13 @@ npm install
 Crea o edita el archivo `.env` en la raiz del proyecto:
 
 ```env
-VITE_API_URL=/api/v1
 VITE_API_TARGET=http://localhost:3000
 ```
 
 Notas:
 
-- `VITE_API_URL` debe mantenerse como ruta relativa para que Vite y Electron puedan usar proxy.
 - `VITE_API_TARGET` debe apuntar al origen del backend, sin `/api/v1`.
+- El frontend agrega internamente la base `/api/v1` a todas las peticiones.
 - El backend debe permitir CORS con credenciales.
 - El frontend envia cookies de sesion con `credentials: "include"`.
 
@@ -118,7 +117,6 @@ npm install
 2. Configurar `.env`:
 
 ```env
-VITE_API_URL=/api/v1
 VITE_API_TARGET=http://localhost:3000
 ```
 
@@ -138,8 +136,7 @@ npm run dev
 
 Verifica que:
 
-- `VITE_API_URL` apunte al backend correcto.
-- `VITE_API_TARGET` apunte al origen correcto del backend cuando uses proxy local.
+- `VITE_API_TARGET` apunte al origen correcto del backend, sin `/api/v1`.
 - El backend este corriendo.
 - El backend tenga CORS con `credentials: true`.
 - La cookie JWT sea enviada por el navegador.

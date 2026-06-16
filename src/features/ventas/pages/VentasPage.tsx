@@ -74,7 +74,9 @@ export function VentasPage() {
           ]) &&
           matchesDateRange(item.fecha, dateFrom, dateTo) &&
           (statusFilter === "all" ||
-            (statusFilter === "active" ? item.activo : !item.activo))
+            (statusFilter === "active"
+              ? item.activo === true
+              : item.activo === false))
       ),
     [dateFrom, dateTo, salesQuery.data?.data, search, statusFilter]
   )
@@ -209,22 +211,18 @@ export function VentasPage() {
                             {item.usuario || "Sin vendedor"}
                           </div>
                           <div className="text-xs text-muted-foreground sm:hidden">
-                            {item.items} prendas
+                            {formatOptionalCount(item.items)} prendas
                           </div>
                         </TableCell>
                         <TableCell className="hidden md:table-cell">
                           {item.usuario || "-"}
                         </TableCell>
                         <TableCell className="hidden sm:table-cell">
-                          {item.items}
+                          {formatOptionalCount(item.items)}
                         </TableCell>
-                        <TableCell>{formatCurrency(item.total)}</TableCell>
+                        <TableCell>{formatOptionalCurrency(item.total)}</TableCell>
                         <TableCell>
-                          <Badge
-                            variant={item.activo ? "secondary" : "outline"}
-                          >
-                            {item.activo ? "Vigente" : "Anulada"}
-                          </Badge>
+                          <SaleStatusBadge activo={item.activo} />
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex flex-col items-end gap-1 sm:flex-row sm:justify-end">
@@ -238,7 +236,9 @@ export function VentasPage() {
                             <Button
                               variant="ghost"
                               size="sm"
-                              disabled={!item.activo || cancelSale.isPending}
+                              disabled={
+                                item.activo !== true || cancelSale.isPending
+                              }
                               onClick={() => {
                                 setSaleToCancel(item.id)
                                 setCancelReason("")
@@ -342,10 +342,10 @@ export function VentasPage() {
                             </TableCell>
                             <TableCell>{item.cantidad}</TableCell>
                             <TableCell>
-                              {formatCurrency(item.precioUnitario)}
+                              {formatOptionalCurrency(item.precioUnitario)}
                             </TableCell>
                             <TableCell className="text-right">
-                              {formatCurrency(item.subtotal)}
+                              {formatOptionalCurrency(item.subtotal)}
                             </TableCell>
                           </TableRow>
                         ))
@@ -368,7 +368,7 @@ export function VentasPage() {
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Metodo</TableHead>
+                        <TableHead>Método</TableHead>
                         <TableHead>Referencia</TableHead>
                         <TableHead>Recibido</TableHead>
                         <TableHead className="text-right">Monto</TableHead>
@@ -378,7 +378,7 @@ export function VentasPage() {
                       {saleDetailQuery.data.pagos.length > 0 ? (
                         saleDetailQuery.data.pagos.map((item) => (
                           <TableRow key={item.id}>
-                            <TableCell>{item.metodo}</TableCell>
+                            <TableCell>{item.metodo || "-"}</TableCell>
                             <TableCell>
                               {item.numeroReferencia || "-"}
                             </TableCell>
@@ -388,7 +388,7 @@ export function VentasPage() {
                                 : formatCurrency(item.montoRecibido)}
                             </TableCell>
                             <TableCell className="text-right">
-                              {formatCurrency(item.monto)}
+                              {formatOptionalCurrency(item.monto)}
                             </TableCell>
                           </TableRow>
                         ))
@@ -407,7 +407,7 @@ export function VentasPage() {
                 </div>
 
                 <div className="flex justify-end rounded-md bg-muted px-3 py-2 text-sm font-medium">
-                  Total: {formatCurrency(saleDetailQuery.data.total)}
+                  Total: {formatOptionalCurrency(saleDetailQuery.data.total)}
                 </div>
               </div>
             </LoadTransition>
@@ -476,6 +476,34 @@ function DetailItem({ label, value }: { label: string; value: string }) {
       <div className="text-xs text-muted-foreground">{label}</div>
       <div className="font-medium">{value}</div>
     </div>
+  )
+}
+
+function formatOptionalCurrency(value?: number) {
+  return value === undefined || Number.isNaN(value) ? "-" : formatCurrency(value)
+}
+
+function formatOptionalCount(value?: number) {
+  return value === undefined || Number.isNaN(value) ? "-" : String(value)
+}
+
+function saleStatusLabel(activo?: boolean) {
+  if (activo === true) {
+    return "Vigente"
+  }
+
+  if (activo === false) {
+    return "Anulada"
+  }
+
+  return "Sin estado"
+}
+
+function SaleStatusBadge({ activo }: { activo?: boolean }) {
+  return (
+    <Badge variant={activo === true ? "secondary" : "outline"}>
+      {saleStatusLabel(activo)}
+    </Badge>
   )
 }
 
