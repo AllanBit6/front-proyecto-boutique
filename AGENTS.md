@@ -20,7 +20,7 @@ Stack actual:
 - Electron 33 + electron-builder (desktop)
 
 Base URL del API:
-- `/api/v1` (proxy de Vite a `VITE_API_TARGET` en `.env`)
+- `VITE_API_TARGET` en `.env` define el origen del backend; el frontend agrega `/api/v1` internamente.
 
 ---
 
@@ -195,8 +195,8 @@ Si se agrega un rol nuevo, actualizar:
 
 ### Base URL y proxy
 
-- `.env` define `VITE_API_URL=/api/v1` y `VITE_API_TARGET=http://localhost:3000`.
-- En desarrollo, Vite proxy reenvía `/api` al target.
+- `.env` define solo `VITE_API_TARGET=http://localhost:3000` o el origen remoto correspondiente.
+- El frontend construye las requests como `${VITE_API_TARGET}/api/v1`.
 - En producción (Electron), el backend debe estar corriendo en `localhost:3000`.
 
 ### Autenticación

@@ -1,6 +1,5 @@
+import { apiUrl } from "@/shared/utils/apiClient"
 import { readSafeApiError } from "@/shared/utils/apiErrors"
-
-const API_URL = import.meta.env.VITE_API_URL ?? ""
 
 export interface PaginatedData<T> {
   data: T[]
@@ -129,7 +128,7 @@ interface ApiMeta {
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(`${API_URL}${path}`, {
+  const response = await fetch(apiUrl(path), {
     credentials: "include",
     ...init,
     headers: {

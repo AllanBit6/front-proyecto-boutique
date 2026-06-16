@@ -1,4 +1,5 @@
 import type { Role } from "@/shared/types/domain"
+import { apiUrl } from "@/shared/utils/apiClient"
 import { readSafeApiError } from "@/shared/utils/apiErrors"
 
 export interface AuthUser {
@@ -26,8 +27,6 @@ interface ChangePasswordResponse {
   usuario?: ApiLoginUser
 }
 
-const API_URL = import.meta.env.VITE_API_URL ?? ""
-
 function toAuthUser(user: ApiLoginUser): AuthUser {
   return {
     id: user.id,
@@ -52,7 +51,7 @@ function mapRole(role: string): Role {
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(`${API_URL}${path}`, {
+  const response = await fetch(apiUrl(path), {
     credentials: "include",
     ...init,
     headers: {
@@ -103,7 +102,7 @@ export async function changePassword(input: {
 }
 
 export async function logout(): Promise<void> {
-  await fetch(`${API_URL}/auth/logout`, {
+  await fetch(apiUrl("/auth/logout"), {
     credentials: "include",
     method: "POST",
   })
